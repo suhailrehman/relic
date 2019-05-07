@@ -1,0 +1,4 @@
+[submodule "primitives/cpp"]
+	path = primitives/cpp
+	url = git@github.com:slhuang/RELIC_Silu.git
+	branch = master
