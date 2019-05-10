@@ -2,3 +2,4 @@ networkx
 matplotlib
 pandas
 tqdm
+psycopg2

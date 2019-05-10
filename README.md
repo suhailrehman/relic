@@ -21,6 +21,11 @@
 ### Prerequisites
 PostgresSQL, Jupyter etc.
 
+```
+# TODO: Postgres Installation
+sudo apt install python-dev libpq-dev
+```
+
 ### Python modules
 ```
 pip install -r requirements.txt
