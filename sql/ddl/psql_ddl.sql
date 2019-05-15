@@ -5,7 +5,7 @@
 -- Dumped from database version 11.2 (Ubuntu 11.2-1.pgdg18.04+1)
 -- Dumped by pg_dump version 11.2 (Ubuntu 11.2-1.pgdg18.04+1)
 
--- Started on 2019-05-10 18:25:35 CDT
+-- Started on 2019-05-14 20:53:47 CDT
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -26,6 +26,28 @@ CREATE SCHEMA lineage;
 
 
 ALTER SCHEMA lineage OWNER TO lineage;
+
+--
+-- TOC entry 205 (class 1255 OID 16707)
+-- Name: truncate_tables(); Type: FUNCTION; Schema: lineage; Owner: lineage
+--
+
+CREATE FUNCTION lineage.truncate_tables() RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    statements CURSOR FOR
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'lineage';
+BEGIN
+    FOR stmt IN statements LOOP
+        EXECUTE 'TRUNCATE TABLE ' || quote_ident(stmt.tablename) || ' CASCADE;';
+    END LOOP;
+END;
+$$;
+
+
+ALTER FUNCTION lineage.truncate_tables() OWNER TO lineage;
 
 SET default_tablespace = '';
 
@@ -71,8 +93,9 @@ ALTER TABLE lineage.artifact_column OWNER TO suhail;
 CREATE TABLE lineage.cluster (
     id uuid NOT NULL,
     artifact_id uuid NOT NULL,
-    type character varying(45),
-    experiment_id uuid NOT NULL
+    cluster_type character varying(45),
+    experiment_id uuid NOT NULL,
+    primitive_cluster_id integer
 );
 
 
@@ -85,8 +108,7 @@ ALTER TABLE lineage.cluster OWNER TO suhail;
 
 CREATE TABLE lineage.experiment (
     id uuid NOT NULL,
-    create_time character varying(45) NOT NULL,
-    start_time timestamp without time zone NOT NULL,
+    start_time timestamp without time zone,
     parameters json,
     commit_hash character varying(2000)
 );
@@ -154,7 +176,7 @@ CREATE TABLE lineage.workflow (
 ALTER TABLE lineage.workflow OWNER TO suhail;
 
 --
--- TOC entry 2840 (class 2606 OID 16542)
+-- TOC entry 2841 (class 2606 OID 16542)
 -- Name: artifact_column artifact_column_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -163,7 +185,7 @@ ALTER TABLE ONLY lineage.artifact_column
 
 
 --
--- TOC entry 2836 (class 2606 OID 16532)
+-- TOC entry 2837 (class 2606 OID 16532)
 -- Name: artifact artifact_pkey; Type: CONSTRAINT; Schema: lineage; Owner: lineage
 --
 
@@ -172,7 +194,7 @@ ALTER TABLE ONLY lineage.artifact
 
 
 --
--- TOC entry 2844 (class 2606 OID 16572)
+-- TOC entry 2845 (class 2606 OID 16572)
 -- Name: cluster cluster_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -181,7 +203,7 @@ ALTER TABLE ONLY lineage.cluster
 
 
 --
--- TOC entry 2832 (class 2606 OID 16615)
+-- TOC entry 2833 (class 2606 OID 16615)
 -- Name: workflow directory_path_uq; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -190,7 +212,7 @@ ALTER TABLE ONLY lineage.workflow
 
 
 --
--- TOC entry 2830 (class 2606 OID 16522)
+-- TOC entry 2831 (class 2606 OID 16522)
 -- Name: experiment experiment_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -199,7 +221,7 @@ ALTER TABLE ONLY lineage.experiment
 
 
 --
--- TOC entry 2842 (class 2606 OID 16552)
+-- TOC entry 2843 (class 2606 OID 16552)
 -- Name: ground_truth_edge ground_truth_edge_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -208,7 +230,7 @@ ALTER TABLE ONLY lineage.ground_truth_edge
 
 
 --
--- TOC entry 2846 (class 2606 OID 16587)
+-- TOC entry 2847 (class 2606 OID 16587)
 -- Name: relationship_edge relationship_edge_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -217,7 +239,7 @@ ALTER TABLE ONLY lineage.relationship_edge
 
 
 --
--- TOC entry 2838 (class 2606 OID 16688)
+-- TOC entry 2839 (class 2606 OID 16688)
 -- Name: artifact unique_artifact_constraint; Type: CONSTRAINT; Schema: lineage; Owner: lineage
 --
 
@@ -226,7 +248,7 @@ ALTER TABLE ONLY lineage.artifact
 
 
 --
--- TOC entry 2834 (class 2606 OID 16527)
+-- TOC entry 2835 (class 2606 OID 16527)
 -- Name: workflow workflow_pkey; Type: CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -235,7 +257,7 @@ ALTER TABLE ONLY lineage.workflow
 
 
 --
--- TOC entry 2848 (class 2606 OID 16543)
+-- TOC entry 2849 (class 2606 OID 16543)
 -- Name: artifact_column fk_artifact_column_artifact1; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -244,7 +266,7 @@ ALTER TABLE ONLY lineage.artifact_column
 
 
 --
--- TOC entry 2847 (class 2606 OID 16533)
+-- TOC entry 2848 (class 2606 OID 16533)
 -- Name: artifact fk_artifact_workflow; Type: FK CONSTRAINT; Schema: lineage; Owner: lineage
 --
 
@@ -253,7 +275,7 @@ ALTER TABLE ONLY lineage.artifact
 
 
 --
--- TOC entry 2852 (class 2606 OID 16573)
+-- TOC entry 2853 (class 2606 OID 16573)
 -- Name: cluster fk_cluster_artifact; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -262,7 +284,7 @@ ALTER TABLE ONLY lineage.cluster
 
 
 --
--- TOC entry 2853 (class 2606 OID 16578)
+-- TOC entry 2854 (class 2606 OID 16578)
 -- Name: cluster fk_cluster_experiment; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -271,7 +293,7 @@ ALTER TABLE ONLY lineage.cluster
 
 
 --
--- TOC entry 2854 (class 2606 OID 16588)
+-- TOC entry 2855 (class 2606 OID 16588)
 -- Name: relationship_edge fk_experiment; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -280,7 +302,7 @@ ALTER TABLE ONLY lineage.relationship_edge
 
 
 --
--- TOC entry 2849 (class 2606 OID 16553)
+-- TOC entry 2850 (class 2606 OID 16553)
 -- Name: ground_truth_edge fk_ground_truth_edge_artifact1; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -289,7 +311,7 @@ ALTER TABLE ONLY lineage.ground_truth_edge
 
 
 --
--- TOC entry 2850 (class 2606 OID 16558)
+-- TOC entry 2851 (class 2606 OID 16558)
 -- Name: ground_truth_edge fk_ground_truth_edge_artifact2; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -298,7 +320,7 @@ ALTER TABLE ONLY lineage.ground_truth_edge
 
 
 --
--- TOC entry 2851 (class 2606 OID 16563)
+-- TOC entry 2852 (class 2606 OID 16563)
 -- Name: ground_truth_edge fk_ground_truth_edge_workflow; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -307,7 +329,7 @@ ALTER TABLE ONLY lineage.ground_truth_edge
 
 
 --
--- TOC entry 2855 (class 2606 OID 16593)
+-- TOC entry 2856 (class 2606 OID 16593)
 -- Name: relationship_edge fk_relationship_edge_artifact1; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -316,7 +338,7 @@ ALTER TABLE ONLY lineage.relationship_edge
 
 
 --
--- TOC entry 2856 (class 2606 OID 16598)
+-- TOC entry 2857 (class 2606 OID 16598)
 -- Name: relationship_edge fk_relationship_edge_artifact2; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -325,7 +347,7 @@ ALTER TABLE ONLY lineage.relationship_edge
 
 
 --
--- TOC entry 2857 (class 2606 OID 16606)
+-- TOC entry 2858 (class 2606 OID 16606)
 -- Name: time_log fk_timelog_experiment1; Type: FK CONSTRAINT; Schema: lineage; Owner: suhail
 --
 
@@ -334,7 +356,70 @@ ALTER TABLE ONLY lineage.time_log
 
 
 --
--- TOC entry 2984 (class 0 OID 0)
+-- TOC entry 2985 (class 0 OID 0)
+-- Dependencies: 205
+-- Name: FUNCTION truncate_tables(); Type: ACL; Schema: lineage; Owner: lineage
+--
+
+REVOKE ALL ON FUNCTION lineage.truncate_tables() FROM PUBLIC;
+
+
+--
+-- TOC entry 2986 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: TABLE artifact_column; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.artifact_column TO lineage;
+
+
+--
+-- TOC entry 2987 (class 0 OID 0)
+-- Dependencies: 202
+-- Name: TABLE cluster; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.cluster TO lineage;
+
+
+--
+-- TOC entry 2988 (class 0 OID 0)
+-- Dependencies: 197
+-- Name: TABLE experiment; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.experiment TO lineage;
+
+
+--
+-- TOC entry 2989 (class 0 OID 0)
+-- Dependencies: 201
+-- Name: TABLE ground_truth_edge; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.ground_truth_edge TO lineage;
+
+
+--
+-- TOC entry 2990 (class 0 OID 0)
+-- Dependencies: 203
+-- Name: TABLE relationship_edge; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.relationship_edge TO lineage;
+
+
+--
+-- TOC entry 2991 (class 0 OID 0)
+-- Dependencies: 204
+-- Name: TABLE time_log; Type: ACL; Schema: lineage; Owner: suhail
+--
+
+GRANT ALL ON TABLE lineage.time_log TO lineage;
+
+
+--
+-- TOC entry 2992 (class 0 OID 0)
 -- Dependencies: 198
 -- Name: TABLE workflow; Type: ACL; Schema: lineage; Owner: suhail
 --
@@ -342,8 +427,9 @@ ALTER TABLE ONLY lineage.time_log
 GRANT ALL ON TABLE lineage.workflow TO lineage;
 
 
--- Completed on 2019-05-10 18:25:35 CDT
+-- Completed on 2019-05-14 20:53:47 CDT
 
 --
 -- PostgreSQL database dump complete
 --
+
