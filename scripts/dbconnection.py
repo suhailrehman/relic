@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""dbconnection.py: Code to handle postgres db connection"""
+
+__author__ = "Suhail Rehman"
+
 import psycopg2
 
 
@@ -34,3 +39,9 @@ def test_db():
     curs = conn.cursor()
     res = curs.execute('select * from lineage.workflow;')
     print(res)
+
+
+def truncate_db(connection):
+    curs = connection.cursor()
+    curs.execute('SELECT truncate_tables();')
+    connection.commit()

@@ -10,6 +10,9 @@ import glob
 import argparse
 
 import dbconnection
+import queries
+
+import networkx as nx
 
 
 def setup_argparse():
@@ -66,8 +69,43 @@ def store_workflow(workflow, connection):
                                       connection)
 
 
-def store_ground_truth_nx(workflow, cursor):
-    pass
+def store_gt_edge(gt_edge, connection):
+    gt_edge_sql = '''INSERT INTO lineage.ground_truth_edge(
+    id, artifact_1, artifact_2, workflow_id)
+    VALUES (%s, %s, %s, %s);
+    '''
+
+    return dbconnection.execute_insert(gt_edge_sql,
+                                       (str(gt_edge['id']),
+                                        gt_edge['artifact_1'],
+                                        gt_edge['artifact_2'],
+                                        gt_edge['workflow_id']),
+                                       connection)
+
+
+def load_graph(graph_pkl_file):
+    return nx.read_gpickle(graph_pkl_file)
+
+
+def store_ground_truth_nx(gt_workflow, wf_id, connection):
+    try:
+        for v1, v2 in gt_workflow.edges:
+            af_id1 = queries.get_artifact_id_name(v1, wf_id, connection)
+            af_id2 = queries.get_artifact_id_name(v2, wf_id, connection)
+            # print(v1, af_id1, v2, af_id2)
+            gt_edge = {
+                'id': uuid.uuid4(),
+                'artifact_1': af_id1,
+                'artifact_2': af_id2,
+                'workflow_id': wf_id
+            }
+            store_gt_edge(gt_edge, connection)
+    except Exception as e:
+        print(e)
+        raise e
+        return False
+
+    return True
 
 
 '''
@@ -82,21 +120,51 @@ if __name__ == '__main__':
 
 
 def test_workflow():
-    directory = '/home/suhail/Scratch/pyexec/dataset/nb_123977.ipynb'
+    directory = '/home/suhail/Projects/sample_workflows/Full_Data/nb_123977/artifacts'
     return parse_directory_workflow(directory)
 
 
-def test_store_workflow(workflow):
-    conn = dbconnection.connect_db()
+def test_store_workflow(workflow, conn):
     return store_workflow(workflow, conn)
 
 
-def test_store_artifacts(artifacts):
-    conn = dbconnection.connect_db()
+def test_store_artifacts(artifacts, conn):
     return store_artifacts(artifacts, conn)
 
-
+'''
+conn = dbconnection.connect_db()
+dbconnection.truncate_db(conn)
 wf = test_workflow()
-test_store_workflow(wf)
+test_store_workflow(wf, conn)
 afs = wf['artifacts']
-test_store_artifacts(afs)
+test_store_artifacts(afs, conn)
+path = '/home/suhail/Projects/sample_workflows/Full_Data/nb_123977/artifacts'
+wf_id = queries.get_workflow_id_path(path, conn)
+graph = load_graph('/home/suhail/Projects/sample_workflows/Full_Data/nb_123977/nb_123977_gt.pkl')
+store_ground_truth_nx(graph, wf_id, conn)
+'''
+
+def ingest_workflow(wf_path, gt_graph_path, truncate=False):
+    conn = dbconnection.connect_db()
+
+    if truncate:
+        dbconnection.truncate_db(conn)
+
+    # Get workflow items and store them.
+    workflow = parse_directory_workflow(wf_path)
+    store_workflow(workflow, conn)
+
+    # Store artifact_sql
+    store_artifacts(workflow['artifacts'], conn)
+
+    # Store Ground ground_truth
+    graph = load_graph(gt_graph_path)
+    store_ground_truth_nx(graph, str(workflow['id']), conn)
+
+    return True
+
+
+wf_path = '/home/suhail/Projects/sample_workflows/Full_Data/nb_123977/artifacts'
+graph_path = '/home/suhail/Projects/sample_workflows/Full_Data/nb_123977/nb_123977_gt.pkl'
+
+ingest_workflow(wf_path, graph_path, truncate=True)
