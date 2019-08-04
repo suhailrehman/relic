@@ -1,0 +1,12 @@
+file_name, local_cid, pk, global_cid
+../../example/nb_331057.ipynb/artifacts_1/areaCrime.csv,0,Area,0
+../../example/nb_331057.ipynb/artifacts_1/areaCrime__1.csv,0,Area,0
+../../example/nb_331057.ipynb/artifacts_1/crimeTypes.csv,0,Crime type,5
+../../example/nb_331057.ipynb/artifacts_1/crimes.csv,4,Area,0
+../../example/nb_331057.ipynb/artifacts_1/crimesByMonth.csv,0,Crime Month,9
+../../example/nb_331057.ipynb/artifacts_1/locationRecode.csv,0,Area,0
+../../example/nb_331057.ipynb/artifacts_1/typeLoc.csv,2,Outcome Month,1
+../../example/nb_331057.ipynb/artifacts_1/typeLoc__1.csv,2,Outcome Month,1
+../../example/nb_331057.ipynb/artifacts_1/typeLoc__2.csv,1,Outcome Month,1
+../../example/nb_331057.ipynb/artifacts_1/typeLoc__3.csv,2,Outcome Month,1
+../../example/nb_331057.ipynb/artifacts_1/typeOutcome.csv,6,text,12

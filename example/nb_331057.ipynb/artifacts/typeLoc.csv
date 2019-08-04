@@ -1,0 +1,727 @@
+,Crime type,Area,Outcome Month,Outcome type,Crime Month
+0,Bicycle theft,Barking and Dagenham,87,87,87
+1,Bicycle theft,Barnet,106,106,106
+2,Bicycle theft,Bexley,77,77,77
+3,Bicycle theft,Brent,196,196,196
+4,Bicycle theft,Bromley,102,102,102
+5,Bicycle theft,Camden,499,499,499
+6,Bicycle theft,Central Bedfordshire,1,1,1
+7,Bicycle theft,City of London,7,7,7
+8,Bicycle theft,Croydon,129,129,129
+9,Bicycle theft,Dartford,1,1,1
+10,Bicycle theft,Ealing,276,276,276
+11,Bicycle theft,Elmbridge,1,1,1
+12,Bicycle theft,Enfield,131,131,131
+13,Bicycle theft,Greenwich,205,205,205
+14,Bicycle theft,Hackney,700,700,700
+15,Bicycle theft,Hammersmith and Fulham,400,400,400
+16,Bicycle theft,Haringey,259,259,259
+17,Bicycle theft,Harrow,80,80,80
+18,Bicycle theft,Havering,78,78,78
+19,Bicycle theft,Hillingdon,174,174,174
+20,Bicycle theft,Hounslow,303,303,303
+21,Bicycle theft,Islington,499,499,499
+22,Bicycle theft,Kensington and Chelsea,233,233,233
+23,Bicycle theft,Kingston upon Thames,140,140,140
+24,Bicycle theft,Lambeth,482,482,482
+25,Bicycle theft,Lewisham,169,169,169
+26,Bicycle theft,Merton,165,165,165
+27,Bicycle theft,Newham,233,233,233
+28,Bicycle theft,Redbridge,96,96,96
+29,Bicycle theft,Richmond upon Thames,257,257,257
+30,Bicycle theft,Southwark,566,566,566
+31,Bicycle theft,Spelthorne,1,1,1
+32,Bicycle theft,Stratford-on-Avon,1,1,1
+33,Bicycle theft,Sutton,68,68,68
+34,Bicycle theft,Tower Hamlets,660,660,660
+35,Bicycle theft,Waltham Forest,167,167,167
+36,Bicycle theft,Wandsworth,398,398,398
+37,Bicycle theft,Westminster,584,584,584
+38,Burglary,Ashford,1,1,1
+39,Burglary,Barking and Dagenham,585,585,585
+40,Burglary,Barnet,1304,1304,1304
+41,Burglary,Bexley,505,505,505
+42,Burglary,Birmingham,1,1,1
+43,Burglary,Brent,1161,1161,1161
+44,Burglary,Bromley,837,837,837
+45,Burglary,Camden,1313,1313,1313
+46,Burglary,City of London,13,13,13
+47,Burglary,Croydon,1187,1187,1187
+48,Burglary,Dartford,1,1,1
+49,Burglary,Ealing,1157,1157,1157
+50,Burglary,Elmbridge,1,1,1
+51,Burglary,Enfield,1126,1126,1126
+52,Burglary,Epsom and Ewell,1,1,1
+53,Burglary,Greenwich,972,972,972
+54,Burglary,Hackney,1285,1285,1285
+55,Burglary,Hammersmith and Fulham,952,952,952
+56,Burglary,Haringey,1025,1025,1025
+57,Burglary,Harrow,741,741,741
+58,Burglary,Havering,767,767,767
+59,Burglary,Hillingdon,1023,1023,1023
+60,Burglary,Hounslow,830,830,830
+61,Burglary,Islington,1044,1044,1044
+62,Burglary,Kensington and Chelsea,764,764,764
+63,Burglary,Kingston upon Thames,510,510,510
+64,Burglary,Lambeth,1353,1353,1353
+65,Burglary,Lancaster,1,1,1
+66,Burglary,Lewisham,1059,1059,1059
+67,Burglary,Merton,593,593,593
+68,Burglary,Newham,884,884,884
+69,Burglary,Redbridge,827,827,827
+70,Burglary,Reigate and Banstead,1,1,1
+71,Burglary,Richmond upon Thames,560,560,560
+72,Burglary,Southwark,1283,1283,1283
+73,Burglary,Sutton,513,513,513
+74,Burglary,Tandridge,1,1,1
+75,Burglary,Three Rivers,1,1,1
+76,Burglary,Thurrock,2,2,2
+77,Burglary,Tower Hamlets,1420,1420,1420
+78,Burglary,Waltham Forest,718,718,718
+79,Burglary,Wandsworth,1186,1186,1186
+80,Burglary,Wealden,1,1,1
+81,Burglary,Westminster,1736,1736,1736
+82,Criminal damage and arson,Barking and Dagenham,939,939,939
+83,Criminal damage and arson,Barnet,995,995,995
+84,Criminal damage and arson,Bexley,715,715,715
+85,Criminal damage and arson,Brent,1098,1098,1098
+86,Criminal damage and arson,Bromley,994,994,994
+87,Criminal damage and arson,Camden,983,983,983
+88,Criminal damage and arson,Central Bedfordshire,1,1,1
+89,Criminal damage and arson,City of London,2,2,2
+90,Criminal damage and arson,Croydon,1477,1477,1477
+91,Criminal damage and arson,Dartford,2,2,2
+92,Criminal damage and arson,Ealing,1271,1271,1271
+93,Criminal damage and arson,Elmbridge,3,3,3
+94,Criminal damage and arson,Enfield,1010,1010,1010
+95,Criminal damage and arson,Epping Forest,1,1,1
+96,Criminal damage and arson,Epsom and Ewell,1,1,1
+97,Criminal damage and arson,Greenwich,1193,1193,1193
+98,Criminal damage and arson,Hackney,1045,1045,1045
+99,Criminal damage and arson,Hammersmith and Fulham,732,732,732
+100,Criminal damage and arson,Haringey,1105,1105,1105
+101,Criminal damage and arson,Harrow,514,514,514
+102,Criminal damage and arson,Havering,775,775,775
+103,Criminal damage and arson,Hertsmere,1,1,1
+104,Criminal damage and arson,Hillingdon,1111,1111,1111
+105,Criminal damage and arson,Hounslow,1025,1025,1025
+106,Criminal damage and arson,Islington,965,965,965
+107,Criminal damage and arson,Kensington and Chelsea,543,543,543
+108,Criminal damage and arson,Kingston upon Thames,534,534,534
+109,Criminal damage and arson,Lambeth,1308,1308,1308
+110,Criminal damage and arson,Lewisham,1175,1175,1175
+111,Criminal damage and arson,Merton,611,611,611
+112,Criminal damage and arson,Newham,1121,1121,1121
+113,Criminal damage and arson,Redbridge,827,827,827
+114,Criminal damage and arson,Reigate and Banstead,1,1,1
+115,Criminal damage and arson,Richmond upon Thames,468,468,468
+116,Criminal damage and arson,Sevenoaks,1,1,1
+117,Criminal damage and arson,Shropshire,1,1,1
+118,Criminal damage and arson,Southwark,1178,1178,1178
+119,Criminal damage and arson,Spelthorne,3,3,3
+120,Criminal damage and arson,Sutton,542,542,542
+121,Criminal damage and arson,Tandridge,1,1,1
+122,Criminal damage and arson,Thurrock,2,2,2
+123,Criminal damage and arson,Tower Hamlets,1157,1157,1157
+124,Criminal damage and arson,Waltham Forest,870,870,870
+125,Criminal damage and arson,Wandsworth,845,845,845
+126,Criminal damage and arson,Westminster,1133,1133,1133
+127,Criminal damage and arson,Wycombe,1,1,1
+128,Drugs,Barking and Dagenham,771,771,771
+129,Drugs,Barnet,715,715,715
+130,Drugs,Bassetlaw,1,1,1
+131,Drugs,Bedford,1,1,1
+132,Drugs,Bexley,487,487,487
+133,Drugs,Bracknell Forest,1,1,1
+134,Drugs,Brent,1796,1796,1796
+135,Drugs,Brentwood,1,1,1
+136,Drugs,Bromley,597,597,597
+137,Drugs,Broxbourne,2,2,2
+138,Drugs,Camden,1223,1223,1223
+139,Drugs,Canterbury,1,1,1
+140,Drugs,City of London,9,9,9
+141,Drugs,Croydon,1098,1098,1098
+142,Drugs,Ealing,1124,1124,1124
+143,Drugs,Elmbridge,1,1,1
+144,Drugs,Enfield,866,866,866
+145,Drugs,Epping Forest,2,2,2
+146,Drugs,Epsom and Ewell,8,8,8
+147,Drugs,Greenwich,671,671,671
+148,Drugs,Hackney,1047,1047,1047
+149,Drugs,Hammersmith and Fulham,1110,1110,1110
+150,Drugs,Haringey,1262,1262,1262
+151,Drugs,Harrow,356,356,356
+152,Drugs,Havering,569,569,569
+153,Drugs,Hertsmere,4,4,4
+154,Drugs,Hillingdon,825,825,825
+155,Drugs,Hounslow,850,850,850
+156,Drugs,Islington,1452,1452,1452
+157,Drugs,Kensington and Chelsea,1457,1457,1457
+158,Drugs,Kingston upon Thames,604,604,604
+159,Drugs,Lambeth,2147,2147,2147
+160,Drugs,Lewisham,1290,1290,1290
+161,Drugs,Medway,2,2,2
+162,Drugs,Merton,369,369,369
+163,Drugs,Newham,1384,1384,1384
+164,Drugs,Redbridge,849,849,849
+165,Drugs,Reigate and Banstead,1,1,1
+166,Drugs,Richmond upon Thames,238,238,238
+167,Drugs,Sevenoaks,1,1,1
+168,Drugs,Slough,5,5,5
+169,Drugs,Southampton,2,2,2
+170,Drugs,Southwark,1487,1487,1487
+171,Drugs,Spelthorne,7,7,7
+172,Drugs,St Albans,2,2,2
+173,Drugs,Sutton,353,353,353
+174,Drugs,Tamworth,1,1,1
+175,Drugs,Three Rivers,1,1,1
+176,Drugs,Thurrock,3,3,3
+177,Drugs,Torbay,1,1,1
+178,Drugs,Tower Hamlets,1280,1280,1280
+179,Drugs,Uttlesford,1,1,1
+180,Drugs,Waltham Forest,845,845,845
+181,Drugs,Wandsworth,696,696,696
+182,Drugs,Welwyn Hatfield,1,1,1
+183,Drugs,Westminster,1766,1766,1766
+184,Drugs,Windsor and Maidenhead,1,1,1
+185,Other crime,Barking and Dagenham,157,157,157
+186,Other crime,Barnet,195,195,195
+187,Other crime,Basildon,1,1,1
+188,Other crime,Bexley,132,132,132
+189,Other crime,Birmingham,1,1,1
+190,Other crime,Bracknell Forest,1,1,1
+191,Other crime,Brent,170,170,170
+192,Other crime,Bristol,1,1,1
+193,Other crime,Broadland,1,1,1
+194,Other crime,Bromley,182,182,182
+195,Other crime,Broxbourne,1,1,1
+196,Other crime,Camden,168,168,168
+197,Other crime,Chelmsford,1,1,1
+198,Other crime,Cheltenham,1,1,1
+199,Other crime,City of London,2,2,2
+200,Other crime,Cotswold,1,1,1
+201,Other crime,Croydon,278,278,278
+202,Other crime,Dacorum,1,1,1
+203,Other crime,Darlington,1,1,1
+204,Other crime,Dartford,2,2,2
+205,Other crime,Ealing,263,263,263
+206,Other crime,East Hertfordshire,1,1,1
+207,Other crime,Eastbourne,1,1,1
+208,Other crime,Enfield,223,223,223
+209,Other crime,Epping Forest,4,4,4
+210,Other crime,Gravesham,3,3,3
+211,Other crime,Greenwich,312,312,312
+212,Other crime,Hackney,174,174,174
+213,Other crime,Hammersmith and Fulham,226,226,226
+214,Other crime,Haringey,202,202,202
+215,Other crime,Harlow,1,1,1
+216,Other crime,Harrow,124,124,124
+217,Other crime,Havering,160,160,160
+218,Other crime,Herefordshire,1,1,1
+219,Other crime,Hertsmere,1,1,1
+220,Other crime,Hillingdon,936,936,936
+221,Other crime,Hounslow,370,370,370
+222,Other crime,Islington,179,179,179
+223,Other crime,Kensington and Chelsea,173,173,173
+224,Other crime,Kingston upon Thames,66,66,66
+225,Other crime,Lambeth,297,297,297
+226,Other crime,Lewisham,242,242,242
+227,Other crime,Luton,1,1,1
+228,Other crime,Manchester,1,1,1
+229,Other crime,Medway,1,1,1
+230,Other crime,Merton,106,106,106
+231,Other crime,Milton Keynes,2,2,2
+232,Other crime,Newham,322,322,322
+233,Other crime,Peterborough,1,1,1
+234,Other crime,Redbridge,170,170,170
+235,Other crime,Reigate and Banstead,1,1,1
+236,Other crime,Richmond upon Thames,101,101,101
+237,Other crime,Rother,1,1,1
+238,Other crime,South Bucks,1,1,1
+239,Other crime,Southwark,213,213,213
+240,Other crime,Spelthorne,2,2,2
+241,Other crime,St Albans,1,1,1
+242,Other crime,Stevenage,1,1,1
+243,Other crime,Suffolk Coastal,1,1,1
+244,Other crime,Sutton,92,92,92
+245,Other crime,Swansea,3,3,3
+246,Other crime,Thurrock,2,2,2
+247,Other crime,Tower Hamlets,281,281,281
+248,Other crime,Waltham Forest,192,192,192
+249,Other crime,Wandsworth,167,167,167
+250,Other crime,Westminster,285,285,285
+251,Other crime,Windsor and Maidenhead,1,1,1
+252,Other theft,Adur,1,1,1
+253,Other theft,Barking and Dagenham,1221,1221,1221
+254,Other theft,Barnet,2351,2351,2351
+255,Other theft,Bexley,1033,1033,1033
+256,Other theft,Birmingham,1,1,1
+257,Other theft,Brent,1964,1964,1964
+258,Other theft,Brentwood,2,2,2
+259,Other theft,Bromley,1852,1852,1852
+260,Other theft,Broxbourne,2,2,2
+261,Other theft,Cambridge,1,1,1
+262,Other theft,Camden,3124,3124,3124
+263,Other theft,Chelmsford,1,1,1
+264,Other theft,Cheshire East,1,1,1
+265,Other theft,City of London,60,60,60
+266,Other theft,County Durham,1,1,1
+267,Other theft,Coventry,1,1,1
+268,Other theft,Crawley,1,1,1
+269,Other theft,Croydon,2034,2034,2034
+270,Other theft,Ealing,2403,2403,2403
+271,Other theft,East Dorset,1,1,1
+272,Other theft,East Northamptonshire,1,1,1
+273,Other theft,Elmbridge,2,2,2
+274,Other theft,Enfield,1833,1833,1833
+275,Other theft,Epping Forest,2,2,2
+276,Other theft,Epsom and Ewell,2,2,2
+277,Other theft,Fylde,1,1,1
+278,Other theft,Gravesham,1,1,1
+279,Other theft,Greenwich,1791,1791,1791
+280,Other theft,Hackney,2118,2118,2118
+281,Other theft,Hammersmith and Fulham,1635,1635,1635
+282,Other theft,Haringey,2121,2121,2121
+283,Other theft,Harrow,916,916,916
+284,Other theft,Hastings,1,1,1
+285,Other theft,Havering,1377,1377,1377
+286,Other theft,Herefordshire,1,1,1
+287,Other theft,Hillingdon,2117,2117,2117
+288,Other theft,Hounslow,1719,1719,1719
+289,Other theft,Huntingdonshire,1,1,1
+290,Other theft,Ipswich,1,1,1
+291,Other theft,Islington,2082,2082,2082
+292,Other theft,Kensington and Chelsea,2210,2210,2210
+293,Other theft,Kingston upon Thames,761,761,761
+294,Other theft,Kirklees,1,1,1
+295,Other theft,Lambeth,2695,2695,2695
+296,Other theft,Leeds,2,2,2
+297,Other theft,Leicester,1,1,1
+298,Other theft,Lewisham,1700,1700,1700
+299,Other theft,Liverpool,2,2,2
+300,Other theft,Luton,1,1,1
+301,Other theft,Malvern Hills,1,1,1
+302,Other theft,Medway,1,1,1
+303,Other theft,Merton,910,910,910
+304,Other theft,Milton Keynes,1,1,1
+305,Other theft,New Forest,1,1,1
+306,Other theft,Newcastle upon Tyne,1,1,1
+307,Other theft,Newham,2250,2250,2250
+308,Other theft,North Kesteven,1,1,1
+309,Other theft,Northampton,1,1,1
+310,Other theft,Redbridge,1613,1613,1613
+311,Other theft,Reigate and Banstead,2,2,2
+312,Other theft,Richmond upon Thames,789,789,789
+313,Other theft,Rother,1,1,1
+314,Other theft,Runnymede,1,1,1
+315,Other theft,Sevenoaks,2,2,2
+316,Other theft,South Bucks,3,3,3
+317,Other theft,South Norfolk,1,1,1
+318,Other theft,South Oxfordshire,1,1,1
+319,Other theft,Southend-on-Sea,1,1,1
+320,Other theft,Southwark,2811,2811,2811
+321,Other theft,Spelthorne,31,31,31
+322,Other theft,Sutton,684,684,684
+323,Other theft,Swansea,1,1,1
+324,Other theft,Tandridge,1,1,1
+325,Other theft,Three Rivers,2,2,2
+326,Other theft,Tower Hamlets,1925,1925,1925
+327,Other theft,Uttlesford,2,2,2
+328,Other theft,Wakefield,1,1,1
+329,Other theft,Waltham Forest,1636,1636,1636
+330,Other theft,Wandsworth,2045,2045,2045
+331,Other theft,Warrington,1,1,1
+332,Other theft,Waverley,1,1,1
+333,Other theft,West Berkshire,1,1,1
+334,Other theft,Westminster,6926,6926,6926
+335,Other theft,Wigan,1,1,1
+336,Other theft,Windsor and Maidenhead,1,1,1
+337,Other theft,Woking,1,1,1
+338,Possession of weapons,Barking and Dagenham,86,86,86
+339,Possession of weapons,Barnet,79,79,79
+340,Possession of weapons,Bexley,49,49,49
+341,Possession of weapons,Brent,167,167,167
+342,Possession of weapons,Bromley,65,65,65
+343,Possession of weapons,Camden,127,127,127
+344,Possession of weapons,Cornwall,1,1,1
+345,Possession of weapons,Croydon,162,162,162
+346,Possession of weapons,Dartford,1,1,1
+347,Possession of weapons,Ealing,105,105,105
+348,Possession of weapons,Elmbridge,1,1,1
+349,Possession of weapons,Enfield,139,139,139
+350,Possession of weapons,Epsom and Ewell,1,1,1
+351,Possession of weapons,Gravesham,1,1,1
+352,Possession of weapons,Greenwich,73,73,73
+353,Possession of weapons,Hackney,150,150,150
+354,Possession of weapons,Hammersmith and Fulham,92,92,92
+355,Possession of weapons,Haringey,147,147,147
+356,Possession of weapons,Harrow,41,41,41
+357,Possession of weapons,Havering,70,70,70
+358,Possession of weapons,Hertsmere,2,2,2
+359,Possession of weapons,Hillingdon,72,72,72
+360,Possession of weapons,Hounslow,80,80,80
+361,Possession of weapons,Islington,141,141,141
+362,Possession of weapons,Kensington and Chelsea,113,113,113
+363,Possession of weapons,Kingston upon Thames,41,41,41
+364,Possession of weapons,Lambeth,255,255,255
+365,Possession of weapons,Lewisham,172,172,172
+366,Possession of weapons,Merton,53,53,53
+367,Possession of weapons,Newham,175,175,175
+368,Possession of weapons,Redbridge,75,75,75
+369,Possession of weapons,Richmond upon Thames,26,26,26
+370,Possession of weapons,South Bucks,1,1,1
+371,Possession of weapons,Southwark,172,172,172
+372,Possession of weapons,Spelthorne,2,2,2
+373,Possession of weapons,Sutton,40,40,40
+374,Possession of weapons,Three Rivers,1,1,1
+375,Possession of weapons,Tower Hamlets,150,150,150
+376,Possession of weapons,Waltham Forest,112,112,112
+377,Possession of weapons,Wandsworth,77,77,77
+378,Possession of weapons,Westminster,264,264,264
+379,Possession of weapons,Woking,1,1,1
+380,Public order,Barking and Dagenham,649,649,649
+381,Public order,Barnet,1093,1093,1093
+382,Public order,Bedford,1,1,1
+383,Public order,Bexley,586,586,586
+384,Public order,Blackpool,1,1,1
+385,Public order,Bradford,1,1,1
+386,Public order,Brent,1050,1050,1050
+387,Public order,Bromley,1010,1010,1010
+388,Public order,Camden,1243,1243,1243
+389,Public order,City of London,16,16,16
+390,Public order,Croydon,1297,1297,1297
+391,Public order,Ealing,1286,1286,1286
+392,Public order,East Devon,1,1,1
+393,Public order,Elmbridge,4,4,4
+394,Public order,Enfield,920,920,920
+395,Public order,Epping Forest,4,4,4
+396,Public order,Epsom and Ewell,2,2,2
+397,Public order,Greenwich,1242,1242,1242
+398,Public order,Hackney,1289,1289,1289
+399,Public order,Hammersmith and Fulham,1124,1124,1124
+400,Public order,Haringey,1131,1131,1131
+401,Public order,Harrow,445,445,445
+402,Public order,Havering,665,665,665
+403,Public order,Hillingdon,1117,1117,1117
+404,Public order,Hounslow,1000,1000,1000
+405,Public order,Islington,1362,1362,1362
+406,Public order,Kensington and Chelsea,865,865,865
+407,Public order,Kingston upon Thames,488,488,488
+408,Public order,Lambeth,1414,1414,1414
+409,Public order,Lewisham,1186,1186,1186
+410,Public order,Merton,517,517,517
+411,Public order,Newham,1079,1079,1079
+412,Public order,North Hertfordshire,1,1,1
+413,Public order,North Tyneside,1,1,1
+414,Public order,Northumberland,1,1,1
+415,Public order,Redbridge,767,767,767
+416,Public order,Reigate and Banstead,3,3,3
+417,Public order,Richmond upon Thames,525,525,525
+418,Public order,Rochford,1,1,1
+419,Public order,Shepway,1,1,1
+420,Public order,Southampton,1,1,1
+421,Public order,Southwark,1218,1218,1218
+422,Public order,Spelthorne,5,5,5
+423,Public order,Sutton,477,477,477
+424,Public order,Tandridge,2,2,2
+425,Public order,Tower Hamlets,1469,1469,1469
+426,Public order,Uttlesford,1,1,1
+427,Public order,Waltham Forest,849,849,849
+428,Public order,Wandsworth,950,950,950
+429,Public order,Westminster,1747,1747,1747
+430,Robbery,Barking and Dagenham,384,384,384
+431,Robbery,Barnet,336,336,336
+432,Robbery,Bexley,148,148,148
+433,Robbery,Brent,617,617,617
+434,Robbery,Bromley,268,268,268
+435,Robbery,Camden,667,667,667
+436,Robbery,Canterbury,1,1,1
+437,Robbery,City of London,6,6,6
+438,Robbery,Croydon,836,836,836
+439,Robbery,Dartford,1,1,1
+440,Robbery,Ealing,502,502,502
+441,Robbery,Enfield,584,584,584
+442,Robbery,Greenwich,371,371,371
+443,Robbery,Hackney,721,721,721
+444,Robbery,Hammersmith and Fulham,290,290,290
+445,Robbery,Haringey,837,837,837
+446,Robbery,Harrow,258,258,258
+447,Robbery,Havering,212,212,212
+448,Robbery,Hillingdon,274,274,274
+449,Robbery,Hounslow,279,279,279
+450,Robbery,Islington,671,671,671
+451,Robbery,Kensington and Chelsea,392,392,392
+452,Robbery,Kingston upon Thames,92,92,92
+453,Robbery,Lambeth,835,835,835
+454,Robbery,Lewisham,622,622,622
+455,Robbery,Merton,182,182,182
+456,Robbery,Newham,900,900,900
+457,Robbery,Redbridge,400,400,400
+458,Robbery,Reigate and Banstead,2,2,2
+459,Robbery,Richmond upon Thames,83,83,83
+460,Robbery,Southwark,816,816,816
+461,Robbery,Sutton,123,123,123
+462,Robbery,Three Rivers,2,2,2
+463,Robbery,Tower Hamlets,796,796,796
+464,Robbery,Waltham Forest,378,378,378
+465,Robbery,Wandsworth,430,430,430
+466,Robbery,Westminster,1301,1301,1301
+467,Shoplifting,Barking and Dagenham,723,723,723
+468,Shoplifting,Barnet,1193,1193,1193
+469,Shoplifting,Bexley,641,641,641
+470,Shoplifting,Brent,1113,1113,1113
+471,Shoplifting,Brighton and Hove,2,2,2
+472,Shoplifting,Bromley,1564,1564,1564
+473,Shoplifting,Camden,1316,1316,1316
+474,Shoplifting,City of London,22,22,22
+475,Shoplifting,Croydon,1370,1370,1370
+476,Shoplifting,Ealing,1559,1559,1559
+477,Shoplifting,Enfield,952,952,952
+478,Shoplifting,Greenwich,1103,1103,1103
+479,Shoplifting,Guildford,1,1,1
+480,Shoplifting,Hackney,860,860,860
+481,Shoplifting,Hammersmith and Fulham,1275,1275,1275
+482,Shoplifting,Haringey,1089,1089,1089
+483,Shoplifting,Harrow,731,731,731
+484,Shoplifting,Havering,888,888,888
+485,Shoplifting,Hertsmere,1,1,1
+486,Shoplifting,Hillingdon,1593,1593,1593
+487,Shoplifting,Hounslow,1278,1278,1278
+488,Shoplifting,Islington,1289,1289,1289
+489,Shoplifting,Kensington and Chelsea,1359,1359,1359
+490,Shoplifting,Kingston upon Thames,885,885,885
+491,Shoplifting,Lambeth,1252,1252,1252
+492,Shoplifting,Lewisham,1046,1046,1046
+493,Shoplifting,Merton,713,713,713
+494,Shoplifting,Newham,1328,1328,1328
+495,Shoplifting,Redbridge,934,934,934
+496,Shoplifting,Richmond upon Thames,547,547,547
+497,Shoplifting,Southwark,1216,1216,1216
+498,Shoplifting,Spelthorne,6,6,6
+499,Shoplifting,Stevenage,1,1,1
+500,Shoplifting,Sutton,608,608,608
+501,Shoplifting,Swansea,1,1,1
+502,Shoplifting,Tower Hamlets,1084,1084,1084
+503,Shoplifting,Waltham Forest,850,850,850
+504,Shoplifting,Wandsworth,1262,1262,1262
+505,Shoplifting,Westminster,3110,3110,3110
+506,Theft from the person,Barking and Dagenham,183,183,183
+507,Theft from the person,Barnet,336,336,336
+508,Theft from the person,Bexley,85,85,85
+509,Theft from the person,Birmingham,1,1,1
+510,Theft from the person,Brent,352,352,352
+511,Theft from the person,Bromley,188,188,188
+512,Theft from the person,Camden,1494,1494,1494
+513,Theft from the person,City of London,45,45,45
+514,Theft from the person,Crawley,1,1,1
+515,Theft from the person,Croydon,346,346,346
+516,Theft from the person,Ealing,354,354,354
+517,Theft from the person,Enfield,303,303,303
+518,Theft from the person,Greenwich,294,294,294
+519,Theft from the person,Hackney,1444,1444,1444
+520,Theft from the person,Hammersmith and Fulham,360,360,360
+521,Theft from the person,Haringey,973,973,973
+522,Theft from the person,Harrow,210,210,210
+523,Theft from the person,Havering,180,180,180
+524,Theft from the person,Hillingdon,263,263,263
+525,Theft from the person,Horsham,1,1,1
+526,Theft from the person,Hounslow,222,222,222
+527,Theft from the person,Islington,1776,1776,1776
+528,Theft from the person,Kensington and Chelsea,458,458,458
+529,Theft from the person,Kingston upon Thames,193,193,193
+530,Theft from the person,Lambeth,1011,1011,1011
+531,Theft from the person,Leeds,1,1,1
+532,Theft from the person,Lewisham,366,366,366
+533,Theft from the person,Liverpool,1,1,1
+534,Theft from the person,Merton,125,125,125
+535,Theft from the person,Newham,629,629,629
+536,Theft from the person,Redbridge,290,290,290
+537,Theft from the person,Richmond upon Thames,104,104,104
+538,Theft from the person,Rugby,1,1,1
+539,Theft from the person,Southwark,924,924,924
+540,Theft from the person,Sutton,69,69,69
+541,Theft from the person,Thurrock,1,1,1
+542,Theft from the person,Tower Hamlets,765,765,765
+543,Theft from the person,Uttlesford,1,1,1
+544,Theft from the person,Waltham Forest,294,294,294
+545,Theft from the person,Wandsworth,380,380,380
+546,Theft from the person,Welwyn Hatfield,1,1,1
+547,Theft from the person,Westminster,2679,2679,2679
+548,Vehicle crime,Barking and Dagenham,786,786,786
+549,Vehicle crime,Barnet,1116,1116,1116
+550,Vehicle crime,Basildon,1,1,1
+551,Vehicle crime,Bexley,619,619,619
+552,Vehicle crime,Bracknell Forest,1,1,1
+553,Vehicle crime,Braintree,1,1,1
+554,Vehicle crime,Brent,927,927,927
+555,Vehicle crime,Bromley,780,780,780
+556,Vehicle crime,Camden,964,964,964
+557,Vehicle crime,Cheshire West and Chester,1,1,1
+558,Vehicle crime,City of London,4,4,4
+559,Vehicle crime,Croydon,1026,1026,1026
+560,Vehicle crime,Dartford,1,1,1
+561,Vehicle crime,Ealing,1284,1284,1284
+562,Vehicle crime,Elmbridge,5,5,5
+563,Vehicle crime,Enfield,1142,1142,1142
+564,Vehicle crime,Epping Forest,1,1,1
+565,Vehicle crime,Epsom and Ewell,1,1,1
+566,Vehicle crime,Gravesham,2,2,2
+567,Vehicle crime,Greenwich,934,934,934
+568,Vehicle crime,Hackney,867,867,867
+569,Vehicle crime,Hammersmith and Fulham,1089,1089,1089
+570,Vehicle crime,Haringey,964,964,964
+571,Vehicle crime,Harrow,491,491,491
+572,Vehicle crime,Havering,611,611,611
+573,Vehicle crime,Hillingdon,1078,1078,1078
+574,Vehicle crime,Hounslow,1169,1169,1169
+575,Vehicle crime,Islington,714,714,714
+576,Vehicle crime,Kensington and Chelsea,1175,1175,1175
+577,Vehicle crime,Kettering,1,1,1
+578,Vehicle crime,Kingston upon Thames,338,338,338
+579,Vehicle crime,Lambeth,1079,1079,1079
+580,Vehicle crime,Lewisham,881,881,881
+581,Vehicle crime,Medway,1,1,1
+582,Vehicle crime,Merton,592,592,592
+583,Vehicle crime,Newham,1111,1111,1111
+584,Vehicle crime,Redbridge,1047,1047,1047
+585,Vehicle crime,Reigate and Banstead,1,1,1
+586,Vehicle crime,Richmond upon Thames,631,631,631
+587,Vehicle crime,Southwark,1110,1110,1110
+588,Vehicle crime,Spelthorne,2,2,2
+589,Vehicle crime,Sutton,373,373,373
+590,Vehicle crime,Tonbridge and Malling,1,1,1
+591,Vehicle crime,Tower Hamlets,1054,1054,1054
+592,Vehicle crime,Waltham Forest,719,719,719
+593,Vehicle crime,Wandsworth,1569,1569,1569
+594,Vehicle crime,Welwyn Hatfield,1,1,1
+595,Vehicle crime,Westminster,1589,1589,1589
+596,Vehicle crime,Wokingham,1,1,1
+597,Violence and sexual offences,Aylesbury Vale,1,1,1
+598,Violence and sexual offences,Babergh,1,1,1
+599,Violence and sexual offences,Barking and Dagenham,3830,3830,3830
+600,Violence and sexual offences,Barnet,4502,4502,4502
+601,Violence and sexual offences,Basildon,1,1,1
+602,Violence and sexual offences,Bexley,2760,2760,2760
+603,Violence and sexual offences,Birmingham,3,3,3
+604,Violence and sexual offences,Bracknell Forest,1,1,1
+605,Violence and sexual offences,Bradford,4,4,4
+606,Violence and sexual offences,Brent,5300,5300,5300
+607,Violence and sexual offences,Brentwood,1,1,1
+608,Violence and sexual offences,Brighton and Hove,4,4,4
+609,Violence and sexual offences,Bristol,1,1,1
+610,Violence and sexual offences,Bromley,4060,4060,4060
+611,Violence and sexual offences,Broxbourne,6,6,6
+612,Violence and sexual offences,Camden,4153,4153,4153
+613,Violence and sexual offences,Central Bedfordshire,1,1,1
+614,Violence and sexual offences,Chelmsford,1,1,1
+615,Violence and sexual offences,Cheshire East,1,1,1
+616,Violence and sexual offences,Chiltern,1,1,1
+617,Violence and sexual offences,City of London,40,40,40
+618,Violence and sexual offences,Colchester,1,1,1
+619,Violence and sexual offences,Corby,1,1,1
+620,Violence and sexual offences,Cornwall,1,1,1
+621,Violence and sexual offences,Cotswold,1,1,1
+622,Violence and sexual offences,County Durham,1,1,1
+623,Violence and sexual offences,Crawley,2,2,2
+624,Violence and sexual offences,Croydon,6471,6471,6471
+625,Violence and sexual offences,Dacorum,1,1,1
+626,Violence and sexual offences,Dartford,4,4,4
+627,Violence and sexual offences,Ealing,5681,5681,5681
+628,Violence and sexual offences,Eastbourne,1,1,1
+629,Violence and sexual offences,Elmbridge,8,8,8
+630,Violence and sexual offences,Enfield,4829,4829,4829
+631,Violence and sexual offences,Epping Forest,18,18,18
+632,Violence and sexual offences,Epsom and Ewell,8,8,8
+633,Violence and sexual offences,Fareham,1,1,1
+634,Violence and sexual offences,Gravesham,1,1,1
+635,Violence and sexual offences,Greenwich,5322,5322,5322
+636,Violence and sexual offences,Guildford,1,1,1
+637,Violence and sexual offences,Hackney,5177,5177,5177
+638,Violence and sexual offences,Hammersmith and Fulham,3409,3409,3409
+639,Violence and sexual offences,Harborough,1,1,1
+640,Violence and sexual offences,Haringey,5171,5171,5171
+641,Violence and sexual offences,Harlow,1,1,1
+642,Violence and sexual offences,Harrow,2672,2672,2672
+643,Violence and sexual offences,Hastings,3,3,3
+644,Violence and sexual offences,Havering,3609,3609,3609
+645,Violence and sexual offences,Hertsmere,6,6,6
+646,Violence and sexual offences,Hillingdon,4505,4505,4505
+647,Violence and sexual offences,Hounslow,4399,4399,4399
+648,Violence and sexual offences,Huntingdonshire,1,1,1
+649,Violence and sexual offences,Ipswich,2,2,2
+650,Violence and sexual offences,Isle of Wight,2,2,2
+651,Violence and sexual offences,Islington,4636,4636,4636
+652,Violence and sexual offences,Kensington and Chelsea,2590,2590,2590
+653,Violence and sexual offences,Kingston upon Thames,1926,1926,1926
+654,Violence and sexual offences,Kirklees,2,2,2
+655,Violence and sexual offences,Lambeth,6331,6331,6331
+656,Violence and sexual offences,Leeds,3,3,3
+657,Violence and sexual offences,Leicester,2,2,2
+658,Violence and sexual offences,Lewisham,5489,5489,5489
+659,Violence and sexual offences,Liverpool,1,1,1
+660,Violence and sexual offences,Luton,3,3,3
+661,Violence and sexual offences,Maldon,1,1,1
+662,Violence and sexual offences,Medway,3,3,3
+663,Violence and sexual offences,Merton,2472,2472,2472
+664,Violence and sexual offences,Mole Valley,1,1,1
+665,Violence and sexual offences,Neath Port Talbot,1,1,1
+666,Violence and sexual offences,New Forest,1,1,1
+667,Violence and sexual offences,Newcastle upon Tyne,3,3,3
+668,Violence and sexual offences,Newham,5718,5718,5718
+669,Violence and sexual offences,North Tyneside,1,1,1
+670,Violence and sexual offences,Northumberland,1,1,1
+671,Violence and sexual offences,Norwich,1,1,1
+672,Violence and sexual offences,Nottingham,1,1,1
+673,Violence and sexual offences,Pendle,1,1,1
+674,Violence and sexual offences,Peterborough,1,1,1
+675,Violence and sexual offences,Portsmouth,2,2,2
+676,Violence and sexual offences,Preston,1,1,1
+677,Violence and sexual offences,Reading,1,1,1
+678,Violence and sexual offences,Redbridge,3976,3976,3976
+679,Violence and sexual offences,Reigate and Banstead,3,3,3
+680,Violence and sexual offences,Richmond upon Thames,1906,1906,1906
+681,Violence and sexual offences,Richmondshire,1,1,1
+682,Violence and sexual offences,Rochford,2,2,2
+683,Violence and sexual offences,Runnymede,1,1,1
+684,Violence and sexual offences,Sevenoaks,5,5,5
+685,Violence and sexual offences,Slough,3,3,3
+686,Violence and sexual offences,South Bucks,2,2,2
+687,Violence and sexual offences,South Kesteven,1,1,1
+688,Violence and sexual offences,Southampton,1,1,1
+689,Violence and sexual offences,Southend-on-Sea,3,3,3
+690,Violence and sexual offences,Southwark,5505,5505,5505
+691,Violence and sexual offences,Spelthorne,9,9,9
+692,Violence and sexual offences,St Albans,3,3,3
+693,Violence and sexual offences,St Edmundsbury,1,1,1
+694,Violence and sexual offences,St. Helens,1,1,1
+695,Violence and sexual offences,Stafford,1,1,1
+696,Violence and sexual offences,Suffolk Coastal,1,1,1
+697,Violence and sexual offences,Surrey Heath,1,1,1
+698,Violence and sexual offences,Sutton,2341,2341,2341
+699,Violence and sexual offences,Swindon,1,1,1
+700,Violence and sexual offences,Tandridge,9,9,9
+701,Violence and sexual offences,Thanet,1,1,1
+702,Violence and sexual offences,Three Rivers,5,5,5
+703,Violence and sexual offences,Thurrock,8,8,8
+704,Violence and sexual offences,Tonbridge and Malling,1,1,1
+705,Violence and sexual offences,Torbay,1,1,1
+706,Violence and sexual offences,Tower Hamlets,5419,5419,5419
+707,Violence and sexual offences,Uttlesford,1,1,1
+708,Violence and sexual offences,Wakefield,1,1,1
+709,Violence and sexual offences,Waltham Forest,4591,4591,4591
+710,Violence and sexual offences,Wandsworth,4200,4200,4200
+711,Violence and sexual offences,Watford,4,4,4
+712,Violence and sexual offences,Waveney,1,1,1
+713,Violence and sexual offences,Waverley,2,2,2
+714,Violence and sexual offences,Welwyn Hatfield,4,4,4
+715,Violence and sexual offences,West Berkshire,1,1,1
+716,Violence and sexual offences,West Lancashire,2,2,2
+717,Violence and sexual offences,Westminster,5628,5628,5628
+718,Violence and sexual offences,Weymouth and Portland,1,1,1
+719,Violence and sexual offences,Winchester,1,1,1
+720,Violence and sexual offences,Wirral,1,1,1
+721,Violence and sexual offences,Wokingham,1,1,1
+722,Violence and sexual offences,Wolverhampton,2,2,2
+723,Violence and sexual offences,Worthing,1,1,1
+724,Violence and sexual offences,Wychavon,1,1,1
+725,Violence and sexual offences,Wycombe,1,1,1

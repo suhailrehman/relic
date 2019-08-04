@@ -1,0 +1,430 @@
+Crime type,Area,Outcome Month,Outcome type,Crime Month
+Bicycle theft,Barking and Dagenham,87,87,87
+Bicycle theft,Barnet,106,106,106
+Bicycle theft,Bexley,77,77,77
+Bicycle theft,Brent,196,196,196
+Bicycle theft,Bromley,102,102,102
+Bicycle theft,Camden,499,499,499
+Bicycle theft,Croydon,129,129,129
+Bicycle theft,Ealing,276,276,276
+Bicycle theft,Enfield,131,131,131
+Bicycle theft,Greenwich,205,205,205
+Bicycle theft,Hackney,700,700,700
+Bicycle theft,Hammersmith and Fulham,400,400,400
+Bicycle theft,Haringey,259,259,259
+Bicycle theft,Harrow,80,80,80
+Bicycle theft,Havering,78,78,78
+Bicycle theft,Hillingdon,174,174,174
+Bicycle theft,Hounslow,303,303,303
+Bicycle theft,Islington,499,499,499
+Bicycle theft,Kensington and Chelsea,233,233,233
+Bicycle theft,Kingston upon Thames,140,140,140
+Bicycle theft,Lambeth,482,482,482
+Bicycle theft,Lewisham,169,169,169
+Bicycle theft,Merton,165,165,165
+Bicycle theft,Newham,233,233,233
+Bicycle theft,Not in London,12,12,12
+Bicycle theft,Redbridge,96,96,96
+Bicycle theft,Richmond upon Thames,257,257,257
+Bicycle theft,Southwark,566,566,566
+Bicycle theft,Sutton,68,68,68
+Bicycle theft,Tower Hamlets,660,660,660
+Bicycle theft,Waltham Forest,167,167,167
+Bicycle theft,Wandsworth,398,398,398
+Bicycle theft,Westminster,584,584,584
+Burglary,Barking and Dagenham,585,585,585
+Burglary,Barnet,1304,1304,1304
+Burglary,Bexley,505,505,505
+Burglary,Brent,1161,1161,1161
+Burglary,Bromley,837,837,837
+Burglary,Camden,1313,1313,1313
+Burglary,Croydon,1187,1187,1187
+Burglary,Ealing,1157,1157,1157
+Burglary,Enfield,1126,1126,1126
+Burglary,Greenwich,972,972,972
+Burglary,Hackney,1285,1285,1285
+Burglary,Hammersmith and Fulham,952,952,952
+Burglary,Haringey,1025,1025,1025
+Burglary,Harrow,741,741,741
+Burglary,Havering,767,767,767
+Burglary,Hillingdon,1023,1023,1023
+Burglary,Hounslow,830,830,830
+Burglary,Islington,1044,1044,1044
+Burglary,Kensington and Chelsea,764,764,764
+Burglary,Kingston upon Thames,510,510,510
+Burglary,Lambeth,1353,1353,1353
+Burglary,Lewisham,1059,1059,1059
+Burglary,Merton,593,593,593
+Burglary,Newham,884,884,884
+Burglary,Not in London,25,25,25
+Burglary,Redbridge,827,827,827
+Burglary,Richmond upon Thames,560,560,560
+Burglary,Southwark,1283,1283,1283
+Burglary,Sutton,513,513,513
+Burglary,Tower Hamlets,1420,1420,1420
+Burglary,Waltham Forest,718,718,718
+Burglary,Wandsworth,1186,1186,1186
+Burglary,Westminster,1736,1736,1736
+Criminal damage and arson,Barking and Dagenham,939,939,939
+Criminal damage and arson,Barnet,995,995,995
+Criminal damage and arson,Bexley,715,715,715
+Criminal damage and arson,Brent,1098,1098,1098
+Criminal damage and arson,Bromley,994,994,994
+Criminal damage and arson,Camden,983,983,983
+Criminal damage and arson,Croydon,1477,1477,1477
+Criminal damage and arson,Ealing,1271,1271,1271
+Criminal damage and arson,Enfield,1010,1010,1010
+Criminal damage and arson,Greenwich,1193,1193,1193
+Criminal damage and arson,Hackney,1045,1045,1045
+Criminal damage and arson,Hammersmith and Fulham,732,732,732
+Criminal damage and arson,Haringey,1105,1105,1105
+Criminal damage and arson,Harrow,514,514,514
+Criminal damage and arson,Havering,775,775,775
+Criminal damage and arson,Hillingdon,1111,1111,1111
+Criminal damage and arson,Hounslow,1025,1025,1025
+Criminal damage and arson,Islington,965,965,965
+Criminal damage and arson,Kensington and Chelsea,543,543,543
+Criminal damage and arson,Kingston upon Thames,534,534,534
+Criminal damage and arson,Lambeth,1308,1308,1308
+Criminal damage and arson,Lewisham,1175,1175,1175
+Criminal damage and arson,Merton,611,611,611
+Criminal damage and arson,Newham,1121,1121,1121
+Criminal damage and arson,Not in London,21,21,21
+Criminal damage and arson,Redbridge,827,827,827
+Criminal damage and arson,Richmond upon Thames,468,468,468
+Criminal damage and arson,Southwark,1178,1178,1178
+Criminal damage and arson,Sutton,542,542,542
+Criminal damage and arson,Tower Hamlets,1157,1157,1157
+Criminal damage and arson,Waltham Forest,870,870,870
+Criminal damage and arson,Wandsworth,845,845,845
+Criminal damage and arson,Westminster,1133,1133,1133
+Drugs,Barking and Dagenham,771,771,771
+Drugs,Barnet,715,715,715
+Drugs,Bexley,487,487,487
+Drugs,Brent,1796,1796,1796
+Drugs,Bromley,597,597,597
+Drugs,Camden,1223,1223,1223
+Drugs,Croydon,1098,1098,1098
+Drugs,Ealing,1124,1124,1124
+Drugs,Enfield,866,866,866
+Drugs,Greenwich,671,671,671
+Drugs,Hackney,1047,1047,1047
+Drugs,Hammersmith and Fulham,1110,1110,1110
+Drugs,Haringey,1262,1262,1262
+Drugs,Harrow,356,356,356
+Drugs,Havering,569,569,569
+Drugs,Hillingdon,825,825,825
+Drugs,Hounslow,850,850,850
+Drugs,Islington,1452,1452,1452
+Drugs,Kensington and Chelsea,1457,1457,1457
+Drugs,Kingston upon Thames,604,604,604
+Drugs,Lambeth,2147,2147,2147
+Drugs,Lewisham,1290,1290,1290
+Drugs,Merton,369,369,369
+Drugs,Newham,1384,1384,1384
+Drugs,Not in London,60,60,60
+Drugs,Redbridge,849,849,849
+Drugs,Richmond upon Thames,238,238,238
+Drugs,Southwark,1487,1487,1487
+Drugs,Sutton,353,353,353
+Drugs,Tower Hamlets,1280,1280,1280
+Drugs,Waltham Forest,845,845,845
+Drugs,Wandsworth,696,696,696
+Drugs,Westminster,1766,1766,1766
+Other crime,Barking and Dagenham,157,157,157
+Other crime,Barnet,195,195,195
+Other crime,Bexley,132,132,132
+Other crime,Brent,170,170,170
+Other crime,Bromley,182,182,182
+Other crime,Camden,168,168,168
+Other crime,Croydon,278,278,278
+Other crime,Ealing,263,263,263
+Other crime,Enfield,223,223,223
+Other crime,Greenwich,312,312,312
+Other crime,Hackney,174,174,174
+Other crime,Hammersmith and Fulham,226,226,226
+Other crime,Haringey,202,202,202
+Other crime,Harrow,124,124,124
+Other crime,Havering,160,160,160
+Other crime,Hillingdon,936,936,936
+Other crime,Hounslow,370,370,370
+Other crime,Islington,179,179,179
+Other crime,Kensington and Chelsea,173,173,173
+Other crime,Kingston upon Thames,66,66,66
+Other crime,Lambeth,297,297,297
+Other crime,Lewisham,242,242,242
+Other crime,Merton,106,106,106
+Other crime,Newham,322,322,322
+Other crime,Not in London,47,47,47
+Other crime,Redbridge,170,170,170
+Other crime,Richmond upon Thames,101,101,101
+Other crime,Southwark,213,213,213
+Other crime,Sutton,92,92,92
+Other crime,Tower Hamlets,281,281,281
+Other crime,Waltham Forest,192,192,192
+Other crime,Wandsworth,167,167,167
+Other crime,Westminster,285,285,285
+Other theft,Barking and Dagenham,1221,1221,1221
+Other theft,Barnet,2351,2351,2351
+Other theft,Bexley,1033,1033,1033
+Other theft,Brent,1964,1964,1964
+Other theft,Bromley,1852,1852,1852
+Other theft,Camden,3124,3124,3124
+Other theft,Croydon,2034,2034,2034
+Other theft,Ealing,2403,2403,2403
+Other theft,Enfield,1833,1833,1833
+Other theft,Greenwich,1791,1791,1791
+Other theft,Hackney,2118,2118,2118
+Other theft,Hammersmith and Fulham,1635,1635,1635
+Other theft,Haringey,2121,2121,2121
+Other theft,Harrow,916,916,916
+Other theft,Havering,1377,1377,1377
+Other theft,Hillingdon,2117,2117,2117
+Other theft,Hounslow,1719,1719,1719
+Other theft,Islington,2082,2082,2082
+Other theft,Kensington and Chelsea,2210,2210,2210
+Other theft,Kingston upon Thames,761,761,761
+Other theft,Lambeth,2695,2695,2695
+Other theft,Lewisham,1700,1700,1700
+Other theft,Merton,910,910,910
+Other theft,Newham,2250,2250,2250
+Other theft,Not in London,156,156,156
+Other theft,Redbridge,1613,1613,1613
+Other theft,Richmond upon Thames,789,789,789
+Other theft,Southwark,2811,2811,2811
+Other theft,Sutton,684,684,684
+Other theft,Tower Hamlets,1925,1925,1925
+Other theft,Waltham Forest,1636,1636,1636
+Other theft,Wandsworth,2045,2045,2045
+Other theft,Westminster,6926,6926,6926
+Possession of weapons,Barking and Dagenham,86,86,86
+Possession of weapons,Barnet,79,79,79
+Possession of weapons,Bexley,49,49,49
+Possession of weapons,Brent,167,167,167
+Possession of weapons,Bromley,65,65,65
+Possession of weapons,Camden,127,127,127
+Possession of weapons,Croydon,162,162,162
+Possession of weapons,Ealing,105,105,105
+Possession of weapons,Enfield,139,139,139
+Possession of weapons,Greenwich,73,73,73
+Possession of weapons,Hackney,150,150,150
+Possession of weapons,Hammersmith and Fulham,92,92,92
+Possession of weapons,Haringey,147,147,147
+Possession of weapons,Harrow,41,41,41
+Possession of weapons,Havering,70,70,70
+Possession of weapons,Hillingdon,72,72,72
+Possession of weapons,Hounslow,80,80,80
+Possession of weapons,Islington,141,141,141
+Possession of weapons,Kensington and Chelsea,113,113,113
+Possession of weapons,Kingston upon Thames,41,41,41
+Possession of weapons,Lambeth,255,255,255
+Possession of weapons,Lewisham,172,172,172
+Possession of weapons,Merton,53,53,53
+Possession of weapons,Newham,175,175,175
+Possession of weapons,Not in London,12,12,12
+Possession of weapons,Redbridge,75,75,75
+Possession of weapons,Richmond upon Thames,26,26,26
+Possession of weapons,Southwark,172,172,172
+Possession of weapons,Sutton,40,40,40
+Possession of weapons,Tower Hamlets,150,150,150
+Possession of weapons,Waltham Forest,112,112,112
+Possession of weapons,Wandsworth,77,77,77
+Possession of weapons,Westminster,264,264,264
+Public order,Barking and Dagenham,649,649,649
+Public order,Barnet,1093,1093,1093
+Public order,Bexley,586,586,586
+Public order,Brent,1050,1050,1050
+Public order,Bromley,1010,1010,1010
+Public order,Camden,1243,1243,1243
+Public order,Croydon,1297,1297,1297
+Public order,Ealing,1286,1286,1286
+Public order,Enfield,920,920,920
+Public order,Greenwich,1242,1242,1242
+Public order,Hackney,1289,1289,1289
+Public order,Hammersmith and Fulham,1124,1124,1124
+Public order,Haringey,1131,1131,1131
+Public order,Harrow,445,445,445
+Public order,Havering,665,665,665
+Public order,Hillingdon,1117,1117,1117
+Public order,Hounslow,1000,1000,1000
+Public order,Islington,1362,1362,1362
+Public order,Kensington and Chelsea,865,865,865
+Public order,Kingston upon Thames,488,488,488
+Public order,Lambeth,1414,1414,1414
+Public order,Lewisham,1186,1186,1186
+Public order,Merton,517,517,517
+Public order,Newham,1079,1079,1079
+Public order,Not in London,47,47,47
+Public order,Redbridge,767,767,767
+Public order,Richmond upon Thames,525,525,525
+Public order,Southwark,1218,1218,1218
+Public order,Sutton,477,477,477
+Public order,Tower Hamlets,1469,1469,1469
+Public order,Waltham Forest,849,849,849
+Public order,Wandsworth,950,950,950
+Public order,Westminster,1747,1747,1747
+Robbery,Barking and Dagenham,384,384,384
+Robbery,Barnet,336,336,336
+Robbery,Bexley,148,148,148
+Robbery,Brent,617,617,617
+Robbery,Bromley,268,268,268
+Robbery,Camden,667,667,667
+Robbery,Croydon,836,836,836
+Robbery,Ealing,502,502,502
+Robbery,Enfield,584,584,584
+Robbery,Greenwich,371,371,371
+Robbery,Hackney,721,721,721
+Robbery,Hammersmith and Fulham,290,290,290
+Robbery,Haringey,837,837,837
+Robbery,Harrow,258,258,258
+Robbery,Havering,212,212,212
+Robbery,Hillingdon,274,274,274
+Robbery,Hounslow,279,279,279
+Robbery,Islington,671,671,671
+Robbery,Kensington and Chelsea,392,392,392
+Robbery,Kingston upon Thames,92,92,92
+Robbery,Lambeth,835,835,835
+Robbery,Lewisham,622,622,622
+Robbery,Merton,182,182,182
+Robbery,Newham,900,900,900
+Robbery,Not in London,12,12,12
+Robbery,Redbridge,400,400,400
+Robbery,Richmond upon Thames,83,83,83
+Robbery,Southwark,816,816,816
+Robbery,Sutton,123,123,123
+Robbery,Tower Hamlets,796,796,796
+Robbery,Waltham Forest,378,378,378
+Robbery,Wandsworth,430,430,430
+Robbery,Westminster,1301,1301,1301
+Shoplifting,Barking and Dagenham,723,723,723
+Shoplifting,Barnet,1193,1193,1193
+Shoplifting,Bexley,641,641,641
+Shoplifting,Brent,1113,1113,1113
+Shoplifting,Bromley,1564,1564,1564
+Shoplifting,Camden,1316,1316,1316
+Shoplifting,Croydon,1370,1370,1370
+Shoplifting,Ealing,1559,1559,1559
+Shoplifting,Enfield,952,952,952
+Shoplifting,Greenwich,1103,1103,1103
+Shoplifting,Hackney,860,860,860
+Shoplifting,Hammersmith and Fulham,1275,1275,1275
+Shoplifting,Haringey,1089,1089,1089
+Shoplifting,Harrow,731,731,731
+Shoplifting,Havering,888,888,888
+Shoplifting,Hillingdon,1593,1593,1593
+Shoplifting,Hounslow,1278,1278,1278
+Shoplifting,Islington,1289,1289,1289
+Shoplifting,Kensington and Chelsea,1359,1359,1359
+Shoplifting,Kingston upon Thames,885,885,885
+Shoplifting,Lambeth,1252,1252,1252
+Shoplifting,Lewisham,1046,1046,1046
+Shoplifting,Merton,713,713,713
+Shoplifting,Newham,1328,1328,1328
+Shoplifting,Not in London,34,34,34
+Shoplifting,Redbridge,934,934,934
+Shoplifting,Richmond upon Thames,547,547,547
+Shoplifting,Southwark,1216,1216,1216
+Shoplifting,Sutton,608,608,608
+Shoplifting,Tower Hamlets,1084,1084,1084
+Shoplifting,Waltham Forest,850,850,850
+Shoplifting,Wandsworth,1262,1262,1262
+Shoplifting,Westminster,3110,3110,3110
+Theft from the person,Barking and Dagenham,183,183,183
+Theft from the person,Barnet,336,336,336
+Theft from the person,Bexley,85,85,85
+Theft from the person,Brent,352,352,352
+Theft from the person,Bromley,188,188,188
+Theft from the person,Camden,1494,1494,1494
+Theft from the person,Croydon,346,346,346
+Theft from the person,Ealing,354,354,354
+Theft from the person,Enfield,303,303,303
+Theft from the person,Greenwich,294,294,294
+Theft from the person,Hackney,1444,1444,1444
+Theft from the person,Hammersmith and Fulham,360,360,360
+Theft from the person,Haringey,973,973,973
+Theft from the person,Harrow,210,210,210
+Theft from the person,Havering,180,180,180
+Theft from the person,Hillingdon,263,263,263
+Theft from the person,Hounslow,222,222,222
+Theft from the person,Islington,1776,1776,1776
+Theft from the person,Kensington and Chelsea,458,458,458
+Theft from the person,Kingston upon Thames,193,193,193
+Theft from the person,Lambeth,1011,1011,1011
+Theft from the person,Lewisham,366,366,366
+Theft from the person,Merton,125,125,125
+Theft from the person,Newham,629,629,629
+Theft from the person,Not in London,54,54,54
+Theft from the person,Redbridge,290,290,290
+Theft from the person,Richmond upon Thames,104,104,104
+Theft from the person,Southwark,924,924,924
+Theft from the person,Sutton,69,69,69
+Theft from the person,Tower Hamlets,765,765,765
+Theft from the person,Waltham Forest,294,294,294
+Theft from the person,Wandsworth,380,380,380
+Theft from the person,Westminster,2679,2679,2679
+Vehicle crime,Barking and Dagenham,786,786,786
+Vehicle crime,Barnet,1116,1116,1116
+Vehicle crime,Bexley,619,619,619
+Vehicle crime,Brent,927,927,927
+Vehicle crime,Bromley,780,780,780
+Vehicle crime,Camden,964,964,964
+Vehicle crime,Croydon,1026,1026,1026
+Vehicle crime,Ealing,1284,1284,1284
+Vehicle crime,Enfield,1142,1142,1142
+Vehicle crime,Greenwich,934,934,934
+Vehicle crime,Hackney,867,867,867
+Vehicle crime,Hammersmith and Fulham,1089,1089,1089
+Vehicle crime,Haringey,964,964,964
+Vehicle crime,Harrow,491,491,491
+Vehicle crime,Havering,611,611,611
+Vehicle crime,Hillingdon,1078,1078,1078
+Vehicle crime,Hounslow,1169,1169,1169
+Vehicle crime,Islington,714,714,714
+Vehicle crime,Kensington and Chelsea,1175,1175,1175
+Vehicle crime,Kingston upon Thames,338,338,338
+Vehicle crime,Lambeth,1079,1079,1079
+Vehicle crime,Lewisham,881,881,881
+Vehicle crime,Merton,592,592,592
+Vehicle crime,Newham,1111,1111,1111
+Vehicle crime,Not in London,26,26,26
+Vehicle crime,Redbridge,1047,1047,1047
+Vehicle crime,Richmond upon Thames,631,631,631
+Vehicle crime,Southwark,1110,1110,1110
+Vehicle crime,Sutton,373,373,373
+Vehicle crime,Tower Hamlets,1054,1054,1054
+Vehicle crime,Waltham Forest,719,719,719
+Vehicle crime,Wandsworth,1569,1569,1569
+Vehicle crime,Westminster,1589,1589,1589
+Violence and sexual offences,Barking and Dagenham,3830,3830,3830
+Violence and sexual offences,Barnet,4502,4502,4502
+Violence and sexual offences,Bexley,2760,2760,2760
+Violence and sexual offences,Brent,5300,5300,5300
+Violence and sexual offences,Bromley,4060,4060,4060
+Violence and sexual offences,Camden,4153,4153,4153
+Violence and sexual offences,Croydon,6471,6471,6471
+Violence and sexual offences,Ealing,5681,5681,5681
+Violence and sexual offences,Enfield,4829,4829,4829
+Violence and sexual offences,Greenwich,5322,5322,5322
+Violence and sexual offences,Hackney,5177,5177,5177
+Violence and sexual offences,Hammersmith and Fulham,3409,3409,3409
+Violence and sexual offences,Haringey,5171,5171,5171
+Violence and sexual offences,Harrow,2672,2672,2672
+Violence and sexual offences,Havering,3609,3609,3609
+Violence and sexual offences,Hillingdon,4505,4505,4505
+Violence and sexual offences,Hounslow,4399,4399,4399
+Violence and sexual offences,Islington,4636,4636,4636
+Violence and sexual offences,Kensington and Chelsea,2590,2590,2590
+Violence and sexual offences,Kingston upon Thames,1926,1926,1926
+Violence and sexual offences,Lambeth,6331,6331,6331
+Violence and sexual offences,Lewisham,5489,5489,5489
+Violence and sexual offences,Merton,2472,2472,2472
+Violence and sexual offences,Newham,5718,5718,5718
+Violence and sexual offences,Not in London,254,254,254
+Violence and sexual offences,Redbridge,3976,3976,3976
+Violence and sexual offences,Richmond upon Thames,1906,1906,1906
+Violence and sexual offences,Southwark,5505,5505,5505
+Violence and sexual offences,Sutton,2341,2341,2341
+Violence and sexual offences,Tower Hamlets,5419,5419,5419
+Violence and sexual offences,Waltham Forest,4591,4591,4591
+Violence and sexual offences,Wandsworth,4200,4200,4200
+Violence and sexual offences,Westminster,5628,5628,5628

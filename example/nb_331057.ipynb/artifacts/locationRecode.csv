@@ -1,0 +1,173 @@
+,Area,Outcome Month,Outcome type,Crime Month,Crime type,Recoded Area
+0,Adur,1,1,1,1,Not in London
+1,Ashford,1,1,1,1,Not in London
+2,Aylesbury Vale,1,1,1,1,Not in London
+3,Babergh,1,1,1,1,Not in London
+4,Barking and Dagenham,10401,10401,10401,10401,Barking and Dagenham
+5,Barnet,14321,14321,14321,14321,Barnet
+6,Basildon,3,3,3,3,Not in London
+7,Bassetlaw,1,1,1,1,Not in London
+8,Bedford,2,2,2,2,Not in London
+9,Bexley,7837,7837,7837,7837,Bexley
+10,Birmingham,7,7,7,7,Not in London
+11,Blackpool,1,1,1,1,Not in London
+12,Bracknell Forest,4,4,4,4,Not in London
+13,Bradford,5,5,5,5,Not in London
+14,Braintree,1,1,1,1,Not in London
+15,Brent,15911,15911,15911,15911,Brent
+16,Brentwood,4,4,4,4,Not in London
+17,Brighton and Hove,6,6,6,6,Not in London
+18,Bristol,2,2,2,2,Not in London
+19,Broadland,1,1,1,1,Not in London
+20,Bromley,12499,12499,12499,12499,Bromley
+21,Broxbourne,11,11,11,11,Not in London
+22,Cambridge,1,1,1,1,Not in London
+23,Camden,17274,17274,17274,17274,Camden
+24,Canterbury,2,2,2,2,Not in London
+25,Central Bedfordshire,3,3,3,3,Not in London
+26,Chelmsford,3,3,3,3,Not in London
+27,Cheltenham,1,1,1,1,Not in London
+28,Cheshire East,2,2,2,2,Not in London
+29,Cheshire West and Chester,1,1,1,1,Not in London
+30,Chiltern,1,1,1,1,Not in London
+31,City of London,226,226,226,226,Not in London
+32,Colchester,1,1,1,1,Not in London
+33,Corby,1,1,1,1,Not in London
+34,Cornwall,2,2,2,2,Not in London
+35,Cotswold,2,2,2,2,Not in London
+36,County Durham,2,2,2,2,Not in London
+37,Coventry,1,1,1,1,Not in London
+38,Crawley,4,4,4,4,Not in London
+39,Croydon,17711,17711,17711,17711,Croydon
+40,Dacorum,2,2,2,2,Not in London
+41,Darlington,1,1,1,1,Not in London
+42,Dartford,13,13,13,13,Not in London
+43,Ealing,17265,17265,17265,17265,Ealing
+44,East Devon,1,1,1,1,Not in London
+45,East Dorset,1,1,1,1,Not in London
+46,East Hertfordshire,1,1,1,1,Not in London
+47,East Northamptonshire,1,1,1,1,Not in London
+48,Eastbourne,2,2,2,2,Not in London
+49,Elmbridge,26,26,26,26,Not in London
+50,Enfield,14058,14058,14058,14058,Enfield
+51,Epping Forest,32,32,32,32,Not in London
+52,Epsom and Ewell,24,24,24,24,Not in London
+53,Fareham,1,1,1,1,Not in London
+54,Fylde,1,1,1,1,Not in London
+55,Gravesham,8,8,8,8,Not in London
+56,Greenwich,14483,14483,14483,14483,Greenwich
+57,Guildford,2,2,2,2,Not in London
+58,Hackney,16877,16877,16877,16877,Hackney
+59,Hammersmith and Fulham,12694,12694,12694,12694,Hammersmith and Fulham
+60,Harborough,1,1,1,1,Not in London
+61,Haringey,16286,16286,16286,16286,Haringey
+62,Harlow,2,2,2,2,Not in London
+63,Harrow,7579,7579,7579,7579,Harrow
+64,Hastings,4,4,4,4,Not in London
+65,Havering,9961,9961,9961,9961,Havering
+66,Herefordshire,2,2,2,2,Not in London
+67,Hertsmere,15,15,15,15,Not in London
+68,Hillingdon,15088,15088,15088,15088,Hillingdon
+69,Horsham,1,1,1,1,Not in London
+70,Hounslow,13524,13524,13524,13524,Hounslow
+71,Huntingdonshire,2,2,2,2,Not in London
+72,Ipswich,3,3,3,3,Not in London
+73,Isle of Wight,2,2,2,2,Not in London
+74,Islington,16810,16810,16810,16810,Islington
+75,Kensington and Chelsea,12332,12332,12332,12332,Kensington and Chelsea
+76,Kettering,1,1,1,1,Not in London
+77,Kingston upon Thames,6578,6578,6578,6578,Kingston upon Thames
+78,Kirklees,3,3,3,3,Not in London
+79,Lambeth,20459,20459,20459,20459,Lambeth
+80,Lancaster,1,1,1,1,Not in London
+81,Leeds,6,6,6,6,Not in London
+82,Leicester,3,3,3,3,Not in London
+83,Lewisham,15397,15397,15397,15397,Lewisham
+84,Liverpool,4,4,4,4,Not in London
+85,Luton,5,5,5,5,Not in London
+86,Maldon,1,1,1,1,Not in London
+87,Malvern Hills,1,1,1,1,Not in London
+88,Manchester,1,1,1,1,Not in London
+89,Medway,8,8,8,8,Not in London
+90,Merton,7408,7408,7408,7408,Merton
+91,Milton Keynes,3,3,3,3,Not in London
+92,Mole Valley,1,1,1,1,Not in London
+93,Neath Port Talbot,1,1,1,1,Not in London
+94,New Forest,2,2,2,2,Not in London
+95,Newcastle upon Tyne,4,4,4,4,Not in London
+96,Newham,17134,17134,17134,17134,Newham
+97,North Hertfordshire,1,1,1,1,Not in London
+98,North Kesteven,1,1,1,1,Not in London
+99,North Tyneside,2,2,2,2,Not in London
+100,Northampton,1,1,1,1,Not in London
+101,Northumberland,2,2,2,2,Not in London
+102,Norwich,1,1,1,1,Not in London
+103,Nottingham,1,1,1,1,Not in London
+104,Pendle,1,1,1,1,Not in London
+105,Peterborough,2,2,2,2,Not in London
+106,Portsmouth,2,2,2,2,Not in London
+107,Preston,1,1,1,1,Not in London
+108,Reading,1,1,1,1,Not in London
+109,Redbridge,11871,11871,11871,11871,Redbridge
+110,Reigate and Banstead,15,15,15,15,Not in London
+111,Richmond upon Thames,6235,6235,6235,6235,Richmond upon Thames
+112,Richmondshire,1,1,1,1,Not in London
+113,Rochford,3,3,3,3,Not in London
+114,Rother,2,2,2,2,Not in London
+115,Rugby,1,1,1,1,Not in London
+116,Runnymede,2,2,2,2,Not in London
+117,Sevenoaks,9,9,9,9,Not in London
+118,Shepway,1,1,1,1,Not in London
+119,Shropshire,1,1,1,1,Not in London
+120,Slough,8,8,8,8,Not in London
+121,South Bucks,7,7,7,7,Not in London
+122,South Kesteven,1,1,1,1,Not in London
+123,South Norfolk,1,1,1,1,Not in London
+124,South Oxfordshire,1,1,1,1,Not in London
+125,Southampton,4,4,4,4,Not in London
+126,Southend-on-Sea,4,4,4,4,Not in London
+127,Southwark,18499,18499,18499,18499,Southwark
+128,Spelthorne,68,68,68,68,Not in London
+129,St Albans,6,6,6,6,Not in London
+130,St Edmundsbury,1,1,1,1,Not in London
+131,St. Helens,1,1,1,1,Not in London
+132,Stafford,1,1,1,1,Not in London
+133,Stevenage,2,2,2,2,Not in London
+134,Stratford-on-Avon,1,1,1,1,Not in London
+135,Suffolk Coastal,2,2,2,2,Not in London
+136,Surrey Heath,1,1,1,1,Not in London
+137,Sutton,6283,6283,6283,6283,Sutton
+138,Swansea,5,5,5,5,Not in London
+139,Swindon,1,1,1,1,Not in London
+140,Tamworth,1,1,1,1,Not in London
+141,Tandridge,14,14,14,14,Not in London
+142,Thanet,1,1,1,1,Not in London
+143,Three Rivers,12,12,12,12,Not in London
+144,Thurrock,18,18,18,18,Not in London
+145,Tonbridge and Malling,2,2,2,2,Not in London
+146,Torbay,2,2,2,2,Not in London
+147,Tower Hamlets,17460,17460,17460,17460,Tower Hamlets
+148,Uttlesford,6,6,6,6,Not in London
+149,Wakefield,2,2,2,2,Not in London
+150,Waltham Forest,12221,12221,12221,12221,Waltham Forest
+151,Wandsworth,14205,14205,14205,14205,Wandsworth
+152,Warrington,1,1,1,1,Not in London
+153,Watford,4,4,4,4,Not in London
+154,Waveney,1,1,1,1,Not in London
+155,Waverley,3,3,3,3,Not in London
+156,Wealden,1,1,1,1,Not in London
+157,Welwyn Hatfield,7,7,7,7,Not in London
+158,West Berkshire,2,2,2,2,Not in London
+159,West Lancashire,2,2,2,2,Not in London
+160,Westminster,28748,28748,28748,28748,Westminster
+161,Weymouth and Portland,1,1,1,1,Not in London
+162,Wigan,1,1,1,1,Not in London
+163,Winchester,1,1,1,1,Not in London
+164,Windsor and Maidenhead,3,3,3,3,Not in London
+165,Wirral,1,1,1,1,Not in London
+166,Woking,2,2,2,2,Not in London
+167,Wokingham,2,2,2,2,Not in London
+168,Wolverhampton,2,2,2,2,Not in London
+169,Worthing,1,1,1,1,Not in London
+170,Wychavon,1,1,1,1,Not in London
+171,Wycombe,2,2,2,2,Not in London

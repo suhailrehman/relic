@@ -1,0 +1,4 @@
+locationRecode.csv,areaCrime.csv,0.000528821
+typeLoc.csv,areaCrime.csv,0.000222767
+typeLoc__1.csv,areaCrime.csv,0.000191755
+crimes.csv,areaCrime.csv,4.48088e-07
