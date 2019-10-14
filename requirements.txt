@@ -3,3 +3,5 @@ matplotlib
 pandas
 tqdm
 psycopg2
+datasketch
+pygraphviz

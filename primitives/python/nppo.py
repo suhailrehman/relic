@@ -251,16 +251,24 @@ def find_join_order_general(combo):
 
         common_cols = set()
         for source in join_sources:
+            if not source.intersection(join_dest):
+                common_cols = None
+                break
             common_cols = common_cols.union(source)
+
+        if not common_cols:
+            continue
 
         common_cols = common_cols.intersection(join_dest)
         if not common_cols:
-            return None
+            continue
 
         if len(common_cols) > max_col_number:
             max_col_number = len(common_cols)
             max_combo = (tuple(join_sources), join_dest)
 
+    if not max_combo or not common_cols:
+        return None
     return tuple(max_combo), len(common_cols)
 
 
@@ -363,7 +371,8 @@ def find_all_joins_df_dict(df_dict):
     join_schemas = find_join_schemas_maximal(clusters)
     print(len(join_schemas), " joinable schema combinations")
     pruned = prune_join_schemas(join_schemas)
-    print(len(join_schemas), " joinable schema combinations after pruning")
+    #print(join_schemas, " joinable schema combinations after pruning")
+
     jc = enumerate_join_candidates_new(pruned, clusters, df_dict)
     #print("Schema Candidates:\n")
     #pp = pprint.PrettyPrinter(indent=1)
