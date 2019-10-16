@@ -14,7 +14,7 @@ import clustering
 import nppo
 
 BASE_DIR = '/media/suhail/Data/experiments/reexec/res/'
-NB_NAME = 'githubviz'
+NB_NAME = 'nb_331056.ipynb'
 
 
 def lineage_inference(nb_name=NB_NAME, base_dir=BASE_DIR,
@@ -22,6 +22,7 @@ def lineage_inference(nb_name=NB_NAME, base_dir=BASE_DIR,
                       index=True, threshold=0.0001,
                       join_edges=False,
                       group_edges=False,
+                      pivot_edges=False,
                       ):
 
     wf_dir = base_dir+nb_name
@@ -105,13 +106,24 @@ def lineage_inference(nb_name=NB_NAME, base_dir=BASE_DIR,
         #print(get_join_precision_recall(g_truth_j_edges, inferred_j_edges))
 
 
+    group_list = None
+
+    if group_edges:
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+        groupbys = nppo.get_all_groupbys_dfdict(dataset)
+        group_list = [(x[0], x[2]) for x in groupbys]
+        pp.pprint(groupbys)
+        g_inferred = nppo.add_group_edges(group_list, g_inferred)
+
+
 
     result = graphs.get_precision_recall(g_truth,g_inferred)
 
 
     # Draw inferred graph image:
     cluster_dict = clustering.get_graph_clusters(result_dir+'clusters_with_filename.csv')
-    graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=join_list)
+    graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=join_list, group_list=group_list)
 
     pr_df = pd.DataFrame(columns = ['nb_name', 'index', 'preclustering',  'distance_metric', 'edges_correct', 'edges_missing', 'edges_to_remove',
     'join_edges',
@@ -136,5 +148,5 @@ def lineage_inference(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     return pr_df
 
-
-print(lineage_inference(join_edges=True))
+pd.set_option('display.max_columns', None)
+print(lineage_inference(join_edges=True, group_edges=True))

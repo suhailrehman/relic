@@ -2,6 +2,7 @@ import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 import matplotlib.pyplot as plt
 import pandas as pd
+import os
 from collections import Counter
 
 GRAPH_EDGE_ARGS = '-Eminlen=20.0'
@@ -137,7 +138,7 @@ def generate_explaination_graph(g_truth, g_inferred, distance_matrix):
 
 def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
                layout_fn=graphviz_layout, g_truth=None,
-               cluster_dict=None, join_list=None, **kwargs):
+               cluster_dict=None, join_list=None, group_list=None, **kwargs):
     # Set Canvas Size
     plt.figure(10, figsize=canvas_size)
 
@@ -202,6 +203,12 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
                        arrows=False)
 
 
+    if group_list:
+         nx.draw_networkx_edges(G, pos,
+                       edgelist=group_list,
+                       width=4, alpha=0.7, edge_color='cyan', style='dashed',
+                       arrows=False)
+
     gt_edges = [edge for edge in G.edges(data=True)
                        if 'truth' in edge[2] and edge[2]['truth'] == True]
 
@@ -229,12 +236,17 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
     return plt
 
 
-def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=None, join_list=None):
+def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=None, join_list=None,
+                            group_list=None):
     g_truth = get_graph(base_dir, nb_name)
     g_infered = get_graph_edge_list(base_dir, nb_name,metric)
     dist = get_distance_matrix(base_dir, nb_name,metric)
     exp_graph = generate_explaination_graph(g_truth, g_infered, dist)
-    plt=draw_exp_graph(exp_graph, canvas_size=(30,30), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
-    plt.savefig(base_dir+nb_name+'/'+nb_name+'_inferred.png')
+    plt=draw_exp_graph(exp_graph, canvas_size=(30,30), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list, group_list=group_list)
+    figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
+    if os.path.isfile(figure_file):
+        print('Overwriting file: '+ figure_file)
+        os.remove(figure_file)
+    plt.savefig(figure_file)
     plt.clf()
     #plt.show()
