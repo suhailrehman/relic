@@ -185,6 +185,16 @@ def column_groupby_check(col1, col2):
     #if len(col1) == len(col2):
     #    return False
     src, dst = ((col1,col2) if len(col1) > len(col2) else (col2, col1))
+
+    # TODO: avoid repeated set generation
+
+    # Keyness checking
+    if(len(set(dst.values)) != len(dst.values)):
+        return False
+
+    if(len(src.values) == len(dst.values)):
+        return False
+
     if(set(src.values) == set(dst.values)): # Check set intersection
         if(len(set(src.values)) == len(dst.values)): # Check if destination set is unique and fully contained
             return True
@@ -200,6 +210,25 @@ def df_groupby_check(df1,df2):
             return str(col1), str(col2)
     return False
 
+def df_groupby_check_direct(df1,df2):
+    common_cols = set(list(df1)).intersection(set(list(df2)))
+    for col in common_cols:
+        if(column_groupby_check(df1[col], df2[col])):
+            return col,col
+    return False
+
+
+def df_groupby_check_direct_multi(df1,df2):
+    common_cols = set(list(df1)).intersection(set(list(df2)))
+    for i in range(1,3):
+        colcombos = itertools.combinations(common_cols,i)
+        for col in common_cols:
+            if(column_groupby_check(df1[col], df2[col])):
+                return col,col
+    return False
+
+
+
 def get_all_groupbys_wf(nb_name, csvdir):
     artifact_dir = csvdir
     artifacts = [os.path.basename(p) for p in glob.glob(artifact_dir+'*.csv')]
@@ -211,6 +240,15 @@ def get_all_groupbys_wf(nb_name, csvdir):
             print(df1, result[0], df2, result[1])
     return True
 
+
+def get_all_groupbys_dfdict(df_dict):
+    return_result = []
+    combinations = itertools.combinations(df_dict.keys(),2)
+    for df1, df2 in combinations:
+        result = df_groupby_check_direct(df_dict[df1], df_dict[df2])
+        if result:
+            return_result.append((df1, result[0], df2, result[1]))
+    return return_result
 
 # Pivot Detection
 # Checks if df1 is a pivot of df2 or vice versa
@@ -251,16 +289,24 @@ def find_join_order_general(combo):
 
         common_cols = set()
         for source in join_sources:
+            if not source.intersection(join_dest):
+                common_cols = None
+                break
             common_cols = common_cols.union(source)
+
+        if not common_cols:
+            continue
 
         common_cols = common_cols.intersection(join_dest)
         if not common_cols:
-            return None
+            continue
 
         if len(common_cols) > max_col_number:
             max_col_number = len(common_cols)
             max_combo = (tuple(join_sources), join_dest)
 
+    if not max_combo or not common_cols:
+        return None
     return tuple(max_combo), len(common_cols)
 
 
@@ -363,7 +409,8 @@ def find_all_joins_df_dict(df_dict):
     join_schemas = find_join_schemas_maximal(clusters)
     print(len(join_schemas), " joinable schema combinations")
     pruned = prune_join_schemas(join_schemas)
-    print(len(join_schemas), " joinable schema combinations after pruning")
+    #print(join_schemas, " joinable schema combinations after pruning")
+
     jc = enumerate_join_candidates_new(pruned, clusters, df_dict)
     #print("Schema Candidates:\n")
     #pp = pprint.PrettyPrinter(indent=1)
@@ -382,3 +429,20 @@ def add_join_edges(join_list, G):
         G.add_edge(join[0], join[2], weight=0)
         G.add_edge(join[1], join[2], weight=0)
     return G
+
+
+def add_group_edges(group_list, G):
+    for group in group_list:
+        G.add_edge(group[0], group[1], weight=0)
+    return G
+
+
+#### Complete Groupby implementation
+
+def columnset_keyness_ratio(df, colset):
+    original_size = len(df[colset].values)
+    set_size = len(frozenset(df[colset].values))
+
+    return set_size / original_size
+
+
