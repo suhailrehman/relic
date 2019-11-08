@@ -231,3 +231,70 @@ def compute_jaccard_DF_reindex(df1,df2):
     del(df3)
 
     return float(intersection) / union
+
+
+
+#Assumes corresponding column names are same and PK refers to same column.
+def compute_DF_overlap(df1,df2, pk_col_name=None):
+
+    # fill NaN values in df1, df2 to some token val
+    df1 = df1.fillna('jac_tmp_NA')
+    df2 = df2.fillna('jac_tmp_NA')
+
+    try:
+        if(pk_col_name):
+            df3 = df1.merge(df2, how='outer', on=pk_col_name, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+        else:
+            df3 = df1.merge(df2, how='outer', left_index=True, right_index=True, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+    except TypeError as e:
+        # print("Can't Merge")
+        return 0
+
+    # Get set of column column names:
+    comparison_cols = set(col for col in df3.columns if'_jac_tmp_' in str(col))
+    common_cols = set(col.split('_jac_tmp_',1)[0] for col in comparison_cols)
+
+    if(len(common_cols) == 0):
+        return 0
+
+    # Get set of non-common columns:
+    uniq_cols = set(col for col in df3.columns if'_jac_tmp_' not in str(col))
+    if(pk_col_name):
+        uniq_cols.remove(pk_col_name)
+
+    # Check common cols and print True/False
+    for col in common_cols:
+        left = col+'_jac_tmp_1'
+        right = col+'_jac_tmp_2'
+        df3[col] = df3[left] == df3[right]
+
+    # Unique columns are already false
+    for col in uniq_cols:
+        df3[col] = False
+
+    #Drop superflous columns
+    df3 = df3.drop(columns=comparison_cols)
+    if(pk_col_name):
+        df3 = df3.drop(columns=[pk_col_name])
+
+    # Return Intersection
+    intersection = np.sum(np.sum(df3))
+    return intersection
+
+
+
+def get_pairs_similarity(dataset, cluster_set1, cluster_set2, similarity_metric=compute_jaccard_DF, threshold=-1.0):
+    pairwise_similarity = []
+    pairs = list(itertools.product(cluster_set1, cluster_set2))
+    for d1, d2 in tqdm_notebook(pairs, desc='graph pairs', leave=False):
+        if d1 == d2:
+            continue
+        score = similarity_metric(dataset[d1], dataset[d2])
+        if score >= threshold:
+            pairwise_similarity.append((d1, d2, score))
+        else:
+            pass
+            #print("WARNING: DROPPING",d1,d2, score, threshold)
+
+    pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
+    return pairwise_similarity

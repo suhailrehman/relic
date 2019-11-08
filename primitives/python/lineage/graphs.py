@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from collections import Counter
 
-GRAPH_EDGE_ARGS = '-Eminlen=20.0'
+import io
+
+GRAPH_EDGE_ARGS = '-Eminlen=50.0'
 
 
 # Generates a weighted graph of pairwise similarity scores
@@ -53,8 +55,8 @@ def draw_graph(G, canvas_size=(8, 12), node_size=2000,
     except:
         edge_labels = None
 
-    nx.draw_networkx(G, pos=pos, with_labels=True, node_size=node_size)
-    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels)
+    nx.draw_networkx(G, pos=pos, with_labels=True, node_size=node_size, font_size=20)
+    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels, font_size=16)
     if show:
         plt.show()
 
@@ -167,7 +169,7 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
         edge_labels = None
 
     if cluster_dict:
-        node_color = [cluster_dict[e]/max(cluster_dict.values()) for e in G.nodes()]
+        node_color = [cluster_dict[e]/20 for e in G.nodes()]
         cmap = 'rainbow'
     else :
         node_color = 'r'
@@ -177,7 +179,7 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
                        node_size=500,
                        alpha=0.9,
                        cmap=cmap)
-    nx.draw_networkx_labels(G, pos, font_size=10)
+    nx.draw_networkx_labels(G, pos, font_size=20)
 
 
     correct_edges = [edge for edge in G.edges(data=True)
@@ -224,7 +226,7 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
         if (i[1],i[0]) not in already_marked.keys():
             edge_labels[(i[0],i[1])] = edge_label
 
-    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels)
+    nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels, font_size=16)
 
     return plt
 
@@ -234,7 +236,11 @@ def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=N
     g_infered = get_graph_edge_list(base_dir, nb_name,metric)
     dist = get_distance_matrix(base_dir, nb_name,metric)
     exp_graph = generate_explaination_graph(g_truth, g_infered, dist)
-    plt=draw_exp_graph(exp_graph, canvas_size=(30,30), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
+    plt=draw_exp_graph(exp_graph, canvas_size=(50,50), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
     plt.savefig(base_dir+nb_name+'/'+nb_name+'_inferred.png')
-    plt.clf()
-    #plt.show()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    #plt.clf()
+    plt.show()
+    return buf
