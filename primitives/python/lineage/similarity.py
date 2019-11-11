@@ -298,3 +298,12 @@ def get_pairs_similarity(dataset, cluster_set1, cluster_set2, similarity_metric=
 
     pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
     return pairwise_similarity
+
+
+def intra_cluster_similarity(df_dict, clusters, threshold=0.25):
+    pairwise_jaccard = []
+    for cluster in clusters.values():
+        batch = {k: df_dict[k] for k in cluster}
+        pw_batch = get_pairwise_similarity(batch, compute_jaccard_DF, threshold=threshold)
+        pairwise_jaccard.extend(pw_batch)
+    return pairwise_jaccard

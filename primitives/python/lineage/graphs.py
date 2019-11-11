@@ -244,22 +244,17 @@ def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=N
     g_infered = get_graph_edge_list(base_dir, nb_name,metric)
     dist = get_distance_matrix(base_dir, nb_name,metric)
     exp_graph = generate_explaination_graph(g_truth, g_infered, dist)
-<<<<<<< HEAD
+
     plt=draw_exp_graph(exp_graph, canvas_size=(50,50), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
-    plt.savefig(base_dir+nb_name+'/'+nb_name+'_inferred.png')
-    
+
+    figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
+    if os.path.isfile(figure_file):
+        print('Overwriting file: ' + figure_file)
+        os.remove(figure_file)
+    plt.savefig(figure_file)
+
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     #plt.clf()
     plt.show()
     return buf
-=======
-    plt=draw_exp_graph(exp_graph, canvas_size=(30,30), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list, group_list=group_list)
-    figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
-    if os.path.isfile(figure_file):
-        print('Overwriting file: '+ figure_file)
-        os.remove(figure_file)
-    plt.savefig(figure_file)
-    plt.clf()
-    #plt.show()
->>>>>>> 24635fcf07b4af02ff54193402dbe64e44ee22bb
