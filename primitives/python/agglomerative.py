@@ -3,7 +3,7 @@ import networkx as nx
 import pandas as pd
 import os
 
-from lineage import similarity, graphs
+from lineage import similarity, graphs, precomputed_sim
 
 import dataset as ds
 import clustering
@@ -11,7 +11,7 @@ import clustering
 import nppo
 
 
-BASE_DIR = '/media/suhail/Data/experiments/reexec/res/'
+BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
 NB_NAME = 'nb_331056.ipynb'
 
 def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
@@ -69,7 +69,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
 
     # Start with intra-cluster edges:
-    pairwise_jaccard = similarity.intra_cluster_similarity(dataset, clusters)
+    pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph)
 
     pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
 
@@ -78,7 +78,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     # Add vertices to the graph if they don't exist
     for artifact in dataset.keys():
         if artifact not in [n for n in g_inferred.nodes()]:
-            print('Adding artifact to graph', artifact)
+            #print('Adding artifact to graph', artifact)
             g_inferred.add_node(artifact)
 
     nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
@@ -109,7 +109,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     # nx.write_edgelist(g_inferred,result_dir+'infered_mst_cell.csv',data=True)
 
     components = [c for c in nx.connected_components(g_inferred)]
-    print('Components:', components)
+    #print('Components:', components)
 
     steps = 0
     stop = False
@@ -126,7 +126,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             g_inferred = new_graph
 
         components = [c for c in nx.connected_components(g_inferred)]
-        print('Components:', components)
+        #print('Components:', components)
 
         nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
 
@@ -207,6 +207,20 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     return pr_df
 
+notebooks = [
+    'nb_331056.ipynb',
+    'nb_495072.ipynb',
+    'nb_315236.ipynb',
+    'churn',
+    'githubviz',
+    'titanic',
+    'retail'
+]
 
 pd.set_option('display.max_columns', None)
-print(lineage_inference_agglomerative(join_edges=True, group_edges=True))
+
+for nb_name in notebooks:
+    print('Processing:', nb_name)
+    result = lineage_inference_agglomerative(nb_name=nb_name, join_edges=False, group_edges=False)
+    print(result[['numclusters','edges_correct', 'edges_missing', 'edges_to_remove', 'F1']])
+    result.to_csv(BASE_DIR+nb_name+'/relic_agglomerative_result.csv')

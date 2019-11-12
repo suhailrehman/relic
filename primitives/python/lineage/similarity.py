@@ -8,7 +8,7 @@ import numpy as np
 
 
 from glob import glob
-from tqdm import tqdm_notebook
+from tqdm.autonotebook import tqdm
 
 import numpy.testing as npt
 
@@ -34,7 +34,7 @@ def load_dataset_dir(dirpath, glob_pattern, **kwargs):
 def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0):
     pairwise_similarity = []
     pairs = list(itertools.combinations(dataset.keys(), 2))
-    for d1, d2 in tqdm_notebook(pairs, desc='graph pairs', leave=False):
+    for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
         score = similarity_metric(dataset[d1], dataset[d2])
         if score >= threshold:
             pairwise_similarity.append((d1, d2, score))
@@ -44,6 +44,7 @@ def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0):
 
     pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
     return pairwise_similarity
+
 
 
 # Jaccard Functions
@@ -286,7 +287,7 @@ def compute_DF_overlap(df1,df2, pk_col_name=None):
 def get_pairs_similarity(dataset, cluster_set1, cluster_set2, similarity_metric=compute_jaccard_DF, threshold=-1.0):
     pairwise_similarity = []
     pairs = list(itertools.product(cluster_set1, cluster_set2))
-    for d1, d2 in tqdm_notebook(pairs, desc='graph pairs', leave=False):
+    for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
         if d1 == d2:
             continue
         score = similarity_metric(dataset[d1], dataset[d2])

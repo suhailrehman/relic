@@ -1,11 +1,12 @@
 # Pre Clustering Functions
 
 from collections import defaultdict
+from tqdm.autonotebook import tqdm
 import csv
 import itertools
 import networkx as nx
 
-from lineage import similarity
+from lineage import similarity, precomputed_sim
 
 
 
@@ -110,7 +111,10 @@ def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
     all_cmp_pairs_similarties = []
 
     for srccmp, dstcmp in itertools.combinations(components, 2):
-        similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp)
+        if pw_graph:
+            similarites = precomputed_sim.get_pairs_similarity_pc(df_dict, srccmp, dstcmp, pw_graph)
+        else:
+            similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp)
         all_cmp_pairs_similarties.extend(similarites)
 
     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)

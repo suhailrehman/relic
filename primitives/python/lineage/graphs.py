@@ -152,11 +152,11 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
     ax.margins(0.30)
 
     root = kwargs.pop('root', None)
-    print(root)
+    #print(root)
     if root is None:
-        print(G)
+        #print(G)
         root = sorted(nx.degree(G), key=lambda kv: kv[1])[0][0]
-        print(root)
+        #print(root)
 
     if g_truth:
         pos = layout_fn(g_truth, root=root, prog='dot', args=GRAPH_EDGE_ARGS)
@@ -249,12 +249,12 @@ def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=N
 
     figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
     if os.path.isfile(figure_file):
-        print('Overwriting file: ' + figure_file)
+        #print('Overwriting file: ' + figure_file)
         os.remove(figure_file)
     plt.savefig(figure_file)
 
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
-    #plt.clf()
-    plt.show()
+    plt.clf()
+    #plt.show()
     return buf
