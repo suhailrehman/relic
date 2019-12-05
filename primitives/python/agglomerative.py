@@ -10,6 +10,9 @@ import clustering
 
 import nppo
 
+from PIL import Image
+
+
 
 BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
 NB_NAME = 'nb_331056.ipynb'
@@ -52,6 +55,9 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     # Load Ground Truth:
     g_truth = nx.read_gpickle(wf_dir + '/' + nb_name + '_gt_fixed.pkl')
 
+    # Write ground truth image
+    graphs.generate_notebook_image(base_dir, nb_name)
+
     # Compute all-pairs similarity for visualization
     # Start with intra-cluster edges:
     all_pairwise_jaccard = similarity.get_pairwise_similarity(dataset, similarity.compute_jaccard_DF)
@@ -69,7 +75,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
 
     # Start with intra-cluster edges:
-    pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph)
+    pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=0.1)
 
     pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
 
@@ -80,6 +86,14 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         if artifact not in [n for n in g_inferred.nodes()]:
             #print('Adding artifact to graph', artifact)
             g_inferred.add_node(artifact)
+
+    for edge in g_inferred.edges(data=True):
+        print('Spanning Tree Edge:', edge[0], edge[1], "cell score:", edge[2]['weight'])
+
+    # Now try adding columnar edges to each disconnected cluster subgraph:
+    # g_inferred = intra_cluster_add_col_edges(dataset, clusters, g_inferred, all_pw_jaccard_graph)
+
+    print("Finished adding all intra-cluster edges")
 
     nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
 
@@ -205,7 +219,82 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             'missing_files': len(missing_files)
         }, ignore_index=True)
 
+    group_list = None
+
+    if group_edges:
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+        groupbys = nppo.get_all_groupbys_dfdict(dataset)
+        group_list = [(x[0], x[2]) for x in groupbys]
+        pp.pprint(groupbys)
+        g_inferred = nppo.add_group_edges(group_list, g_inferred)
+
+        # Check Group Precision/Recall
+
+        result = graphs.get_precision_recall(g_truth, g_inferred)
+
+        cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
+        img_frames.append(
+            graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=join_list))
+
+        pr_df = pr_df.append({
+            'nb_name': nb_name,
+            'index': index,
+            'numclusters': len(clusters),
+            'distance_metric': 'pandas_cell',
+            'edges_correct': len(result['correct_edges']),
+            'edges_missing': len(result['to_add']),
+            'edges_to_remove': len(result['to_remove']),
+            'join_edges': len(inferred_j_edges),
+            'precision': result['Precision'],
+            'recall': result['Recall'],
+            'F1': result['F1'],
+            'missing_files': len(missing_files)
+        }, ignore_index=True)
+
+    image_frames = [Image.open(frame) for frame in img_frames]
+
+    image_frames[0].save(BASE_DIR+nb_name+'/relic_construction.gif',
+                         format='GIF', append_images=image_frames[1:],
+                         save_all=True,
+                         duration=1000,
+                         loop=0)
+
     return pr_df
+
+
+# Note: Edges in g_inferred should only be within a cluster
+def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, all_pw_jaccard_graph):
+
+    for cluster in clusters.values():
+        subgraph = g_inferred.subgraph(cluster).copy()
+        components = [c for c in nx.connected_components(subgraph)]
+
+        steps = 0
+        stop = False
+
+        # Clustering Loop Starts here
+        while (len(components) > 1 and steps < 20 and not stop):
+
+            steps += 1
+
+            new_graph = clustering.find_components_join_edge(subgraph, df_dict, pw_graph=all_pw_jaccard_graph)
+            if not new_graph:
+                stop = True
+            else:
+                subgraph = new_graph
+
+            components = [c for c in nx.connected_components(subgraph)]
+            # print('Components:', components)
+
+
+        for edge in subgraph.edges(data=True):
+            g_inferred.add_edge(edge[0], edge[1], weight=edge[2])
+
+
+    return g_inferred
+
+
 
 notebooks = [
     'nb_331056.ipynb',

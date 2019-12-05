@@ -6,3 +6,4 @@ psycopg2
 datasketch
 pygraphviz
 jupyter
+Pillow

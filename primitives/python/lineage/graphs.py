@@ -7,7 +7,7 @@ from collections import Counter
 
 import io
 
-GRAPH_EDGE_ARGS = '-Eminlen=50.0'
+GRAPH_EDGE_ARGS = '-Eminlen=70.0'
 
 
 # Generates a weighted graph of pairwise similarity scores
@@ -108,7 +108,7 @@ def get_distance_matrix(base_dir, nb_name, metric):
     return pd.read_csv(result_file, index_col=0)
 
 
-def generate_notebook_image(base_dir, nb_name, canvas_size=(30,30)):
+def generate_notebook_image(base_dir, nb_name, canvas_size=(50,50)):
     g_truth = get_graph(base_dir, nb_name)
     plt = draw_graph(g_truth, canvas_size=canvas_size, show=False)
     plt.savefig(base_dir+nb_name+'/'+nb_name+'_gt.png')
@@ -245,7 +245,7 @@ def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=N
     dist = get_distance_matrix(base_dir, nb_name,metric)
     exp_graph = generate_explaination_graph(g_truth, g_infered, dist)
 
-    plt=draw_exp_graph(exp_graph, canvas_size=(50,50), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
+    plt=draw_exp_graph(exp_graph, canvas_size=(100, 100), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
 
     figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
     if os.path.isfile(figure_file):

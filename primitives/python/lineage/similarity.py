@@ -5,7 +5,7 @@ import itertools
 # import collections
 # import merkle_tree
 import numpy as np
-
+import networkx as nx
 
 from glob import glob
 from tqdm.autonotebook import tqdm
@@ -287,7 +287,7 @@ def compute_DF_overlap(df1,df2, pk_col_name=None):
 def get_pairs_similarity(dataset, cluster_set1, cluster_set2, similarity_metric=compute_jaccard_DF, threshold=-1.0):
     pairwise_similarity = []
     pairs = list(itertools.product(cluster_set1, cluster_set2))
-    for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
+    for d1, d2 in pairs:
         if d1 == d2:
             continue
         score = similarity_metric(dataset[d1], dataset[d2])
@@ -308,3 +308,49 @@ def intra_cluster_similarity(df_dict, clusters, threshold=0.25):
         pw_batch = get_pairwise_similarity(batch, compute_jaccard_DF, threshold=threshold)
         pairwise_jaccard.extend(pw_batch)
     return pairwise_jaccard
+
+
+
+# Duplicate function
+def set_jaccard_distance(set1, set2):
+    intersect = set1.intersection(set2)
+    union = set1.union(set2)
+    return 1 - (len(intersect) / len(union))
+
+
+# Duplicate function
+def set_jaccard_similarity(set1, set2):
+    intersect = set1.intersection(set2)
+    union = set1.union(set2)
+    return len(intersect) / len(union)
+
+
+# Assumes corresponding column names and valid indices in both data frames
+def compute_col_jaccard_DF(df1,df2):
+
+    # Empty DF check
+
+    # fill NaN values in df1, df2 to some token val
+    df1 = df1.fillna('jac_tmp_NA').reset_index(drop=True)
+    df2 = df2.fillna('jac_tmp_NA').reset_index(drop=True)
+
+    common_cols = set(df1).intersection(set(df2))
+
+    if(len(common_cols) == 0):
+        return 0.0
+
+
+    common_cols_jaccard = []
+
+    # Check common cols and print True/False
+    for col in common_cols:
+        try:
+            common_cols_jaccard.append(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+        except Exception as e:
+            print(col)
+            print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+            raise e
+
+    return np.max(common_cols_jaccard)
+
+

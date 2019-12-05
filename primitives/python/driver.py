@@ -13,7 +13,7 @@ import clustering
 
 import nppo
 
-BASE_DIR = '/media/suhail/Data/experiments/reexec/res/'
+BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
 NB_NAME = 'nb_331056.ipynb'
 
 
@@ -148,5 +148,21 @@ def lineage_inference(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     return pr_df
 
+notebooks = [
+    'nb_331056.ipynb',
+    #'nb_495072.ipynb',
+    #'nb_315236.ipynb',
+    #'churn',
+    #'githubviz',
+    #'titanic',
+    #'retail'
+]
+
 pd.set_option('display.max_columns', None)
-print(lineage_inference(join_edges=True, group_edges=True))
+
+for nb_name in notebooks:
+    print('Processing:', nb_name)
+    result = lineage_inference(nb_name=nb_name, join_edges=False, group_edges=False)
+    print(result[['edges_correct', 'edges_missing', 'edges_to_remove', 'F1']])
+    result.to_csv(BASE_DIR+nb_name+'/relic_agglomerative_result.csv')
+

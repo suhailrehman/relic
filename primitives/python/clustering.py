@@ -5,6 +5,7 @@ from tqdm.autonotebook import tqdm
 import csv
 import itertools
 import networkx as nx
+import numpy as np
 
 from lineage import similarity, precomputed_sim
 
@@ -101,6 +102,22 @@ def tiebreak_pairscores(df_dict, pairlist):
     return max_pair
 
 
+def tiebreak_pairscores_col(df_dict, pairlist):
+    min_pair = None
+    min_raw_score = np.inf
+
+    for src, dst, score in pairlist:
+        srcdf = df_dict[src]
+        dstdf = df_dict[dst]
+        overlap_score = len(set(srcdf).symmetric_difference(set(dstdf)))
+
+        if overlap_score < min_raw_score:
+            min_pair = (src, dst, score)
+            min_raw_score = overlap_score
+
+    return min_pair
+
+
 def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
     schema_dict = exact_schema_cluster(df_dict)
 
@@ -123,8 +140,9 @@ def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
 
     maxscore = max(score_dict)
 
-    if maxscore > 0.001:
+    if maxscore > 0.01:
         if len(score_dict[maxscore]) > 1:
+            print("Breaking Tie for cell-level:", score_dict[maxscore])
             src, dst, score = tiebreak_pairscores(df_dict, score_dict[maxscore])
         else:
             src, dst, score = score_dict[maxscore][0]
@@ -134,4 +152,19 @@ def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
         return g_inferred
 
     else:
-        return None
+        similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp, similarity_metric=similarity.compute_col_jaccard_DF)
+
+        score_dict = generate_score_dict(similarites)
+
+        maxscore = max(score_dict)
+
+        if len(score_dict[maxscore]) > 1:
+            print("Breaking Tie for column-level:", score_dict[maxscore])
+            src, dst, score = tiebreak_pairscores_col(df_dict, score_dict[maxscore])
+        else:
+            src, dst, score = score_dict[maxscore][0]
+
+
+        print('Adding column edge', src, dst, score)
+        g_inferred.add_edge(src, dst, weight=score)
+        return g_inferred
