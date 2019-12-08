@@ -118,7 +118,7 @@ def tiebreak_pairscores_col(df_dict, pairlist):
     return min_pair
 
 
-def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
+def find_components_join_edge(g_inferred, df_dict, pw_graph=None, threshold=0.01):
     schema_dict = exact_schema_cluster(df_dict)
 
     a_schema_dict = reverse_schema_dict(schema_dict)
@@ -140,7 +140,7 @@ def find_components_join_edge(g_inferred, df_dict, pw_graph=None):
 
     maxscore = max(score_dict)
 
-    if maxscore > 0.01:
+    if maxscore > threshold:
         if len(score_dict[maxscore]) > 1:
             print("Breaking Tie for cell-level:", score_dict[maxscore])
             src, dst, score = tiebreak_pairscores(df_dict, score_dict[maxscore])

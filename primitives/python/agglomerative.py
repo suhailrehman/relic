@@ -17,18 +17,49 @@ from PIL import Image
 BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
 NB_NAME = 'nb_331056.ipynb'
 
+notebooks = [
+    'nb_331056.ipynb',
+    'nb_495072.ipynb',
+    'nb_315236.ipynb',
+    'churn',
+    'githubviz',
+    'titanic',
+    'retail'
+]
+
+def append_result(pr_df, g_truth, g_inferred, nb_name, index, clusters, missing_files):
+    result = graphs.get_precision_recall(g_truth, g_inferred)
+
+    pr_df = pr_df.append({
+        'nb_name': nb_name,
+        'index': index,
+        'numclusters': len(clusters),
+        'distance_metric': 'pandas_cell',
+        'edges_correct': len(result['correct_edges']),
+        'edges_missing': len(result['to_add']),
+        'edges_to_remove': len(result['to_remove']),
+        # 'join_edges': len(inferred_j_edges),
+        'precision': result['Precision'],
+        'recall': result['Recall'],
+        'F1': result['F1'],
+        'missing_files': len(missing_files)
+    }, ignore_index=True)
+
+    return pr_df
+
 def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
-                                    pre_cluster=False,
-                                    index=True, threshold=0.0001,
+                                    pre_cluster='No Precluster',
+                                    intra_cell_threshold=0.0001,
+                                    inter_cell_threshold=0.0001,
                                     join_edges=False,
                                     group_edges=False,
+                                    index=False
                                     ):
-    wf_dir = base_dir + nb_name
+    print('Processing:', nb_name)
 
-    if index:
-        artifact_dir = wf_dir + '/artifacts/'
-    else:
-        artifact_dir = wf_dir + '/artifacts_1/'
+    wf_dir = base_dir + nb_name
+    artifact_dir = wf_dir+'/artifacts/'
+
 
     # Output Directory
     result_dir = wf_dir + '/inferred/'
@@ -73,9 +104,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     # Cluster for visualization
     clusters = clustering.exact_schema_cluster(dataset)
     clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
+    cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
 
     # Start with intra-cluster edges:
-    pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=0.1)
+    if(pre_cluster != 'No Precluster'):
+        pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=intra_cell_threshold)
+    else:
+        pairwise_jaccard = all_pairwise_jaccard
 
     pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
 
@@ -88,36 +123,24 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             g_inferred.add_node(artifact)
 
     for edge in g_inferred.edges(data=True):
-        print('Spanning Tree Edge:', edge[0], edge[1], "cell score:", edge[2]['weight'])
-
-    # Now try adding columnar edges to each disconnected cluster subgraph:
-    # g_inferred = intra_cluster_add_col_edges(dataset, clusters, g_inferred, all_pw_jaccard_graph)
-
-    print("Finished adding all intra-cluster edges")
-
-    nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
+        print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], "cell-level score:", edge[2]['weight'])
 
     # Draw first graph and get results
-    cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
     img_frames.append(
         graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=None))
 
-    result = graphs.get_precision_recall(g_truth, g_inferred)
+    pr_df = append_result(pr_df, g_truth, g_inferred, nb_name, index, clusters, missing_files)
 
-    pr_df = pr_df.append({
-        'nb_name': nb_name,
-        'index': index,
-        'numclusters': len(clusters),
-        'distance_metric': 'pandas_cell',
-        'edges_correct': len(result['correct_edges']),
-        'edges_missing': len(result['to_add']),
-        'edges_to_remove': len(result['to_remove']),
-        # 'join_edges': len(inferred_j_edges),
-        'precision': result['Precision'],
-        'recall': result['Recall'],
-        'F1': result['F1'],
-        'missing_files': len(missing_files)
-    }, ignore_index=True)
+    # Now try adding columnar edges to each disconnected cluster subgraph:
+    if pre_cluster == 'PC2':
+        g_inferred = intra_cluster_add_col_edges(dataset, clusters, g_inferred, all_pw_jaccard_graph, threshold=intra_cell_threshold)
+        # Draw first graph and get results
+        img_frames.append(
+            graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=None))
+        pr_df = append_result(pr_df, g_truth, g_inferred, nb_name, index, clusters, missing_files)
+
+    print("Finished adding all intra-cluster edges")
+    nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
 
     # Write out inferred graph
     # nx.write_edgelist(g_inferred,result_dir+'infered_mst_cell.csv',data=True)
@@ -128,12 +151,15 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     steps = 0
     stop = False
 
+    if pre_cluster == 'No Precluster':
+        stop = True
+
     # Clustering Loop Starts here
     while (len(components) > 1 and steps < 20 and not stop):
 
         steps += 1
 
-        new_graph = clustering.find_components_join_edge(g_inferred, dataset, pw_graph=all_pw_jaccard_graph)
+        new_graph = clustering.find_components_join_edge(g_inferred, dataset, pw_graph=all_pw_jaccard_graph, threshold=inter_cell_threshold)
         if not new_graph:
             stop = True
         else:
@@ -156,21 +182,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         # Compute PR after merge
 
         result = graphs.get_precision_recall(g_truth, g_inferred)
-
-        pr_df = pr_df.append({
-            'nb_name': nb_name,
-            'index': index,
-            'numclusters': len(components),
-            'distance_metric': 'pandas_cell',
-            'edges_correct': len(result['correct_edges']),
-            'edges_missing': len(result['to_add']),
-            'edges_to_remove': len(result['to_remove']),
-            # 'join_edges': len(inferred_j_edges),
-            'precision': result['Precision'],
-            'recall': result['Recall'],
-            'F1': result['F1'],
-            'missing_files': len(missing_files)
-        }, ignore_index=True)
+        pr_df = append_result(pr_df, g_truth, g_inferred, nb_name, index, components, missing_files)
 
     # Test for NPPOs:
 
@@ -204,20 +216,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         img_frames.append(
             graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=join_list))
 
-        pr_df = pr_df.append({
-            'nb_name': nb_name,
-            'index': index,
-            'numclusters': len(clusters),
-            'distance_metric': 'pandas_cell',
-            'edges_correct': len(result['correct_edges']),
-            'edges_missing': len(result['to_add']),
-            'edges_to_remove': len(result['to_remove']),
-            'join_edges': len(inferred_j_edges),
-            'precision': result['Precision'],
-            'recall': result['Recall'],
-            'F1': result['F1'],
-            'missing_files': len(missing_files)
-        }, ignore_index=True)
+        pr_df = append_result(pr_df, g_truth, g_inferred, nb_name, index, clusters, missing_files)
 
     group_list = None
 
@@ -237,20 +236,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         img_frames.append(
             graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict, join_list=join_list))
 
-        pr_df = pr_df.append({
-            'nb_name': nb_name,
-            'index': index,
-            'numclusters': len(clusters),
-            'distance_metric': 'pandas_cell',
-            'edges_correct': len(result['correct_edges']),
-            'edges_missing': len(result['to_add']),
-            'edges_to_remove': len(result['to_remove']),
-            'join_edges': len(inferred_j_edges),
-            'precision': result['Precision'],
-            'recall': result['Recall'],
-            'F1': result['F1'],
-            'missing_files': len(missing_files)
-        }, ignore_index=True)
+        pr_df = append_result(pr_df, g_truth, g_inferred, nb_name, index, clusters, missing_files)
 
     image_frames = [Image.open(frame) for frame in img_frames]
 
@@ -260,11 +246,11 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                          duration=1000,
                          loop=0)
 
-    return pr_df
+    return pr_df, image_frames
 
 
 # Note: Edges in g_inferred should only be within a cluster
-def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, all_pw_jaccard_graph):
+def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, all_pw_jaccard_graph, threshold=0.01):
 
     for cluster in clusters.values():
         subgraph = g_inferred.subgraph(cluster).copy()
@@ -278,7 +264,7 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, all_pw_jaccard_gr
 
             steps += 1
 
-            new_graph = clustering.find_components_join_edge(subgraph, df_dict, pw_graph=all_pw_jaccard_graph)
+            new_graph = clustering.find_components_join_edge(subgraph, df_dict, pw_graph=all_pw_jaccard_graph, threshold=threshold)
             if not new_graph:
                 stop = True
             else:
@@ -294,22 +280,17 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, all_pw_jaccard_gr
 
     return g_inferred
 
+def main():
+    pd.set_option('display.max_columns', None)
+
+    nbs = notebooks[:1]
+    for nb_name in nbs:
+        result, im_frames = lineage_inference_agglomerative(nb_name=nb_name, pre_cluster='PC2')
+        print(result[['numclusters', 'edges_correct', 'edges_missing', 'edges_to_remove', 'F1']])
+        result.to_csv(BASE_DIR + nb_name + '/relic_agglomerative_result.csv')
 
 
-notebooks = [
-    'nb_331056.ipynb',
-    'nb_495072.ipynb',
-    'nb_315236.ipynb',
-    'churn',
-    'githubviz',
-    'titanic',
-    'retail'
-]
 
-pd.set_option('display.max_columns', None)
+if __name__ == "__main__":
+    main()
 
-for nb_name in notebooks:
-    print('Processing:', nb_name)
-    result = lineage_inference_agglomerative(nb_name=nb_name, join_edges=False, group_edges=False)
-    print(result[['numclusters','edges_correct', 'edges_missing', 'edges_to_remove', 'F1']])
-    result.to_csv(BASE_DIR+nb_name+'/relic_agglomerative_result.csv')
