@@ -17,18 +17,15 @@ mime_type
 name
 opera
 paragraph
-paragraphs
 phone_number
 rgb_color
 safari
 secondary_address
 sentence
-sentences
 slug
 street_address
 street_name
 text
-texts
 time
 timezone
 unix_device
@@ -38,4 +35,4 @@ uri_path
 url
 user_agent
 windows_platform_token
-words
+word

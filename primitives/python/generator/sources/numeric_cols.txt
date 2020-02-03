@@ -1,5 +1,4 @@
 numerify
-pydecimal
 pyfloat
 pyint
 random_digit

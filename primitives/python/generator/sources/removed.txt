@@ -1,0 +1,6 @@
+paragraphs
+texts
+words
+sentences
+
+pydecimal
