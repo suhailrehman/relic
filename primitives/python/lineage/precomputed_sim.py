@@ -7,7 +7,10 @@ def get_pairwise_similarity_pc(dataset, distance_graph,  threshold=-1.0):
     pairwise_similarity = []
     pairs = list(itertools.combinations(dataset.keys(), 2))
     for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
-        score = distance_graph[d1][d2]['weight']
+        try:
+            score = distance_graph[d1][d2]['weight']
+        except KeyError as e:
+            score = distance_graph[d2][d1]['weight']
         if score >= threshold:
             pairwise_similarity.append((d1, d2, score))
         else:
@@ -18,7 +21,7 @@ def get_pairwise_similarity_pc(dataset, distance_graph,  threshold=-1.0):
     return pairwise_similarity
 
 
-def intra_cluster_similarity_pc(df_dict, clusters, distance_graph,  threshold=0.25):
+def intra_cluster_similarity_pc(df_dict, clusters, distance_graph,  threshold=-1.0):
     pairwise_jaccard = []
     for cluster in clusters.values():
         batch = {k: df_dict[k] for k in cluster}
@@ -33,7 +36,10 @@ def get_pairs_similarity_pc(dataset, cluster_set1, cluster_set2, distance_graph,
     for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
         if d1 == d2:
             continue
-        score = distance_graph[d1][d2]['weight']
+        try:
+            score = distance_graph[d1][d2]['weight']
+        except KeyError as e:
+            score = distance_graph[d2][d1]['weight']
         if score >= threshold:
             pairwise_similarity.append((d1, d2, score))
         else:

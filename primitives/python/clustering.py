@@ -90,14 +90,24 @@ def tiebreak_pairscores(df_dict, pairlist):
     max_pair = None
     max_raw_score = 0.0
 
+    scores_list = []
+
     for src, dst, score in pairlist:
         srcdf = df_dict[src]
         dstdf = df_dict[dst]
         overlap_score = similarity.compute_DF_overlap(srcdf, dstdf)
 
-        if overlap_score > max_raw_score:
+        scores_list.append((src,dst,overlap_score))
+
+        if overlap_score >= max_raw_score:
             max_pair = (src, dst, score)
             max_raw_score = overlap_score
+
+    score_dict = generate_score_dict(scores_list)
+
+    if len(score_dict[max_raw_score])>1:
+        print("Multiple Overlap candidates: ", score_dict[max_raw_score])
+
 
     return max_pair
 
@@ -106,19 +116,29 @@ def tiebreak_pairscores_col(df_dict, pairlist):
     min_pair = None
     min_raw_score = np.inf
 
+    scores_list = []
+
     for src, dst, score in pairlist:
         srcdf = df_dict[src]
         dstdf = df_dict[dst]
         overlap_score = len(set(srcdf).symmetric_difference(set(dstdf)))
 
-        if overlap_score < min_raw_score:
+        scores_list.append((src,dst,overlap_score))
+
+        if overlap_score <= min_raw_score:
             min_pair = (src, dst, score)
             min_raw_score = overlap_score
+
+
+    score_dict = generate_score_dict(scores_list)
+
+    if len(score_dict[min_raw_score])>1:
+        print("Multiple Min SymDiff candidates.", score_dict[min_raw_score])
 
     return min_pair
 
 
-def find_components_join_edge(g_inferred, df_dict, pw_graph=None, threshold=0.01):
+def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01):
     schema_dict = exact_schema_cluster(df_dict)
 
     a_schema_dict = reverse_schema_dict(schema_dict)
@@ -140,31 +160,57 @@ def find_components_join_edge(g_inferred, df_dict, pw_graph=None, threshold=0.01
 
     maxscore = max(score_dict)
 
-    if maxscore > threshold:
+    if maxscore > cell_threshold:
         if len(score_dict[maxscore]) > 1:
-            print("Breaking Tie for cell-level:", score_dict[maxscore])
+            print("Breaking Tie for primary-level:", score_dict[maxscore])
             src, dst, score = tiebreak_pairscores(df_dict, score_dict[maxscore])
         else:
             src, dst, score = score_dict[maxscore][0]
 
-        print('Adding edge', src, dst, score)
-        g_inferred.add_edge(src, dst, weight=score)
-        return g_inferred
+        print('Adding primary edge', src, dst, score)
+        g_inferred.add_edge(src, dst, weight=score, num=edge_num)
+        edge_num += 1
+        return g_inferred, edge_num
 
     else:
-        similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp, similarity_metric=similarity.compute_col_jaccard_DF)
+        all_cmp_pairs_similarties = []
 
-        score_dict = generate_score_dict(similarites)
+        for srccmp, dstcmp in itertools.combinations(components, 2):
+            if col_pw_graph:
+                similarites = precomputed_sim.get_pairs_similarity_pc(df_dict, srccmp, dstcmp, col_pw_graph)
+            else:
+                similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp, similarity_metric=similarity.compute_col_jaccard_DF)
+            all_cmp_pairs_similarties.extend(similarites)
+
+        all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
+
+        score_dict = generate_score_dict(all_cmp_pairs_similarties)
 
         maxscore = max(score_dict)
 
-        if len(score_dict[maxscore]) > 1:
-            print("Breaking Tie for column-level:", score_dict[maxscore])
-            src, dst, score = tiebreak_pairscores_col(df_dict, score_dict[maxscore])
+        if maxscore > col_threshold:
+            if len(score_dict[maxscore]) > 1:
+                print("Breaking Tie for column-level:", score_dict[maxscore])
+                src, dst, score = tiebreak_pairscores_col(df_dict, score_dict[maxscore])
+            else:
+                src, dst, score = score_dict[maxscore][0]
+
+
+            print('Adding secondary edge', src, dst, score)
+            g_inferred.add_edge(src, dst, weight=score, num=edge_num)
+            edge_num +=1
+
         else:
-            src, dst, score = score_dict[maxscore][0]
+            print("No more edges above column threshold")
+            return None, None
+
+        return g_inferred, edge_num
 
 
-        print('Adding column edge', src, dst, score)
-        g_inferred.add_edge(src, dst, weight=score)
-        return g_inferred
+def max_spanning_tree(pw_graph):
+    G = nx.Graph()
+    i = 0
+    for i, e in enumerate(nx.maximum_spanning_edges(pw_graph)):
+        G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i)
+
+    return G, i

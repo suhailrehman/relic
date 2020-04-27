@@ -74,8 +74,8 @@ def get_precision_recall(G_truth, T_inferred):
     to_remove = t_edge_set - g_edge_set
 
     try:
-        precision = float(len(correct))/len(g_edge_set)
-        recall = float(len(correct))/len(t_edge_set)
+        precision = float(len(correct))/len(t_edge_set)
+        recall = float(len(correct))/len(g_edge_set)
         f1 = 2 * ((precision * recall) / (precision + recall))
     except ZeroDivisionError as e:
         precision = 0.0
@@ -258,3 +258,15 @@ def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=N
     plt.clf()
     #plt.show()
     return buf
+
+
+# Given a specific workflow graph with edge weights, prune edges below threshold
+def get_subgraph_threshold(graph, threshold):
+    g_copy = graph.copy()
+    to_remove = [(u, v) for u, v in graph.edges if graph[u][v]['weight'] < threshold]
+
+    for u, v in to_remove:
+        g_copy.remove_edge(u, v)
+
+    return g_copy
+
