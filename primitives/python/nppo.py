@@ -95,12 +95,14 @@ def col_group_containment(df1, df2, colgroup, colgroup2=None):
     if(colgroup2==None):
         colgroup2 = colgroup
 
+    #print(df1.columns)
+    #print(df2.columns)
     df1valset = set(frozenset(u) for u in df1[list(colgroup)].values.tolist())
     df2valset = set(frozenset(u) for u in df2[list(colgroup2)].values.tolist())
 
     #print(df2valset)
 
-    return df1valset.intersection(df2valset) / len(df2valset)
+    return len(df1valset.intersection(df2valset))/ len(df1valset.union(df2valset))
 
 # Removes all supersets of badtip from lattice
 def remove_tup_lattice(lattice, badtup):
@@ -578,12 +580,13 @@ def score_join_schema(df1, df2, df3, df_dict):
         source = next(set_iterator)
         other_source = next(set_iterator)
 
-        symm_diff = columns_dict[source].symmetric_difference(columns_dict[other_source])
-        column_union = symm_diff.union(common_cols)
+        symm_diff = columns_dict[source].intersection(columns_dict[join_dest])
+        column_union = symm_diff.union(columns_dict[other_source].intersection(columns_dict[join_dest]))
 
-        print('DEBUG', source, other_source, symm_diff, column_union)
+        jaccard = similarity.set_jaccard_similarity(columns_dict[join_dest], column_union) * len(columns_dict[join_dest])
 
-        jaccard = similarity.set_jaccard_similarity(columns_dict[join_dest], column_union)
+        print('DEBUG', source, other_source, join_dest, column_union, jaccard)
+
 
         if jaccard > max_col_number:
             max_col_number = jaccard
@@ -594,9 +597,20 @@ def score_join_schema(df1, df2, df3, df_dict):
         return ((df1, df2), df3, 0.0)
 
 
+    df1, df2 = max_combo[0]
+    df3 = max_combo[1]
+
+    df1_columns = columns_dict[df1].intersection(columns_dict[df3])
+    df2_columns = columns_dict[df2].intersection(columns_dict[df3])
+
+    #print(df1,df2,df3)
+    #print(df1_columns, df2_columns)
+    df1_containment = col_group_containment(df_dict[df1], df_dict[df3], df1_columns)
+    df2_containment = col_group_containment(df_dict[df2], df_dict[df3], df2_columns)
+
     # TODO: Check coherency here
 
-    return (max_combo[0], max_combo[1], max_col_number)
+    return (max_combo[0], max_combo[1], max_col_number * df1_containment * df2_containment)
 
 #### Complete Groupby implementation
 

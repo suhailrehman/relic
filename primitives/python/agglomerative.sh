@@ -1,14 +1,14 @@
 #!/bin/bash
 
 #BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset/"
-BASE_DIR="/home/suhail/ok/"
-#BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected/"
+#BASE_DIR="/home/suhail/ok/"
+BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected/"
 
 # Run on a list of notebooks
 nb_list=`cat nblist.txt`
 
-#for f in "$BASE_DIR"*; do
-for f in $nb_list; do
+for f in "$BASE_DIR"*; do
+#for f in $nb_list; do
     if [ -d ${f} ]; then
         # Will not run if no directories are available
         nb_name=$(basename $f)
@@ -16,8 +16,9 @@ for f in $nb_list; do
         rm -rf $BASE_DIR$nb_name'/inferred/'
 
         python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True
-
         python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --group=True
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True --group=True
 
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --swap=True --recompute=True
 

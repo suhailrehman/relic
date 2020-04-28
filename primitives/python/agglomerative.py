@@ -327,51 +327,6 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     # Test for NPPOs:
 
-    group_list = None
-
-    if group_edges:
-        print('In group checking')
-
-        # NPPO Clustering Loop Starts here
-        stop = False
-        while (len(components) > 1 and steps < 20 and not stop):
-            steps += 1
-            new_graph, new_edge_num = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num)
-            if not new_graph:
-                stop = True
-            else:
-                g_inferred, edge_num = new_graph, new_edge_num
-
-            components = [c for c in nx.connected_components(g_inferred)]
-
-            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
-
-            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
-                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
-
-            # print(g_inferred.nodes(), g_inferred.edges())
-
-        '''
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        groupbys = nppo.get_all_groupbys_dfdict(dataset)
-        group_list = [(x[0], x[2]) for x in groupbys]
-        pp.pprint(groupbys)
-        g_inferred = nppo.add_group_edges(group_list, g_inferred)
-
-        # Check Group Precision/Recall
-
-        result = graphs.get_precision_recall(g_truth, g_inferred)
-
-        cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric)
-        if draw:
-            img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
-                                                             cluster_dict=cluster_dict, join_list=None))
-
-        '''
-
     inferred_j_edges = []
     join_list = None
     cluster_dict = None
@@ -427,6 +382,56 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         #if draw:
         #    img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
         #                                                     cluster_dict=cluster_dict, join_list=None))
+
+
+
+
+    group_list = None
+
+    if group_edges:
+        print('In group checking')
+
+        # NPPO Clustering Loop Starts here
+        stop = False
+        while (len(components) > 1 and steps < 20 and not stop):
+            steps += 1
+            new_graph, new_edge_num = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num)
+            if not new_graph:
+                stop = True
+            else:
+                g_inferred, edge_num = new_graph, new_edge_num
+
+            components = [c for c in nx.connected_components(g_inferred)]
+
+            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
+
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
+                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+
+            # print(g_inferred.nodes(), g_inferred.edges())
+
+        '''
+        import pprint
+        pp = pprint.PrettyPrinter(indent=4)
+        groupbys = nppo.get_all_groupbys_dfdict(dataset)
+        group_list = [(x[0], x[2]) for x in groupbys]
+        pp.pprint(groupbys)
+        g_inferred = nppo.add_group_edges(group_list, g_inferred)
+
+        # Check Group Precision/Recall
+
+        result = graphs.get_precision_recall(g_truth, g_inferred)
+
+        cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
+        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric)
+        if draw:
+            img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
+                                                             cluster_dict=cluster_dict, join_list=None))
+
+        '''
+
+
 
 
     image_frames = [Image.open(frame) for frame in img_frames]
