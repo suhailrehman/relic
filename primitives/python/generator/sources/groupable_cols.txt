@@ -1,5 +1,4 @@
 am_pm
-bank_country
 boolean
 century
 city
