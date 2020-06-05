@@ -5,7 +5,18 @@ import pandas as pd
 import os
 from collections import Counter
 
+from pyvis.network import Network
+import pandas as pd
+from networkx.drawing.nx_agraph import graphviz_layout
+from matplotlib.colors import to_hex
+import matplotlib.pyplot as plt
+
 import io
+
+from lineage import similarity
+import clustering
+
+import numpy as np
 
 GRAPH_EDGE_ARGS = '-Eminlen=70.0'
 
@@ -269,4 +280,108 @@ def get_subgraph_threshold(graph, threshold):
         g_copy.remove_edge(u, v)
 
     return g_copy
+
+
+
+
+
+### New pyviz Graph Generators
+
+def get_edge_color(e1, e2, g_truth, g_inferred):
+    in_g_truth = False
+    in_inferred = False
+    if g_truth.has_edge(e1, e2) or g_truth.has_edge(e2, e1):
+        in_g_truth = True
+    if g_inferred.has_edge(e1, e2) or g_inferred.has_edge(e2, e1):
+        in_inferred = True
+
+    if in_g_truth and in_inferred:
+        return 'green'
+    elif in_inferred:
+        return 'red'
+    elif in_g_truth:
+        return 'black'
+    else:
+        return '#D3D3D3'
+
+
+def get_edge_number(e1,e2, g_inferred):
+    if g_inferred.has_edge(e1,e2) and 'num' in g_inferred[e1][e2]:
+        return g_inferred[e1][e2]['num']
+    elif g_inferred.has_edge(e2,e1) and 'num' in g_inferred[e2][e1]:
+        return g_inferred[e2][e1]['num']
+    return None
+
+
+def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_jaccard', cached=True):
+    # , bgcolor="#222222", font_color="white",
+    nb_net = Network(height="750px", width="100%", notebook=True)
+
+    g = get_graph(RESULT_DIR, selected_nb)
+    g_inferred = get_graph_edge_list(RESULT_DIR, selected_nb, metric)
+    df_dict = similarity.load_dataset_dir(RESULT_DIR + selected_nb + '/artifacts/', '*.csv', index_col=0)
+
+    if os.path.exists(RESULT_DIR + selected_nb + '/pairwise_metrics.csv') and cached:
+        nb_data = pd.read_csv(RESULT_DIR + selected_nb + '/pairwise_metrics.csv', index_col=0)
+    else:
+        nb_data = pd.DataFrame(similarity.get_all_node_pair_scores(df_dict, g))
+
+    # print(df_dict)
+
+    if '0.csv' not in df_dict:
+        try:
+            root_node = [x for x in nx.topological_sort(g)][0]  # TODO: Check more than one root issues
+        except nx.exception.NetworkXUnfeasible as e:
+            print("ERROR: Cycle in Graph")
+            root_node = list(df_dict.keys())[0]
+            pass
+    else:
+        root_node = '0.csv'
+
+    pos = graphviz_layout(g, root=root_node, prog='dot')
+
+    # Cluster Coloring
+    cluster_dict = clustering.get_graph_clusters(RESULT_DIR + selected_nb + '/inferred/' + 'clusters_with_filename.csv')
+
+    cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
+    node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in g.nodes()}
+
+    sources = nb_data['source']
+    targets = nb_data['dest']
+    weights = nb_data[weight]
+
+    edge_data = zip(sources, targets, weights)
+
+    for e in edge_data:
+        src = e[0]
+        dst = e[1]
+        w = e[2]
+
+        # Edge Coloring
+        edge_color = get_edge_color(e[0], e[1], g, g_inferred)
+
+        edge_number = get_edge_number(e[0], e[1], g_inferred)
+
+        hover_dict = nb_data.loc[(nb_data.source == src) & (nb_data.dest == dst)].to_dict('records')[0]
+        hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in hover_dict.items()])
+
+        src_node_hover_html = df_dict[src].head().to_html() + "<br> Rows:" + str(len(df_dict[src])) + " Columns:" + str(
+            len(set(df_dict[src])))
+        dst_node_hover_html = df_dict[dst].head().to_html() + "<br> Rows:" + str(len(df_dict[dst])) + " Columns:" + str(
+            len(set(df_dict[dst])))
+        nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
+                        color=node_color[src])
+        nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
+                        color=node_color[dst])
+
+        # Edge Coloring
+        if edge_number is not None and 'type' in g_inferred[src][dst]:
+            hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
+            nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color, label=edge_number)
+
+        else:
+            nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color)
+
+    return nb_net
+
 

@@ -77,6 +77,9 @@ def col_containment(df1, df2, colname, col2name=None):
     df1valset = set(df1[colname])
     df2valset = set(df2[col2name])
 
+    if len(df2valset) == 0:
+        return 0.0
+
     return len(df1valset.intersection(df2valset)) / len(df2valset)
 
 # Looks for perfect colgroup containment of colgroup between dataframes df1, df2
@@ -101,6 +104,8 @@ def col_group_containment(df1, df2, colgroup, colgroup2=None):
     df2valset = set(frozenset(u) for u in df2[list(colgroup2)].values.tolist())
 
     #print(df2valset)
+    if len(df1valset.union(df2valset)) < 1:
+        return 0.0
 
     return len(df1valset.intersection(df2valset))/ len(df1valset.union(df2valset))
 
@@ -270,7 +275,7 @@ def get_group_agg_cols(df1,df2, contaiment_threshold = 0.9):
     srcvalset = set(frozenset(u) for u in df1[group_cols].values.tolist())
     dstvalset = set(frozenset(u) for u in df2[group_cols].values.tolist())
 
-    missing_vals = len(srcvalset - dstvalset) / len(srcvalset)
+    missing_vals = len(group_cols) * (len(srcvalset - dstvalset) / len(srcvalset))
 
     return group_cols, agg_cols, missing_vals
 
@@ -280,7 +285,7 @@ def colgroup_keyness_check(df,colgroup):
     return columnset_keyness_ratio(df, colgroup) == 1.0
 
 
-def df_groupby_check_new(d1, d2, df_dict, g_inferred):
+def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False):
     #TODO: Column matching
     df1 = df_dict[d1]
     df2 = df_dict[d2]
@@ -302,21 +307,29 @@ def df_groupby_check_new(d1, d2, df_dict, g_inferred):
     group_cols, agg_cols, missing_vals = get_group_agg_cols(src, dst)
 
     if not group_cols:
-        #print('No group columns detected')
+        if debug:
+            print('No group columns detected')
         return 0.0
 
     #TODO: Lattice exploration
     group_keyness_ratio = columnset_keyness_ratio(dst, group_cols)
 
     if group_keyness_ratio < 1.0:
-        #print('Group keyness below threshold')
+        if debug:
+            print('Group keyness below threshold')
         return 0.0
 
     column_diff = similarity.set_jaccard_distance(set(df1.columns),set(df2.columns))
 
     contraction_ratio =  len(src.index) / len(dst.index)
 
-    return (1.0 * len(group_cols) * group_keyness_ratio) - column_diff - missing_vals  #* contraction_ratio
+    final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals
+
+    if debug:
+        print('final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals')
+        print(final_val, ' = ', '(1.0 *', len(group_cols) , '*', group_keyness_ratio, ')-', missing_vals)
+
+    return final_val  #* contraction_ratio
 
 
 
@@ -550,7 +563,7 @@ def df_join_check_new(df1, df2, df_dict, g_inferred):
     for df3 in g_inferred.neighbors(df2):
         schema_scores.update(score_join_schema(df1, df2, df3, df_dict))
 
-    print(schema_scores)
+    #print(schema_scores)
 
     if schema_scores:
         return max(schema_scores.keys())
@@ -558,7 +571,7 @@ def df_join_check_new(df1, df2, df_dict, g_inferred):
         return 0.0
 
 
-def score_join_schema(df1, df2, df3, df_dict):
+def score_join_schema(df1, df2, df3, df_dict, debug=False):
     combo_set = set((df1, df2, df3))
     max_combo = None
     max_col_number = 0
@@ -568,7 +581,8 @@ def score_join_schema(df1, df2, df3, df_dict):
     # First Check for at least one common column in triple to act as key
     common_cols = columns_dict[df1].intersection(columns_dict[df2]).intersection(columns_dict[df3])
     if not common_cols:
-        print('No common cols')
+        if debug:
+            print('No common cols')
         return ((df1, df2), df3, 0.0)
 
     for join_dest in combo_set:
@@ -580,12 +594,13 @@ def score_join_schema(df1, df2, df3, df_dict):
         source = next(set_iterator)
         other_source = next(set_iterator)
 
-        symm_diff = columns_dict[source].intersection(columns_dict[join_dest])
-        column_union = symm_diff.union(columns_dict[other_source].intersection(columns_dict[join_dest]))
+        symm_diff = columns_dict[source].intersection(columns_dict[join_dest]) - columns_dict[other_source]
+        column_union = symm_diff.union(columns_dict[other_source].intersection(columns_dict[join_dest]) - columns_dict[source])
 
         jaccard = similarity.set_jaccard_similarity(columns_dict[join_dest], column_union) * len(columns_dict[join_dest])
 
-        print('DEBUG', source, other_source, join_dest, column_union, jaccard)
+        if debug:
+            print('DEBUG', source, other_source, join_dest, column_union, jaccard)
 
 
         if jaccard > max_col_number:
@@ -593,20 +608,40 @@ def score_join_schema(df1, df2, df3, df_dict):
             max_combo = (tuple(join_sources), join_dest)
 
     if not max_combo or not common_cols:
-        print('No Max combo')
+        #print('No Max combo')
         return ((df1, df2), df3, 0.0)
 
 
     df1, df2 = max_combo[0]
     df3 = max_combo[1]
 
-    df1_columns = columns_dict[df1].intersection(columns_dict[df3])
-    df2_columns = columns_dict[df2].intersection(columns_dict[df3])
+    df1_columns = columns_dict[df1].intersection(columns_dict[df3]) - columns_dict[df2]
+    df2_columns = columns_dict[df2].intersection(columns_dict[df3]) - columns_dict[df1]
 
-    #print(df1,df2,df3)
-    #print(df1_columns, df2_columns)
-    df1_containment = col_group_containment(df_dict[df1], df_dict[df3], df1_columns)
-    df2_containment = col_group_containment(df_dict[df2], df_dict[df3], df2_columns)
+    join_key = columns_dict[df1].intersection(columns_dict[df2])
+
+    intersecting_values = set(frozenset(v) for v in df_dict[df1][join_key].values).intersection(
+        set(frozenset(v) for v in df_dict[df2][join_key].values))
+
+    key_list = list(v for fset in intersecting_values for v in fset)
+
+    df1_merge_vals = df_dict[df1].loc[df_dict[df1][list(join_key)[0]].isin(key_list)]
+    df2_merge_vals = df_dict[df2].loc[df_dict[df2][list(join_key)[0]].isin(key_list)]
+
+    df1_containment = col_group_containment(df1_merge_vals, df_dict[df3], df1_columns)
+    df2_containment = col_group_containment(df2_merge_vals, df_dict[df3], df2_columns)
+
+    #print(df1_containment, df2_containment)
+
+    if debug:
+        print('df1,df2,df3:', df1,df2,df3)
+        print('column_sets:', df1_columns, df2_columns)
+
+    #df1_containment = col_group_containment(df_dict[df1], df_dict[df3], df1_columns)
+    #df2_containment = col_group_containment(df_dict[df2], df_dict[df3], df2_columns)
+
+    if debug:
+        print('max_col_ratio, df1contain, df2contain', max_col_number, df1_containment, df2_containment)
 
     # TODO: Check coherency here
 
@@ -620,34 +655,57 @@ def columnset_keyness_ratio(df, colset):
 
     return set_size / original_size
 
+## Transform Detector
+
+def transform_detector(df1_name, df2_name, df_dict, g_inferred):
+    df1 = df_dict[df1_name]
+    df2 = df_dict[df2_name]
+
+    index_name_match = True
+    if df1.index.name and df2.index.name:
+        if df1.index.name != df2.index.name:
+            index_name_match = False
+
+    if not index_name_match:
+        return 0.0
+
+    index_ratio = similarity.set_jaccard_similarity(set(df1.index), set(df2.index))
+    column_ratio = similarity.set_max_containment(set(df1.columns), set(df2.columns))
+    cell_score = 1.0 - similarity.compute_jaccard_DF(df1, df2)
+
+    #print(index_ratio, column_ratio, cell_score)
+
+
+    return index_ratio * column_ratio * cell_score
+
 
 
 ### Common NPPO component search routine:
 
 
-def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_function=df_groupby_check_new):
+def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_function=df_groupby_check_new, label='groupby'):
 
     components = [c for c in nx.connected_components(g_inferred)]
     print('components: ', len(components))
 
     all_cmp_pairs_similarties = []
 
-    for srccmp, dstcmp in itertools.combinations(components, 2):
 
+    for srccmp, dstcmp in itertools.combinations(components, 2):
         # Group Edges Checked here
-        similarites = get_pairs_nppo_edges(df_dict, srccmp, dstcmp, g_inferred, nppo_function)
+        similarites, nppo_dict = get_pairs_nppo_edges(df_dict, srccmp, dstcmp, g_inferred, nppo_function, nppo_dict)
         all_cmp_pairs_similarties.extend(similarites)
 
 
 
     if not all_cmp_pairs_similarties:
-        return None, edge_num
+        return None, edge_num, nppo_dict
 
     #TODO: Common scoring function. right now 1.0 for all edges found.
     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
 
-    print('NNPOs detected')
-    print(all_cmp_pairs_similarties)
+    #print('NNPOs detected')
+    #print(all_cmp_pairs_similarties)
 
     score_dict = clustering.generate_score_dict(all_cmp_pairs_similarties)
     maxscore = max(score_dict)
@@ -659,32 +717,69 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_function=df_gr
         src, dst, score = score_dict[maxscore][0]
 
     print('Adding nppo/group edge', src, dst, score)
-    g_inferred.add_edge(src, dst, weight=score, num=edge_num)
+    g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=label)
     edge_num += 1
-    return g_inferred, edge_num
+    return g_inferred, edge_num, nppo_dict
 
+def augment_triples(triples, g_inferred):
+    new_edges = []
 
-def find_components_join_edge(g_inferred, df_dict, edge_num):
+    for d1,d2,d3 in triples:
+        for n in g_inferred.neighbors(d1):
+            new_edges.append(frozenset((n, d1, d2)))
+            new_edges.append(frozenset((n, d1, d3)))
+        for n in g_inferred.neighbors(d2):
+            new_edges.append(frozenset((n, d2, d1)))
+            new_edges.append(frozenset((n, d2, d3)))
+        for n in g_inferred.neighbors(d3):
+            new_edges.append(frozenset((n, d3, d1)))
+            new_edges.append(frozenset((n, d3, d2)))
+
+    print('Raw triples: ', len(new_edges))
+    union=triples.union(set(new_edges))
+    print('After union: ', len(union))
+    return union
+            
+    
+def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=1.0):
 
     components = [c for c in nx.connected_components(g_inferred)]
-    combos = [[i for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
+    combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
     triples = set(item for sublist in combos for item in sublist)
+
+    print(len(triples), "number of join combinations to be explored")
+    #print(triples)
+
+    triples = augment_triples(triples, g_inferred)
+
+    print(len(triples), "number of join combinations to be explored after augmentation")
+    #print(triples)
 
     join_scores = []
 
     for d1,d2,d3 in triples:
-        similarites = score_join_schema(d1,d2,d3,df_dict)
-        join_scores.append(similarites)
+        #print(tuple(fset))
+        #d1,d2,d3 = tuple(fset)
+        if frozenset((d1,d2,d3)) in triple_dict:
+            similarities = triple_dict[frozenset((d1,d2,d3))]
+        else:
+            similarities = score_join_schema(d1,d2,d3,df_dict)
+            triple_dict[frozenset((d1,d2,d3))] = similarities
+
+        join_scores.append(similarities)
 
 
     if not join_scores:
-        return None, edge_num
+        return None, edge_num, triple_dict
 
-    print('NNPOs detected')
-    print(join_scores)
+    #print('NNPOs detected')
+    #print(join_scores)
 
     score_dict = clustering.generate_score_dict(join_scores)
     maxscore = max(score_dict)
+
+    if maxscore <= threshold:
+        return None, edge_num, triple_dict
 
     #if len(score_dict[maxscore]) > 1:
     #    print("Breaking Tie for join-edges", score_dict[maxscore])
@@ -694,28 +789,37 @@ def find_components_join_edge(g_inferred, df_dict, edge_num):
     src, dst, score = score_dict[maxscore][0]
 
     print('Adding nppo/group edge', src[0], dst, score)
-    g_inferred.add_edge(src[0], dst, weight=score, num=edge_num)
-
+    g_inferred.add_edge(src[0], dst, weight=score, num=edge_num, type='join')
     edge_num += 1
+
+    if g_inferred.has_edge(src[0], dst):
+        print('Join Edge already present: ', src[0], dst)
 
     print('Adding nppo/group edge', src[1], dst, score)
-    g_inferred.add_edge(src[1], dst, weight=score, num=edge_num)
+    g_inferred.add_edge(src[1], dst, weight=score, num=edge_num, type='join')
+
+    if g_inferred.has_edge(src[1], dst):
+        print('Join Edge already present: ', src[1], dst)
 
     edge_num += 1
 
-    return g_inferred, edge_num
+    return g_inferred, edge_num, triple_dict
 
 
 
 
 
-def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_function, threshold=0.6):
+def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_function, nppo_dict, threshold=0.6):
     pairwise_similarity = []
     pairs = list(itertools.product(cluster_set1, cluster_set2))
     for d1, d2 in pairs:
         if d1 == d2:
             continue
-        score = nppo_function(d1, d2, dataset, g_inferred)
+        if frozenset((d1,d2)) in nppo_dict:
+            score = nppo_dict[frozenset((d1,d2))]
+        else:
+            score = nppo_function(d1, d2, dataset, g_inferred)
+            nppo_dict[frozenset((d1,d2))] = score
         if score >= threshold:
             pairwise_similarity.append((d1, d2, score))
         else:
@@ -723,7 +827,7 @@ def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_f
             # print("WARNING: DROPPING",d1,d2, score, threshold)
 
     pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
-    return pairwise_similarity
+    return pairwise_similarity, nppo_dict
 
 
 
@@ -751,3 +855,73 @@ def tie_break_by_contraction_ratio(df_dict, pairlist):
 
     return max_contraction
 
+
+def find_column_set_match(df, valueset):
+    col_mapping_dict = defaultdict(list)
+
+    for col in df.columns:
+        score = similarity.set_jaccard_similarity(valueset, set(df[col].values))
+        col_mapping_dict[score].append(col)
+
+    return col_mapping_dict
+
+
+def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None):
+    df1 = df_dict[df1_name]
+    df2 = df_dict[df2_name]
+
+    index_name_match = None
+    src = None
+    dst = None
+    index_containment = 0.0
+    max_col_score = 0.0
+    max_col_mapping = None
+
+    if df2.index.name:
+        if df2.index.name in df1.columns:
+            index_name_match = df2.index.name
+            src = df1
+            dst = df2
+
+    elif df1.index.name:
+        if df1.index.name in df2.columns:
+            index_name_match = df1.index.name
+            src = df2
+            dst = df1
+
+    if index_name_match:
+        index_containment = similarity.set_jaccard_similarity(set(src[index_name_match].values), set(dst.index.values))
+
+    # otherwise use containment to figure out src and dst:
+    else:
+        try:
+            df1coldict = find_column_set_match(df1, set(df2.index.values))
+            df2coldict = find_column_set_match(df2, set(df1.index.values))
+
+            # print(df1coldict)
+            # print(df2coldict)
+
+            maxdf1 = max(df1coldict.keys())
+            maxdf2 = max(df2coldict.keys())
+
+            if maxdf1 > maxdf2:
+                src = df1
+                dst = df2
+                index_containment = maxdf1
+            else:
+                src = df2
+                dst = df1
+                index_containment = maxdf2
+        except ValueError as e:
+            return 0.0
+
+    # Check column-value containment
+    try:
+        coldict = find_column_set_match(src, set(dst.index.values))
+        max_col_score = max(coldict.keys())
+    except ValueError as e:
+        return 0.0
+
+    # print(index_containment, max_col_score)
+
+    return index_containment * max_col_score

@@ -1,7 +1,7 @@
 # Pre Clustering Functions
 
 from collections import defaultdict
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 import csv
 import itertools
 import networkx as nx
@@ -138,7 +138,7 @@ def tiebreak_pairscores_col(df_dict, pairlist):
     return min_pair
 
 
-def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01):
+def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01, col=False):
     schema_dict = exact_schema_cluster(df_dict)
 
     a_schema_dict = reverse_schema_dict(schema_dict)
@@ -168,11 +168,11 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
             src, dst, score = score_dict[maxscore][0]
 
         print('Adding primary edge', src, dst, score)
-        g_inferred.add_edge(src, dst, weight=score, num=edge_num)
+        g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='cell')
         edge_num += 1
         return g_inferred, edge_num
 
-    else:
+    elif col:
         all_cmp_pairs_similarties = []
 
         for srccmp, dstcmp in itertools.combinations(components, 2):
@@ -197,20 +197,20 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
 
 
             print('Adding secondary edge', src, dst, score)
-            g_inferred.add_edge(src, dst, weight=score, num=edge_num)
+            g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='col')
             edge_num +=1
 
-        else:
-            print("No more edges above column threshold")
-            return None, None
+    else:
+        print("No more edges above threshold")
+        return None, edge_num
 
-        return g_inferred, edge_num
+    return g_inferred, edge_num
 
 
-def max_spanning_tree(pw_graph):
+def max_spanning_tree(pw_graph, edge_type='cell'):
     G = nx.Graph()
     i = 0
     for i, e in enumerate(nx.maximum_spanning_edges(pw_graph)):
-        G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i)
+        G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i, type=edge_type)
 
-    return G, i
+    return G, i+1

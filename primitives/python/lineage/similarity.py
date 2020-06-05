@@ -8,7 +8,7 @@ import numpy as np
 import networkx as nx
 
 from glob import glob
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 import numpy.testing as npt
 
@@ -140,6 +140,7 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
         df3[col] = df3[left] == df3[right]
 
     # Unique columns are already false
+
     for col in uniq_cols:
         df3[col] = False
 
@@ -151,6 +152,8 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
     # Compute Jaccard Similarity
     intersection = np.sum(np.sum(df3))
     union = df3.size
+    #print(intersection, union)
+
     return float(intersection) / union
 
 
@@ -201,7 +204,6 @@ def compute_jaccard_DF_index(df1,df2, reindex=True):
         return 0.0
 
     del(df3)
-
     return float(intersection) / union
 
 # Assumes corresponding column names and valid indices in both data frames
@@ -344,7 +346,16 @@ def set_jaccard_similarity(set1, set2):
 
 def set_max_containment(set1,set2):
     intersect = len(set1.intersection(set2))
+    if len(set1) < 1 or len(set2) < 1:
+        return 0.0
     return max(intersect/len(set1), intersect/len(set2))
+
+# Returns the containment of set1 in set2
+
+def set_containment(set1,set2):
+    intersect = len(set1.intersection(set2))
+    return intersect/len(set1)
+
 
 
 # Assumes corresponding column names and valid indices in both data frames
@@ -596,3 +607,117 @@ def compute_indexed_colvalset_similarity(df1, df2):
 
 def compute_indexed_cellvalset_similarity(df1, df2):
     return set_jaccard_similarity(get_indexed_cellvalset(df1), get_indexed_cellvalset(df2))
+
+
+
+
+### Extra Functions for Interactive Graph Visualization
+
+def common_columns(df1, df2):
+    return set(df1).intersection(set(df2))
+
+
+def get_col_valset(df):
+    for col in set(df):
+        yield col, set(df[col].values)
+
+
+def compute_df_pair_features(df1, df2, df1_value_set_dict=None, df2_value_set_dict=None):
+    common_cols = set(df1).intersection(set(df2))
+
+    if not df1_value_set_dict:
+        df1_value_set_dict = {name: valset for name, valset in get_col_valset(df1)}
+    if not df2_value_set_dict:
+        df2_value_set_dict = {name: valset for name, valset in get_col_valset(df2)}
+
+    cell_jaccard = compute_jaccard_DF(df1, df2)
+    col_jaccard = compute_col_jaccard_DF(df1, df2)  # TODO: Use value set
+    valset_jaccard = compute_valset_similarity(df1, df2)
+    ivalset_jaccard = compute_indexed_valset_similarity(df1, df2)
+    colvalset_jaccard = compute_indexed_colvalset_similarity(df1, df2)
+    cellvalset_jaccard = compute_indexed_cellvalset_similarity(df1, df2)
+
+    containment_scores = [set_max_containment(df1_value_set_dict[col],
+                                                         df2_value_set_dict[col]) for col in common_cols]
+
+    # Uniqueness computation
+    unique_cols = 0
+    contraction_ratios = []
+    for col in common_cols:
+        rows_not_equal = len(df1[col].values) != len(df2[col].values)
+        df1_unique = len(df1_value_set_dict[col]) == len(df1[col])
+        df2_unique = len(df2_value_set_dict[col]) == len(df2[col])
+
+        df1_subset = df1_value_set_dict[col].issubset(df2_value_set_dict[col])
+        df2_subset = df2_value_set_dict[col].issubset(df1_value_set_dict[col])
+
+        if rows_not_equal and (df1_unique or df2_unique) and (df1_subset or df2_subset):
+            unique_cols += 1
+            numerator, denominator = max(len(df1[col]), len(df2[col])), min(len(df1[col]), len(df2[col]))
+            contraction_ratios.append(numerator / denominator)
+
+    result = {
+        'common_cols': len(common_cols),
+        'cell_jaccard': cell_jaccard,
+        'col_jaccard': col_jaccard,
+        'valset_jaccard': valset_jaccard,
+        'rowvalset_jaccard': ivalset_jaccard,
+        'colvalset_jaccard': colvalset_jaccard,
+        'cellvalset_jaccard': cellvalset_jaccard,
+        'unique_cols': unique_cols,
+    }
+
+    if containment_scores:
+        result.update({
+            'max_containment': max(containment_scores),
+            'avg_containment': np.average(containment_scores),
+            'min_containment': min(containment_scores),
+        })
+
+    if contraction_ratios:
+        result.update({
+            'max_contraction': max(contraction_ratios),
+            'avg_contraction': np.average(contraction_ratios),
+            'min_contraction': min(contraction_ratios),
+        })
+
+    return result
+
+
+def get_all_node_pair_scores(dataset, gt_graph):
+    pairwise_scores = []
+    pairs = list(itertools.combinations(dataset.keys(), 2))
+    df_value_dicts = {}
+    for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
+        if d1 not in df_value_dicts.keys():
+            df_value_dicts[d1] = {name: valset for name, valset in get_col_valset(dataset[d1])}
+        if d2 not in df_value_dicts.keys():
+            df_value_dicts[d2] = {name: valset for name, valset in get_col_valset(dataset[d2])}
+
+        result = compute_df_pair_features(dataset[d1], dataset[d2], df1_value_set_dict=df_value_dicts[d1],
+                                          df2_value_set_dict=df_value_dicts[d2])
+
+        gt = False
+
+        if gt_graph.has_edge(d1, d2):
+            result['operation'] = gt_graph[d1][d2]['operation']
+            result['source'] = d1
+            result['dest'] = d2
+            gt = True
+        elif gt_graph.has_edge(d2, d1):
+            result['operation'] = gt_graph[d2][d1]['operation']
+            result['source'] = d2
+            result['dest'] = d1
+            gt = True
+        else:
+            result['source'] = d1
+            result['dest'] = d2
+            gt = False
+
+        result['ground_truth'] = gt
+        pairwise_scores.append(result)
+
+    return pairwise_scores
+
+
+

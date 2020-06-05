@@ -77,9 +77,11 @@ def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
 def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                     pre_cluster='No Precluster',
                                     cell_threshold=0.10,
-                                    col_threshold=-1.0,
+                                    col_threshold=0.10,
                                     join_edges=True,
                                     group_edges=True,
+                                    transform_edges=True,
+                                    pivot_edges=True,
                                     index=False,
                                     draw=False,
                                     recompute=False,
@@ -153,6 +155,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         nx.write_gpickle(all_pw_col_jaccard_graph, result_dir + 'col_sim.pkl')
 
 
+    '''
     if os.path.exists(result_dir+'val_sim.pkl') and recompute:
         all_pw_val_jaccard_graph = nx.read_gpickle(result_dir+'val_sim.pkl')
     else:
@@ -200,7 +203,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             result_dir + 'cellval_sim.csv')
         nx.write_gpickle(all_pw_cellval_jaccard_graph, result_dir + 'cellval_sim.pkl')
 
-
+    '''
 
     if flip_sim:
         temp = all_pw_jaccard_graph
@@ -220,21 +223,30 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
 
     # Start with intra-cluster edges:
-    #if(pre_cluster != 'No Precluster'):
-    #    pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=intra_cell_threshold)
-    #else:
-    #    pairwise_jaccard = all_pairwise_jaccard
+    if(pre_cluster != 'No Precluster'):
+        pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=cell_threshold)
+    else:
+        pairwise_jaccard = precomputed_sim.get_pairwise_similarity_pc(dataset, all_pw_jaccard_graph, threshold=cell_threshold)
 
-    #pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+    pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+
+    if flip_sim:
+        edge_t = 'col'
+    else:
+        edge_t = 'cell'
+
+    g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
+
+    for edge in g_inferred.edges(data=True):
+        print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t+"-level score:", edge[2]['weight'])
 
     # 02/02/2020
     # Start with empty graph to try to force spanning tree tie breaking via columnar containment
     # Doing this to try to reduce false positives at spanning tree stage.
-    g_inferred = nx.empty_graph()  #graphs.generate_spanning_tree(pw_jaccard_graph)
+    # g_inferred = nx.empty_graph()
 
 
-    #for edge in g_inferred.edges(data=True):
-    #    print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], "cell-level score:", edge[2]['weight'])
+
 
 
 
@@ -244,6 +256,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     #    img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict,
     #                                                     join_list=None))
 
+    use_col = 'col' in metric
 
     if pre_cluster == 'No Precluster':
         if metric == 'valset':
@@ -258,14 +271,14 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             jaccard_graph = all_pw_jaccard_graph
 
         threshold_graph = graphs.get_subgraph_threshold(jaccard_graph, cell_threshold)
-        g_inferred, edge_num = clustering.max_spanning_tree(threshold_graph)
+        g_inferred, edge_num = clustering.max_spanning_tree(threshold_graph, edge_type=metric.split('+')[0])
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric)
 
-
     # Now try adding columnar edges to each disconnected cluster subgraph:
     elif pre_cluster == 'PC2':
-        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold)
+        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
+
         # Draw first graph and get results
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric)
@@ -299,7 +312,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
         steps += 1
 
-        new_graph, new_edge_num = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold)
+        new_graph, new_edge_num = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
         if not new_graph:
             stop = True
         else:
@@ -327,6 +340,34 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     # Test for NPPOs:
 
+    group_list = None
+
+    if group_edges:
+        print('In group checking')
+
+        # NPPO Clustering Loop Starts here
+        stop = False
+        nppo_dict = {}
+        while (len(components) > 1 and steps < 20 and not stop):
+            steps += 1
+            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                nppo_dict)
+            if not new_graph:
+                stop = True
+            else:
+                g_inferred, edge_num = new_graph, new_edge_num
+
+            components = [c for c in nx.connected_components(g_inferred)]
+
+            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
+
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
+                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+
+            # print(g_inferred.nodes(), g_inferred.edges())
+
+
+
     inferred_j_edges = []
     join_list = None
     cluster_dict = None
@@ -338,7 +379,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         stop = False
         while (len(components) > 1 and steps < 20 and not stop):
             steps += 1
-            new_graph, new_edge_num = nppo.find_components_join_edge(g_inferred, dataset, edge_num)
+            triple_dict = {}
+            new_graph, new_edge_num, triple_dict = nppo.find_components_join_edge(g_inferred, dataset, edge_num, triple_dict)
             if not new_graph:
                 stop = True
             else:
@@ -384,18 +426,16 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         #                                                     cluster_dict=cluster_dict, join_list=None))
 
 
-
-
-    group_list = None
-
-    if group_edges:
-        print('In group checking')
+    if transform_edges:
+        print('In transform checking')
 
         # NPPO Clustering Loop Starts here
         stop = False
+        nppo_dict = {}
         while (len(components) > 1 and steps < 20 and not stop):
             steps += 1
-            new_graph, new_edge_num = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num)
+            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                nppo_dict, nppo_function=nppo.transform_detector, label='transform')
             if not new_graph:
                 stop = True
             else:
@@ -407,8 +447,6 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time, metric=metric)
-
-            # print(g_inferred.nodes(), g_inferred.edges())
 
         '''
         import pprint
@@ -431,6 +469,29 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
         '''
 
+    if pivot_edges:
+        print('In pivot checking')
+
+        # NPPO Clustering Loop Starts here
+        stop = False
+        nppo_dict = {}
+        while (len(components) > 1 and steps < 20 and not stop):
+            steps += 1
+            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                nppo_dict, nppo_function=nppo.pivot_detector, label='pivot')
+            if not new_graph:
+                stop = True
+            else:
+                g_inferred, edge_num = new_graph, new_edge_num
+
+            components = [c for c in nx.connected_components(g_inferred)]
+
+            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
+
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
+                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+
+
 
 
 
@@ -447,7 +508,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
 
 # Note: Edges in g_inferred should only be within a cluster
-def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=None, cell_threshold=0.1, col_threshold=0.1):
+def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=None, cell_threshold=0.1, col_threshold=0.1, col=True):
 
     for cluster in clusters.values():
         subgraph = g_inferred.subgraph(cluster).copy()
@@ -462,7 +523,7 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
 
             steps += 1
 
-            new_graph ,new_edge_num = clustering.find_components_join_edge(subgraph, df_dict, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold)
+            new_graph ,new_edge_num = clustering.find_components_join_edge(subgraph, df_dict, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=col)
             if not new_graph:
                 stop = True
             else:
@@ -474,22 +535,26 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
 
 
         for edge in subgraph.edges(data=True):
-            g_inferred.add_edge(edge[0], edge[1], weight=edge[2]['weight'], num=edge[2]['num'])
+            g_inferred.add_edge(edge[0], edge[1], weight=edge[2]['weight'], num=edge[2]['num'], type=edge[2]['type'])
             #edge_num += 1
 
 
     return g_inferred, edge_num
 
 
-def experiment_1(base_dir, nb_name, clustering, metric, swap, recompute, group, join):
+def experiment_1(base_dir, nb_name, clustering, metric, swap, recompute, group, join, transform, pivot):
     pd.set_option('display.max_columns', None)
 
     if group:
         metric = metric+'+group'
     if join:
         metric = metric+'+join'
+    if transform:
+        metric = metric + '+transform'
+    if pivot:
+        metric = metric + '+pivot'
 
-    result, im_frames = lineage_inference_agglomerative(base_dir=base_dir, nb_name=nb_name, pre_cluster=clustering, metric=metric, flip_sim=swap, recompute=recompute, group_edges=group, join_edges=join)
+    result, im_frames = lineage_inference_agglomerative(base_dir=base_dir, nb_name=nb_name, pre_cluster=clustering, metric=metric, flip_sim=swap, recompute=recompute, group_edges=group, join_edges=join, transform_edges=transform, pivot_edges=pivot)
     print(result[['numclusters', 'edges_correct', 'edges_missing', 'edges_to_remove', 'F1', 'time']])
     result.to_csv(base_dir + nb_name + '/'+metric+'_relic_result.csv')
 
@@ -568,6 +633,14 @@ def setup_arguments(args):
                         help="Use Join Edge Detection",
                         type=bool, default=False)
 
+    parser.add_argument("--transform",
+                        help="Use Transform Edge Detection",
+                        type=bool, default=False)
+
+    parser.add_argument("--pivot",
+                        help="Use Pivot Edge Detection",
+                        type=bool, default=False)
+
 
     options = parser.parse_args(args)
 
@@ -578,7 +651,7 @@ def main(args=sys.argv[1:]):
 
     options = setup_arguments(args)
     #experiment_1(options.basedir, options.nbname, options.clustering)
-    experiment_1(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute, options.group, options.join)
+    experiment_1(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute, options.group, options.join, options.transform, options.pivot)
     #experiment_2(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute)
     #experiment_3(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute)
 

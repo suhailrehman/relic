@@ -1,5 +1,5 @@
 import itertools
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 
 # Compute pairwise similarity metrics of dataset dict using similarity_metric
 # returns reverse sorted list of (pair1, pair2, similarity_score) tuples
