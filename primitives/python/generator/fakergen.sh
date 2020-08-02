@@ -41,23 +41,23 @@
 #python fakergen.py --output_dir=dataset --col=20 --row=1000 --ver=100 --matfreq=10
 
 
-#for ver in 20 50 # 100
-#do
-#  for col in 10 20 # 50
-#  do
-#    for row in 100 1000 #10000
-#    do
-#      for iter in 1
-#      do
-#        python fakergen.py --output_dir=dataset --col=$col --row=$row --ver=$ver  --npp=True
-#      done
-#    done
-#  done
-#done
+for ver in 20 50 # 100
+do
+  for col in 10 20 # 50
+  do
+    for row in 100 1000 #10000
+    do
+      for iter in 1
+      do
+        python fakergen.py --output_dir=dataset --col=$col --row=$row --ver=$ver  --npp=True
+      done
+    done
+  done
+done
 
 
 
-python fakergen.py --output_dir=dataset --col=20 --row=1000 --ver=20  --npp=True
+#python fakergen.py --output_dir=dataset --col=20 --row=1000 --ver=50  --npp=True
 
 #for mat in 1 2 4 5 10
 #do

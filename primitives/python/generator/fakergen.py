@@ -10,6 +10,61 @@ import time
 import os
 from exceptions import *
 
+from tqdm.auto import tqdm
+
+
+
+def compute_jaccard_DF(df1,df2, pk_col_name=None):
+
+    # fill NaN values in df1, df2 to some token val
+    df1 = df1.fillna('jac_tmp_NA')
+    df2 = df2.fillna('jac_tmp_NA')
+
+    try:
+        if(pk_col_name):
+            df3 = df1.merge(df2, how='outer', on=pk_col_name, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+        else:
+            df3 = df1.merge(df2, how='outer', left_index=True, right_index=True, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+    except TypeError as e:
+        # print("Can't Merge")
+        return 0
+
+    # Get set of column column names:
+    comparison_cols = set(col for col in df3.columns if'_jac_tmp_' in str(col))
+    common_cols = set(col.split('_jac_tmp_',1)[0] for col in comparison_cols)
+
+    if(len(common_cols) == 0):
+        return 0
+
+    # Get set of non-common columns:
+    uniq_cols = set(col for col in df3.columns if'_jac_tmp_' not in str(col))
+    if(pk_col_name):
+        uniq_cols.remove(pk_col_name)
+
+    # Check common cols and print True/False
+    for col in common_cols:
+        left = col+'_jac_tmp_1'
+        right = col+'_jac_tmp_2'
+        df3[col] = df3[left] == df3[right]
+
+    # Unique columns are already false
+
+    for col in uniq_cols:
+        df3[col] = False
+
+    #Drop superflous columns
+    df3 = df3.drop(columns=comparison_cols)
+    if(pk_col_name):
+        df3 = df3.drop(columns=[pk_col_name])
+
+    # Compute Jaccard Similarity
+    intersection = np.sum(np.sum(df3))
+    union = df3.size
+    #print(intersection, union)
+
+    return float(intersection) / union
+
+
 class FakerVersionGenerator:
 
     def __init__(self, shape=(8,20), out_directory='dataset/',
@@ -37,6 +92,9 @@ class FakerVersionGenerator:
         self.opcount = 0
         self.currentdf = None
         self.lastmatchoice = 0
+
+        self.lastargs = None
+        self.op_equv_set = []
 
     def load_function_dict(self, directory='./sources/'):
         return {
@@ -167,7 +225,9 @@ class FakerVersionGenerator:
             #Select a join column
             #TODO: Handle tables without any join column to being with
             join_column = self.select_rand_col_group(df1, 'joinable', 1)[0]
-            df2 = self.generate_base_df(num_rows=len(df1.index))
+            print('Join Column: ', join_column)
+            duplicate_columns = set(df1.columns)
+            df2 = self.generate_base_df(num_rows=len(df1.index), exclusions=duplicate_columns)
 
             #Add the join column to new df if not already present
             # TODO: Generate any length df2 and pad with newly generated faker values
@@ -201,8 +261,19 @@ class FakerVersionGenerator:
                 base_df = self.currentdf
 
             new_df = op_function(base_df, **kwargs)
+
             if type(new_df) is not pd.DataFrame or new_df.empty:
                 raise pd.errors.EmptyDataError
+
+            # Check if newly generated DF is identical (cell-wise to previous):
+            if compute_jaccard_DF(new_df, base_df) == 1.0:
+                raise TooSimilarException
+
+            for d in tqdm(self.dataset):
+                if compute_jaccard_DF(d, new_df) == 1.0:
+                    raise TooSimilarException
+
+
             #new_df = new_df.dropna()
             self.currentdf = new_df
             self.opcount +=1
@@ -225,6 +296,10 @@ class FakerVersionGenerator:
 
         new_col_name = col+'__'+random_func+str(random_scalar)
 
+        if new_col_name in df.columns:
+            print("Assigned Column already exists")
+            return None
+
         print("Applying function", random_func, "to column", col)
 
         if random_func == 'pow':
@@ -239,6 +314,11 @@ class FakerVersionGenerator:
     def assign_string(self, df):
         col = self.select_rand_col_group(df, 'string', 1)[0]
         new_col_name = col+'__swapcase'
+
+        if new_col_name in df.columns:
+            print("Assigned Column already exists")
+            return None
+
         try:
             if type(df[col].iloc[0]) == list:
                 return df.assign(**{new_col_name: lambda x: x[col].apply(lambda y: ",".join(y).swapcase())})
@@ -275,12 +355,26 @@ class FakerVersionGenerator:
 
     def iloc(self, df):
         # Select random row slice
-        num1 = np.random.randint(0, len(df.index))
-        num2 = np.random.randint(num1, len(df.index))
+        # Maybe select at-least 10% of the rows?
+        if len(df.index) < 10:
+            return None
+        stop = False
+        while not stop:
+            num1 = np.random.randint(0, len(df.index))
+            num2 = np.random.randint(num1, len(df.index))
+            print("Random iloc range %:", (num2 - num1) / len(df.index))
+            if (num2 - num1) / len(df.index) >= 0.1:
+                stop = True
+
         return df.iloc[num1:num2]
 
     def nlargest(self, df):
-        n = np.random.randint(len(df.index)/2, max(2,len(df.index)))
+        stop = False
+        while not stop:
+            n = np.random.randint(len(df.index)/2, max(2,len(df.index)))
+            if n / len(df.index) >= 0.1:
+                stop = True
+
         col = self.select_rand_col_group(df, 'numeric', 1)[0]
         if col:
             return df.nlargest(n, col)
@@ -288,7 +382,12 @@ class FakerVersionGenerator:
             return None
 
     def nsmallest(self, df):
-        n = np.random.randint(len(df.index)/2, max(2,len(df.index)))
+        stop = False
+        while not stop:
+            n = np.random.randint(len(df.index) / 2, max(2, len(df.index)))
+            if n / len(df.index) >= 0.1:
+                stop = True
+
         col = self.select_rand_col_group(df, 'numeric', 1)[0]
         if col:
             return df.nsmallest(n, col)
@@ -298,8 +397,8 @@ class FakerVersionGenerator:
     def reindex(self, df):
         return df.reindex(self.get_row_permutation(df))
 
-    def get_rand_percentage(minimum=0.01, maximum=0.99):
-        return round(np.random.random_sample(), 2)
+    def get_rand_percentage(self, minimum=0.1, maximum=0.99):
+        return round((maximum - minimum) * np.random.random_sample() + minimum,  2)
 
     def sample(self, df):
         return df.sample(frac=self.get_rand_percentage())
@@ -372,10 +471,10 @@ class FakerVersionGenerator:
             #self.agg,       ### non-preserving
             self.assign,
             #self.expanding,
-            self.iloc,
+            #self.iloc,
             #self.melt,
-            self.nlargest,
-            self.nsmallest,
+            #self.nlargest,
+            #self.nsmallest,
             #self.reindex,   ### this may cause a problem??
             #self.rolling,
             self.sample,
@@ -394,7 +493,20 @@ class FakerVersionGenerator:
                 ]
             )
 
-        return np.random.choice(operations, 1)[0]
+
+        operations = {
+            self.assign: 0.122,
+            self.sample: 0.066,
+            self.dropcol: 0.066,
+            self.point_edit: 0.096,
+            self.groupby: 0.333,
+            self.merge: 0.276,
+            self.pivot: 0.041
+        }
+
+        ops, probs = zip(*operations.items())
+
+        return np.random.choice(ops, 1, p=probs)[0]
 
     def write_graph_files(self):
         def csv_mapping(x):
@@ -404,6 +516,11 @@ class FakerVersionGenerator:
 
         nx.write_gpickle(csv_graph, self.out_directory+self.gt_prefix+'_gt_fixed.pkl')
         nx.write_edgelist(csv_graph, self.out_directory+self.gt_prefix+'_gt_edgelist.txt')
+
+
+
+
+
 
 
 def generate_dataset(shape, n, output_dir, scale=10., gt_prefix='dataset', npp=False, matfreq=1):
@@ -427,6 +544,11 @@ def generate_dataset(shape, n, output_dir, scale=10., gt_prefix='dataset', npp=F
             print(e)
             print("Cannot apply operation because of missing column type, skipping")
             pass
+        except TooSimilarException as e:
+            print(e)
+            print("Cannot apply operation because generated dataframe is too similar to ones already generated, skipping")
+            pass
+
         except Exception as e:
             print(dataset.lastmatchoice)
             tb = traceback.format_exc()
@@ -463,7 +585,7 @@ def setup_arguments(args):
 
     parser.add_argument("--bfactor",
                         help="Workflow Branching factor, 0.1 is linear, 100 is star-like",
-                        type=float, default=10.0)
+                        type=float, default=5.0)
 
     parser.add_argument("--matfreq",
                         help="Materialization frequency, i.e. how many operations before writing out an artifact",
