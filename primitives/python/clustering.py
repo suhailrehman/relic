@@ -1,6 +1,6 @@
 # Pre Clustering Functions
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from tqdm.auto import tqdm
 import csv
 import itertools
@@ -138,6 +138,31 @@ def tiebreak_pairscores_col(df_dict, pairlist):
     return min_pair
 
 
+def tiebreak_pairscores_cell(df_dict, pairlist):
+    max_pair = None
+    max_cell_score = 0.0
+
+    scores_list = []
+
+    for src, dst, score in pairlist:
+        srcdf = df_dict[src]
+        dstdf = df_dict[dst]
+        cell_score = similarity.compute_jaccard_DF(srcdf, dstdf)
+
+        scores_list.append((src,dst,cell_score))
+
+        if cell_score >= max_cell_score:
+            max_pair = (src, dst, score)
+            max_cell_score = cell_score
+
+    score_dict = generate_score_dict(scores_list)
+
+    if len(score_dict[max_cell_score])>1:
+        print("Multiple Cell-Level candidates.", score_dict[max_cell_score])
+
+    return max_pair
+
+
 def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01, col=False):
     schema_dict = exact_schema_cluster(df_dict)
 
@@ -146,6 +171,10 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
     components = [c for c in nx.connected_components(g_inferred)]
 
     all_cmp_pairs_similarties = []
+    added_edge = None
+
+    src = None
+    dst = None
 
     for srccmp, dstcmp in itertools.combinations(components, 2):
         if pw_graph:
@@ -155,6 +184,8 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
         all_cmp_pairs_similarties.extend(similarites)
 
     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
+
+    considered_edges = [frozenset((u,v)) for u,v,s in all_cmp_pairs_similarties]
 
     score_dict = generate_score_dict(all_cmp_pairs_similarties)
 
@@ -170,7 +201,7 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
         print('Adding primary edge', src, dst, score)
         g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='cell')
         edge_num += 1
-        return g_inferred, edge_num
+        return g_inferred, edge_num, considered_edges, (src,dst)
 
     elif col:
         all_cmp_pairs_similarties = []
@@ -190,8 +221,8 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
 
         if maxscore > col_threshold:
             if len(score_dict[maxscore]) > 1:
-                print("Breaking Tie for column-level:", score_dict[maxscore])
-                src, dst, score = tiebreak_pairscores_col(df_dict, score_dict[maxscore])
+                print("Breaking Tie for column-level using cell-level score:", score_dict[maxscore])
+                src, dst, score = tiebreak_pairscores_cell(df_dict, score_dict[maxscore])
             else:
                 src, dst, score = score_dict[maxscore][0]
 
@@ -202,9 +233,62 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
 
     else:
         print("No more edges above threshold")
-        return None, edge_num
+        return None, edge_num, considered_edges, None
 
-    return g_inferred, edge_num
+    if not src or not dst:
+        return g_inferred, edge_num, considered_edges, None
+
+    return g_inferred, edge_num, considered_edges, (src, dst)
+
+
+def find_components_col_edge(g_inferred, df_dict, edge_num, col_pw_graph=None, col_threshold=0.01):
+    schema_dict = exact_schema_cluster(df_dict)
+
+    a_schema_dict = reverse_schema_dict(schema_dict)
+
+    components = [c for c in nx.connected_components(g_inferred)]
+
+    all_cmp_pairs_similarties = []
+
+    src = None
+    dst = None
+
+    for srccmp, dstcmp in itertools.combinations(components, 2):
+        if col_pw_graph:
+            similarites = precomputed_sim.get_pairs_similarity_pc(df_dict, srccmp, dstcmp, col_pw_graph)
+        else:
+            similarites = similarity.get_pairs_similarity(df_dict, srccmp, dstcmp, similarity_metric=similarity.compute_col_jaccard_DF)
+        all_cmp_pairs_similarties.extend(similarites)
+
+    all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
+    considered_edges = [frozenset((u, v)) for u, v, s in all_cmp_pairs_similarties]
+
+    score_dict = generate_score_dict(all_cmp_pairs_similarties)
+
+    maxscore = max(score_dict)
+
+    if maxscore > col_threshold:
+        if len(score_dict[maxscore]) > 1:
+            print("Breaking Tie for column-level:", score_dict[maxscore])
+            src, dst, score = tiebreak_pairscores_cell(df_dict, score_dict[maxscore])
+        else:
+            src, dst, score = score_dict[maxscore][0]
+
+
+        print('Adding inter-cluster column edge', src, dst, score)
+        g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='col')
+        edge_num +=1
+
+    else:
+        print("No more edges above threshold")
+        return None, edge_num, considered_edges, None
+
+    if not src or not dst:
+        return g_inferred, edge_num, considered_edges, None
+
+    return g_inferred, edge_num, considered_edges, (src, dst)
+
+
 
 
 def max_spanning_tree(pw_graph, edge_type='cell'):
@@ -214,3 +298,43 @@ def max_spanning_tree(pw_graph, edge_type='cell'):
         G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i, type=edge_type)
 
     return G, i+1
+
+
+
+def max_spanning_tree_tie_breaker(pw_graph, g_truth, edge_type='cell'):
+    G = nx.Graph()
+    i = 0
+    for i, e in enumerate(max_spanning_edges_tie_breaker(pw_graph, g_truth)):
+        G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i, type=edge_type)
+
+    return G, i+1
+
+
+def max_spanning_edges_tie_breaker(G, g_truth, weight='weight', data=True):
+    from networkx.utils import UnionFind
+    if G.is_directed():
+        raise nx.NetworkXError(
+            "Mimimum spanning tree not defined for directed graphs.")
+
+    subtrees = UnionFind()
+    edges_dict = OrderedDict()
+
+    for e in sorted(G.edges(data=True), key=lambda t: t[2].get(weight, 1), reverse=True):
+        edges_dict.setdefault(e[2][weight],[]).append(e)
+
+    g_truth_copy = g_truth.to_undirected()
+
+    for w, edge_list in edges_dict.items():
+        print('Column Weight:', w)
+        if len(edge_list) > 1:
+            print('Number of Edges with this weight:', len(edge_list))
+            for edge in edge_list:
+                if g_truth_copy.has_edge(edge[0],edge[1]) and subtrees[edge[0]] != subtrees[edge[1]]:
+                        print('Selecting Tie Breaker GT edge', edge, edge[0], edge[1])
+                        yield (edge[0], edge[1], edge[2])
+                        subtrees.union(edge[0], edge[1])
+
+        for edge in edge_list:
+            if subtrees[edge[0]] != subtrees[edge[1]]:
+                yield (edge[0], edge[1], edge[2])
+                subtrees.union(edge[0], edge[1])

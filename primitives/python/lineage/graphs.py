@@ -313,7 +313,7 @@ def get_edge_number(e1,e2, g_inferred):
     return None
 
 
-def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_jaccard', cached=True):
+def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_jaccard', cached=False):
     # , bgcolor="#222222", font_color="white",
     nb_net = Network(height="750px", width="100%", notebook=True)
 
@@ -321,8 +321,9 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     g_inferred = get_graph_edge_list(RESULT_DIR, selected_nb, metric)
     df_dict = similarity.load_dataset_dir(RESULT_DIR + selected_nb + '/artifacts/', '*.csv', index_col=0)
 
-    if os.path.exists(RESULT_DIR + selected_nb + '/pairwise_metrics.csv') and cached:
-        nb_data = pd.read_csv(RESULT_DIR + selected_nb + '/pairwise_metrics.csv', index_col=0)
+
+    if os.path.exists(RESULT_DIR + selected_nb + '/inferred/'+ weight+'_sim.pkl') and cached:
+        nb_data = nx.read_gpickle(RESULT_DIR + selected_nb + '/inferred/'+ weight+'_sim.pkl')
     else:
         nb_data = pd.DataFrame(similarity.get_all_node_pair_scores(df_dict, g))
 
@@ -346,23 +347,31 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
     node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in g.nodes()}
 
-    sources = nb_data['source']
-    targets = nb_data['dest']
-    weights = nb_data[weight]
+    if not cached:
+        sources = nb_data['source']
+        targets = nb_data['dest']
+        weights = nb_data[weight]
 
-    edge_data = zip(sources, targets, weights)
+        edge_data = zip(sources, targets, {'weight': w for w in weights})
+
+    else:
+        edge_data = nb_data.edges(data=True)
 
     for e in edge_data:
         src = e[0]
         dst = e[1]
-        w = e[2]
+        w = e[2]['weight']
 
         # Edge Coloring
         edge_color = get_edge_color(e[0], e[1], g, g_inferred)
 
         edge_number = get_edge_number(e[0], e[1], g_inferred)
 
-        hover_dict = nb_data.loc[(nb_data.source == src) & (nb_data.dest == dst)].to_dict('records')[0]
+        if not cached:
+            hover_dict = nb_data.loc[(nb_data.source == src) & (nb_data.dest == dst)].to_dict('records')[0]
+        else:
+            hover_dict = e[2]
+
         hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in hover_dict.items()])
 
         src_node_hover_html = df_dict[src].head().to_html() + "<br> Rows:" + str(len(df_dict[src])) + " Columns:" + str(

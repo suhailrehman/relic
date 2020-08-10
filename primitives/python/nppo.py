@@ -23,6 +23,9 @@ import clustering
 import csv
 
 import pprint
+import operator
+
+from tqdm.auto import tqdm
 
 import math
 
@@ -95,6 +98,7 @@ def check_col_group_containment(df1, df2, colgroup, colgroup2=None):
     return df1valset.issubset(df2valset)
 
 def col_group_containment(df1, df2, colgroup, colgroup2=None):
+    # Rewrite: See if df2 is contained in df1
     if(colgroup2==None):
         colgroup2 = colgroup
 
@@ -107,7 +111,8 @@ def col_group_containment(df1, df2, colgroup, colgroup2=None):
     if len(df1valset.union(df2valset)) < 1:
         return 0.0
 
-    return len(df1valset.intersection(df2valset))/ len(df1valset.union(df2valset))
+    #return len(df1valset.intersection(df2valset))/ len(df1valset.union(df2valset))
+    return len(df1valset.intersection(df2valset)) / len(df2valset)
 
 # Removes all supersets of badtip from lattice
 def remove_tup_lattice(lattice, badtup):
@@ -252,7 +257,7 @@ def df_groupby_check_direct(df1,df2):
     return False
 
 
-def get_group_agg_cols(df1,df2, contaiment_threshold = 0.9):
+def get_group_agg_cols(df1,df2, contaiment_threshold = 0.9, sim_threshold = 0.9, debug=False):
 
     group_cols = []
     group_col_containment = []
@@ -263,7 +268,8 @@ def get_group_agg_cols(df1,df2, contaiment_threshold = 0.9):
 
     for col in common_cols:
         containment = col_containment(df1,df2,col)
-        if col_containment(df1,df2,col) > contaiment_threshold:
+        jsim = similarity.set_jaccard_similarity(set(df1[col].values),set(df2[col].values))
+        if containment > contaiment_threshold and jsim > sim_threshold:
             group_cols.append(col)
             group_col_containment.append(containment)
 
@@ -271,11 +277,15 @@ def get_group_agg_cols(df1,df2, contaiment_threshold = 0.9):
             agg_cols.append(col)
 
 
+    if debug:
+        print('Determining Group Cols: ')
+        print(group_cols, group_col_containment)
+
     # Find the group value containment for the contained columns:
     srcvalset = set(frozenset(u) for u in df1[group_cols].values.tolist())
     dstvalset = set(frozenset(u) for u in df2[group_cols].values.tolist())
 
-    missing_vals = len(group_cols) * (len(srcvalset - dstvalset) / len(srcvalset))
+    missing_vals = (len(srcvalset - dstvalset) / len(srcvalset))
 
     return group_cols, agg_cols, missing_vals
 
@@ -311,25 +321,35 @@ def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False):
             print('No group columns detected')
         return 0.0
 
-    #TODO: Lattice exploration
-    group_keyness_ratio = columnset_keyness_ratio(dst, group_cols)
+    if missing_vals > 0.0:
+        if debug:
+            print('GroupBy has missing values')
+        return 0.0
 
-    if group_keyness_ratio < 1.0:
+    #TODO: Lattice exploration
+    src_group_keyness_ratio = columnset_keyness_ratio(src, group_cols)
+    dst_group_keyness_ratio = columnset_keyness_ratio(dst, group_cols)
+
+    if src_group_keyness_ratio == 1.0:
+        if debug:
+            print('Source group columns are also keys, groupby unlikely')
+        return 0.0
+
+    if dst_group_keyness_ratio < 1.0:
         if debug:
             print('Group keyness below threshold')
         return 0.0
 
-    column_diff = similarity.set_jaccard_distance(set(df1.columns),set(df2.columns))
+    column_diff = similarity.set_jaccard_similarity(set(df1.columns),set(df2.columns))
 
     contraction_ratio =  len(src.index) / len(dst.index)
 
-    final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals
-
+    final_val = ((1.0 * len(group_cols) * dst_group_keyness_ratio) - missing_vals) * column_diff
     if debug:
-        print('final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals')
-        print(final_val, ' = ', '(1.0 *', len(group_cols) , '*', group_keyness_ratio, ')-', missing_vals)
+        print('final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals * column_diff')
+        print(final_val, ' = ', '(1.0 *', len(group_cols) , '*', dst_group_keyness_ratio, ')-', missing_vals, '*', column_diff)
 
-    return final_val  #* contraction_ratio
+    return final_val #* contraction_ratio
 
 
 
@@ -572,6 +592,8 @@ def df_join_check_new(df1, df2, df_dict, g_inferred):
 
 
 def score_join_schema(df1, df2, df3, df_dict, debug=False):
+    if debug:
+        print("Join Scoring:", df1,df2,df3)
     combo_set = set((df1, df2, df3))
     max_combo = None
     max_col_number = 0
@@ -580,6 +602,7 @@ def score_join_schema(df1, df2, df3, df_dict, debug=False):
 
     # First Check for at least one common column in triple to act as key
     common_cols = columns_dict[df1].intersection(columns_dict[df2]).intersection(columns_dict[df3])
+
     if not common_cols:
         if debug:
             print('No common cols')
@@ -600,7 +623,7 @@ def score_join_schema(df1, df2, df3, df_dict, debug=False):
         jaccard = similarity.set_jaccard_similarity(columns_dict[join_dest], column_union) * len(columns_dict[join_dest])
 
         if debug:
-            print('DEBUG', source, other_source, join_dest, column_union, jaccard)
+            print('DEBUG', source, other_source, join_dest, symm_diff, column_union, jaccard)
 
 
         if jaccard > max_col_number:
@@ -608,7 +631,8 @@ def score_join_schema(df1, df2, df3, df_dict, debug=False):
             max_combo = (tuple(join_sources), join_dest)
 
     if not max_combo or not common_cols:
-        #print('No Max combo')
+        if debug:
+            print('No Max combo')
         return ((df1, df2), df3, 0.0)
 
 
@@ -618,34 +642,69 @@ def score_join_schema(df1, df2, df3, df_dict, debug=False):
     df1_columns = columns_dict[df1].intersection(columns_dict[df3]) - columns_dict[df2]
     df2_columns = columns_dict[df2].intersection(columns_dict[df3]) - columns_dict[df1]
 
-    join_key = columns_dict[df1].intersection(columns_dict[df2])
+    keys = columns_dict[df1].intersection(columns_dict[df2])
 
-    intersecting_values = set(frozenset(v) for v in df_dict[df1][join_key].values).intersection(
-        set(frozenset(v) for v in df_dict[df2][join_key].values))
+    containments = {}
 
-    key_list = list(v for fset in intersecting_values for v in fset)
+    for join_key in keys: # Assuming single column join
+        #intersecting_values = set(frozenset(v) for v in df_dict[df1][join_key].values).intersection(
+        #    set(frozenset(v) for v in df_dict[df2][join_key].values))
 
-    df1_merge_vals = df_dict[df1].loc[df_dict[df1][list(join_key)[0]].isin(key_list)]
-    df2_merge_vals = df_dict[df2].loc[df_dict[df2][list(join_key)[0]].isin(key_list)]
+        #key_list = list(v for fset in intersecting_values for v in fset)
 
-    df1_containment = col_group_containment(df1_merge_vals, df_dict[df3], df1_columns)
-    df2_containment = col_group_containment(df2_merge_vals, df_dict[df3], df2_columns)
+        key_list = set(df_dict[df1][join_key].values).intersection(set(df_dict[df2][join_key].values))
+
+        df1_merge_vals = df_dict[df1].loc[df_dict[df1][join_key].isin(key_list)]
+        df2_merge_vals = df_dict[df2].loc[df_dict[df2][join_key].isin(key_list)]
+
+        df1_containment = col_group_containment(df1_merge_vals, df_dict[df3], df1_columns)
+        df2_containment = col_group_containment(df2_merge_vals, df_dict[df3], df2_columns)
+
+        containments[join_key] = df1_containment * df2_containment
+
+        if debug:
+            print('Join Key:', join_key, 'Containment', containments[join_key])
+            #print('Key List:', key_list)
+            #print('df1_merge_vals', df1_merge_vals)
+            #print('df2_merge_vales', df2_merge_vals)
 
     #print(df1_containment, df2_containment)
 
+    max_containment = max(containments.items(), key=operator.itemgetter(1))[0]
+
+    if containments[max_containment] < 0.001:
+        if debug:
+            print('Poor containment')
+        return ((df1, df2), df3, 0.0)
+
     if debug:
         print('df1,df2,df3:', df1,df2,df3)
-        print('column_sets:', df1_columns, df2_columns)
+        print('column_sets:', df1_columns, df2_columns, columns_dict[df3])
+        print('join key:', max_containment)
 
-    #df1_containment = col_group_containment(df_dict[df1], df_dict[df3], df1_columns)
-    #df2_containment = col_group_containment(df_dict[df2], df_dict[df3], df2_columns)
+    df1_containment = col_group_containment(df_dict[df1], df_dict[df3], df1_columns)
+    df2_containment = col_group_containment(df_dict[df2], df_dict[df3], df2_columns)
 
-    if debug:
-        print('max_col_ratio, df1contain, df2contain', max_col_number, df1_containment, df2_containment)
+    if df1_containment < 0.01 or df2_containment < 0.01:
+        if debug:
+            print("poor single-sided containments")
+        return ((df1, df2), df3, 0.0)
+
 
     # TODO: Check coherency here
+    # Do Join replay for now:
+    try:
+        replay_score = replay_merge(df_dict[df1],df_dict[df2],df_dict[df3], max_containment)
+    except (ValueError, pd.errors.MergeError) as e:
+        print('Could not merge ',df1,df2, 'to produce', df3, 'using', max_containment)
+        replay_score = 0.0
+        pass
 
-    return (max_combo[0], max_combo[1], max_col_number * df1_containment * df2_containment)
+    if debug:
+        #print('max_col_ratio, df1contain, df2contain', max_col_number, df1_containment, df2_containment)
+        print('max_col_ratio, maxcontain, replay_score', max_col_number, containments[max_containment], replay_score)
+
+    return (max_combo[0], max_combo[1], replay_score)
 
 #### Complete Groupby implementation
 
@@ -683,7 +742,8 @@ def transform_detector(df1_name, df2_name, df_dict, g_inferred):
 ### Common NPPO component search routine:
 
 
-def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_function=df_groupby_check_new, label='groupby'):
+def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_function=df_groupby_check_new, label='groupby',
+                              threshold=1.0, g_truth=None):
 
     components = [c for c in nx.connected_components(g_inferred)]
     print('components: ', len(components))
@@ -691,15 +751,13 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
     all_cmp_pairs_similarties = []
 
 
-    for srccmp, dstcmp in itertools.combinations(components, 2):
+    for srccmp, dstcmp in tqdm(itertools.combinations(components, 2), total=math.comb(len(components), 2)):
         # Group Edges Checked here
         similarites, nppo_dict = get_pairs_nppo_edges(df_dict, srccmp, dstcmp, g_inferred, nppo_function, nppo_dict)
         all_cmp_pairs_similarties.extend(similarites)
 
-
-
     if not all_cmp_pairs_similarties:
-        return None, edge_num, nppo_dict
+        return None, edge_num, nppo_dict, None
 
     #TODO: Common scoring function. right now 1.0 for all edges found.
     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
@@ -710,16 +768,40 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
     score_dict = clustering.generate_score_dict(all_cmp_pairs_similarties)
     maxscore = max(score_dict)
 
+    if maxscore < threshold:
+        print('No more edges above threshold')
+        return None, edge_num, nppo_dict, None
+
     if len(score_dict[maxscore]) > 1:
-        print("Breaking Tie for group-edges", score_dict[maxscore])
+        '''
+        # Removing ground truth capabilities here.
+        if nppo_function == df_groupby_check_new:
+            print("Breaking tie by groupby replay", score_dict[maxscore])
+            src, dst, score = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], g_truth=g_truth)
+
+        elif nppo_function == pivot_detector: # Consider pivot tiebreaker to be GT group edge if present.
+            print("Adding GT edge if present for pivot")
+            found = False
+            for u, v, s in score_dict[maxscore]:
+                if g_truth.to_undirected().has_edge(u,v):
+                    src, dst, score = u,v,s
+                    found=True
+            if not found:
+                return None, edge_num, nppo_dict, None
+
+        else:
+        '''
+
+        print("Breaking tie by contraction ratio", score_dict[maxscore])
         src, dst, score = tie_break_by_contraction_ratio(df_dict, score_dict[maxscore])
+
     else:
         src, dst, score = score_dict[maxscore][0]
 
     print('Adding nppo/group edge', src, dst, score)
     g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=label)
     edge_num += 1
-    return g_inferred, edge_num, nppo_dict
+    return g_inferred, edge_num, nppo_dict, (src, dst)
 
 def augment_triples(triples, g_inferred):
     new_edges = []
@@ -741,7 +823,7 @@ def augment_triples(triples, g_inferred):
     return union
             
     
-def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=1.0):
+def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.7):
 
     components = [c for c in nx.connected_components(g_inferred)]
     combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
@@ -770,7 +852,7 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, thresh
 
 
     if not join_scores:
-        return None, edge_num, triple_dict
+        return None, edge_num, triple_dict, None, None
 
     #print('NNPOs detected')
     #print(join_scores)
@@ -779,33 +861,33 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, thresh
     maxscore = max(score_dict)
 
     if maxscore <= threshold:
-        return None, edge_num, triple_dict
+        return None, edge_num, triple_dict, None, None
 
-    #if len(score_dict[maxscore]) > 1:
-    #    print("Breaking Tie for join-edges", score_dict[maxscore])
-    #    src, dst, score = tie_break_by_contraction_ratio(df_dict, score_dict[maxscore])
+    if len(score_dict[maxscore]) > 1:
+        print("Warning multiple join-edges with same score", score_dict[maxscore])
+        #src, dst, score = tiebreak_by_timestamp_synthetic(df_dict, score_dict[maxscore])
     #else:
 
     src, dst, score = score_dict[maxscore][0]
+
+    if g_inferred.has_edge(src[0], dst):
+        print('Join Edge already present: ', src[0], dst)
 
     print('Adding nppo/group edge', src[0], dst, score)
     g_inferred.add_edge(src[0], dst, weight=score, num=edge_num, type='join')
     edge_num += 1
 
-    if g_inferred.has_edge(src[0], dst):
-        print('Join Edge already present: ', src[0], dst)
+    if g_inferred.has_edge(src[1], dst):
+        print('Join Edge already present: ', src[1], dst)
 
     print('Adding nppo/group edge', src[1], dst, score)
     g_inferred.add_edge(src[1], dst, weight=score, num=edge_num, type='join')
 
-    if g_inferred.has_edge(src[1], dst):
-        print('Join Edge already present: ', src[1], dst)
+
 
     edge_num += 1
 
-    return g_inferred, edge_num, triple_dict
-
-
+    return g_inferred, edge_num, triple_dict, (src[0], dst), (src[1], dst)
 
 
 
@@ -925,3 +1007,145 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None):
     # print(index_containment, max_col_score)
 
     return index_containment * max_col_score
+
+
+
+def tiebreak_by_timestamp_synthetic(df_dict, pairlist):
+    min_ts_diff = None
+    min_diff = np.inf
+
+    scores_list = []
+
+    for src, dst, score in pairlist:
+        src_time = int(src.split('.csv')[0])
+        dst_time = int(dst.split('.csv')[0])
+
+        time_diff = abs(dst_time - src_time)
+
+        scores_list.append((src, dst, time_diff))
+
+        if time_diff <= min_diff:
+            min_ts_diff = (src, dst, score)
+            min_diff = time_diff
+
+    score_dict = clustering.generate_score_dict(scores_list)
+
+    if len(score_dict[min_diff]) > 1:
+        print("Multiple Timestamp candidates:", score_dict[min_diff])
+
+    return min_ts_diff
+
+
+def tiebreak_by_groupby_replay(df_dict, pairlist, g_truth=None):
+    max_replay_candidate = None
+    max_cell_score = 0.0
+
+    scores_list = []
+
+    for src, dst, score in pairlist:
+        replay_score = replay_groupby(df_dict[src],df_dict[dst])
+
+        scores_list.append((src, dst, replay_score))
+
+        if replay_score >= max_cell_score:
+            max_replay_candidate = (src, dst, replay_score)
+            max_cell_score = replay_score
+
+    score_dict = clustering.generate_score_dict(scores_list)
+
+    if len(score_dict[max_cell_score]) > 1:
+        if g_truth:
+            print("Adding GT edge if present for groupby")
+            for u, v, s in score_dict[max_cell_score]:
+                if g_truth.to_undirected().has_edge(u, v):
+                    max_replay_candidate = (u, v, s)
+        else:
+            print("Multiple Replay candidates:", score_dict[max_cell_score])
+
+    return max_replay_candidate
+
+
+def replay_groupby(df1, df2, grouplist=None, agg_op='count', debug=False):
+    if not grouplist:
+        grouplist, agg_cols, missing_vals = get_group_agg_cols(df1,df2)
+
+    if len(df1.index) < len(df2.index):
+        src = df2
+        dst = df1
+    else:
+        src = df1
+        dst = df2
+
+    group_object = src.groupby(grouplist)
+    agg_func = getattr(group_object, agg_op)
+    group_result = agg_func().reset_index()
+    if debug:
+        print('GroupBy performed on column: ', grouplist)
+        print('Columns, rows df1: ', df1.columns, len(df1.index))
+        print('Columns, rows df2: ', df2.columns, len(df2.index))
+        print('Columns, rows group result: ', group_result.columns, len(group_result.index))
+    return similarity.compute_jaccard_DF(dst, group_result)
+
+
+def replay_merge(src1,src2,dst,key):
+    try:
+        size = merge_size(src1,src2,key)
+        if size / len(dst.index) > 10:
+            return 0.0
+
+        merge_result = src1.merge(src2, on=key)
+    except Exception as e:
+        return 0.0
+    return similarity.compute_jaccard_DF(merge_result, dst)
+
+
+def tiebreak_by_col_level(df_dict, pairlist):
+    max_col_candidate = None
+    max_col_score = 0.0
+
+    scores_list = []
+
+    for src, dst, score in pairlist:
+        col_score = similarity.compute_col_jaccard_DF(df_dict[src], df_dict[dst])
+
+        scores_list.append((src, dst, col_score))
+
+        if col_score >= max_col_score:
+            max_col_candidate = (src, dst, col_score)
+            max_col_score = col_score
+
+    score_dict = clustering.generate_score_dict(scores_list)
+
+    if len(score_dict[max_col_score]) > 1:
+        print("Multiple Column-Level candidates:", score_dict[max_col_score])
+
+    return max_col_candidate
+
+
+
+def merge_size(left_frame, right_frame, group_by, how='inner'):
+    left_groups = left_frame.groupby(group_by).size()
+    right_groups = right_frame.groupby(group_by).size()
+    left_keys = set(left_groups.index)
+    right_keys = set(right_groups.index)
+    intersection = right_keys & left_keys
+    left_diff = left_keys - intersection
+    right_diff = right_keys - intersection
+
+    left_nan = len(left_frame[left_frame[group_by] != left_frame[group_by]])
+    right_nan = len(right_frame[right_frame[group_by] != right_frame[group_by]])
+    left_nan = 1 if left_nan == 0 and right_nan != 0 else left_nan
+    right_nan = 1 if right_nan == 0 and left_nan != 0 else right_nan
+
+    sizes = [(left_groups[group_name] * right_groups[group_name]) for group_name in intersection]
+    sizes += [left_nan * right_nan]
+
+    left_size = [left_groups[group_name] for group_name in left_diff]
+    right_size = [right_groups[group_name] for group_name in right_diff]
+    if how == 'inner':
+        return sum(sizes)
+    elif how == 'left':
+        return sum(sizes + left_size)
+    elif how == 'right':
+        return sum(sizes + right_size)
+    return sum(sizes + left_size + right_size)

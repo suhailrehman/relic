@@ -8,6 +8,8 @@ BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset/"
 # Run on a list of notebooks
 #nb_list=`cat nblist.txt`
 
+#find . -name '*_relic_result.csv' -exec rm -rf {} \;
+
 for f in "$BASE_DIR"*; do
 #for f in $nb_list; do
     if [ -d ${f} ]; then
@@ -16,22 +18,29 @@ for f in "$BASE_DIR"*; do
 
         #rm -rf $BASE_DIR$nb_name'/inferred/'
 
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True
+
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --cellt=-1.0
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True --group=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True --group=True --transform=True
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True --group=True --transform=True --pivot=True
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --join=True --group=True --transform=True --pivot=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True --cellt=-1.0 --colt=-1.0
 
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True --join=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True --join=True --group=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True --join=True --group=True --transform=True                python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True --join=True --group=True --transform=True --pivot=True
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True --join=True --group=True --transform=True --pivot=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cell --recompute=True --group=True --join=True --transform=True --pivot=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cellcolgt' --recompute=True --group=True --colt=0.8
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cellcol' --recompute=True --group=True --join=True --pivot=True --colt=0.8 --cellt=0.1
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cellcol' --recompute=True --join=True --group=True --pivot=True --colt=0.8 --transform=True
 
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True --join=True --group=True --transform=True --pivot=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cellgt' --recompute=True --join=True --group=True --pivot=True --colt=0.8
 
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --swap=True --recompute=True
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric=pc2cellcol --recompute=True --join=True --group=True --transform=True --pivot=True
+
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --swap=True --recompute=True --colt=-1.0
+        #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=colgt --swap=True --recompute=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --recompute=True --group=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --recompute=True --join=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=col --recompute=True --join=True --group=True

@@ -32,7 +32,7 @@ def load_dataset_dir(dirpath, glob_pattern, **kwargs):
 
 
 # Compute pairwise similarity metrics of dataset dict using similarity_metric
-# returns reverse sorted list of (pair1, pair2, similarity_score) tuples
+# returns reverse sorted list of+ (pair1, pair2, similarity_score) tuples
 def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0):
     pairwise_similarity = []
     pairs = list(itertools.combinations(dataset.keys(), 2))
@@ -44,7 +44,7 @@ def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0):
             #pass
             print("WARNING: DROPPING",d1,d2, score, threshold)
 
-    pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
+    #pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
     return pairwise_similarity
 
 
@@ -94,6 +94,8 @@ def get_jaccard_coefficient(df1, df2):
 def get_minhash_coefficient(df1,df2):
     pass
 
+def compute_jaccard_label(df1,df2, dataset, d_graph, pk_col_name=None, reindex=False, column_match=False):
+    return compute_jaccard_DF(dataset[df1],dataset[df2],pk_col_name, reindex, column_match)
 
 #Assumes corresponding column names are same and PK refers to same column.
 def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=False):

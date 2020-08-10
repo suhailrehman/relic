@@ -17,6 +17,7 @@ import sys
 import argparse
 import timeit
 import itertools
+import pickle
 
 
 #BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
@@ -38,6 +39,36 @@ notebooks = [
 ]
 
 notebooks = [d for d in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, d))]
+
+
+def edge_cat(truth, inferred):
+    return_str = ''
+    if truth:
+        return_str += 'T'
+    else:
+        return_str += 'F'
+    if inferred:
+        return_str += 'P'
+    else:
+        return_str += 'N'
+
+    return return_str
+
+
+def mark_edge_stage(stage_graph, stage_name, edges_considered, edges_selected, g_truth):
+
+    # Let each be a frozen set to be considered
+
+    for e in edges_considered.keys():
+        truth = g_truth.to_undirected().has_edge(e[0],e[1])
+        stage_graph[e[0]][e[1]][stage_name] = 'considered'
+        stage_graph[e[0]][e[1]][stage_name+'_weight'] = edges_considered[e]
+        if e in edges_selected: #Positive
+            stage_graph[e[0]][e[1]][stage_name+"_op"] = 'selected'
+            #stage_graph[e[0]][e[1]][stage_name+"_result"] = edge_cat(truth, True)
+
+    return stage_graph
+
 
 def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster, time, metric='pandas_cell'):
     result = graphs.get_precision_recall(g_truth, g_inferred)
@@ -76,8 +107,8 @@ def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
 
 def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                     pre_cluster='No Precluster',
-                                    cell_threshold=0.10,
-                                    col_threshold=0.10,
+                                    cell_threshold=0.1,
+                                    col_threshold=0.8,
                                     join_edges=True,
                                     group_edges=True,
                                     transform_edges=True,
@@ -98,6 +129,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     wf_dir = base_dir + nb_name
     artifact_dir = wf_dir+'/artifacts/'
+
+    stage = 0
 
 
     # Output Directory
@@ -143,12 +176,18 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         nx.write_gpickle(all_pw_jaccard_graph, result_dir + 'cell_sim.pkl')
 
 
+    # Stage Annotation:
+    stage_graph = all_pw_jaccard_graph.copy()
+    nx.set_edge_attributes(stage_graph, 'input', 'stage_'+str(stage))
+
+
     if os.path.exists(result_dir+'col_sim.pkl') and recompute:
         all_pw_col_jaccard_graph = nx.read_gpickle(result_dir+'col_sim.pkl')
     else:
         print('Computing pairwise col similarity')
         all_pairwise_col_jaccard = similarity.get_pairwise_similarity(dataset, similarity.compute_col_jaccard_DF)
         all_pw_col_jaccard_graph = graphs.generate_pairwise_graph(all_pairwise_col_jaccard)
+
         # Write out the Pairwise Distances as Adj list
         nx.to_pandas_adjacency(all_pw_col_jaccard_graph, weight='weight').to_csv(
             result_dir + 'col_sim.csv')
@@ -223,22 +262,12 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
 
     # Start with intra-cluster edges:
-    if(pre_cluster != 'No Precluster'):
-        pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph, threshold=cell_threshold)
-    else:
-        pairwise_jaccard = precomputed_sim.get_pairwise_similarity_pc(dataset, all_pw_jaccard_graph, threshold=cell_threshold)
+    #if(pre_cluster != 'No Precluster'):
 
-    pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+    #else:
 
-    if flip_sim:
-        edge_t = 'col'
-    else:
-        edge_t = 'cell'
 
-    g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
 
-    for edge in g_inferred.edges(data=True):
-        print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t+"-level score:", edge[2]['weight'])
 
     # 02/02/2020
     # Start with empty graph to try to force spanning tree tie breaking via columnar containment
@@ -258,7 +287,17 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     use_col = 'col' in metric
 
+    if flip_sim:
+        edge_t = 'col'
+    else:
+        edge_t = 'cell'
+
     if pre_cluster == 'No Precluster':
+
+        pairwise_jaccard = precomputed_sim.get_pairwise_similarity_pc(dataset, all_pw_jaccard_graph, threshold=cell_threshold)
+        pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+
+
         if metric == 'valset':
             jaccard_graph = all_pw_val_jaccard_graph
         elif metric == 'rowvalset':
@@ -270,18 +309,51 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         else:
             jaccard_graph = all_pw_jaccard_graph
 
+        print("Adding edges only above threshold: ", cell_threshold)
         threshold_graph = graphs.get_subgraph_threshold(jaccard_graph, cell_threshold)
-        g_inferred, edge_num = clustering.max_spanning_tree(threshold_graph, edge_type=metric.split('+')[0])
+        if 'gt' in metric:
+            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, g_truth, edge_type=metric.split('+')[0])
+        else:
+            g_inferred, edge_num = clustering.max_spanning_tree(threshold_graph, edge_type=metric.split('+')[0])
+
+        stage += 1
+        # nx.set_edge_attributes(stage_graph, edge_t, 'stage' + str(stage))
+        considered_edges = {(e1,e2): data['weight'] for e1, e2, data in threshold_graph.edges(data=True)}
+        print('Total Edges considered at this stage: ', len(considered_edges.keys()))
+        selected_edges = [e for e in g_inferred.edges()]
+        print('Total Edges selected at this stage: ', len(considered_edges.keys()))
+        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage), considered_edges, selected_edges, g_truth,)
+
+        for edge in g_inferred.edges(data=True):
+            print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t + "-level score:", edge[2]['weight'])
+
+
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric)
 
-    # Now try adding columnar edges to each disconnected cluster subgraph:
     elif pre_cluster == 'PC2':
-        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
+
+        pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph,
+                                                                       threshold=cell_threshold)
+        pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+
+        stage += 1
+
+        #considered_edges = [e for e in pw_jaccard_graph.edges()]
+        considered_edges = {(e1, e2): data['weight'] for e1, e2, data in pw_jaccard_graph.edges(data=True)}
+        g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
+
+        # Now try adding columnar edges to each disconnected cluster subgraph:
+        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=False)
 
         # Draw first graph and get results
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric)
+
+        selected_edges = [e for e in g_inferred.edges()]
+        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra', considered_edges, selected_edges, g_truth)
+
+
         if draw:
             img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
                                                              cluster_dict=cluster_dict, join_list=None))
@@ -307,16 +379,28 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     if pre_cluster == 'No Precluster':
         stop = True
 
+    stage += 1
+    clustered_edges_considered = set()
+    clustered_edges_added = []
+
     # Clustering Loop Starts here
-    while (len(components) > 1 and steps < 20 and not stop):
+    while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
 
         steps += 1
 
-        new_graph, new_edge_num = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
+        #new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
+        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_col_edge(g_inferred, dataset,
+                                                                                                  edge_num,
+                                                                                                  col_pw_graph=all_pw_col_jaccard_graph,
+                                                                                                  col_threshold=col_threshold)
+        for e in edges_considered:
+            clustered_edges_considered.add(e)
+
         if not new_graph:
             stop = True
         else:
             g_inferred, edge_num = new_graph, new_edge_num
+            clustered_edges_added.append(new_edge)
 
         components = [c for c in nx.connected_components(g_inferred)]
         #print('Components:', components)
@@ -338,24 +422,35 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
                                                              cluster_dict=cluster_dict, join_list=None))
 
-    # Test for NPPOs:
+
+    considered_edges = {(e1,e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
+    stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges, clustered_edges_added, g_truth)
 
     group_list = None
 
     if group_edges:
         print('In group checking')
 
+        nppo_edges_considered = set()
+        nppo_edges_added = []
+
         # NPPO Clustering Loop Starts here
         stop = False
+        steps = 0
         nppo_dict = {}
-        while (len(components) > 1 and steps < 20 and not stop):
+        while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             steps += 1
-            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
-                                                                                nppo_dict)
+            new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                          nppo_dict, g_truth=g_truth)
+            if not nppo_edges_considered:
+                for e in nppo_dict.keys():
+                    nppo_edges_considered.add(e)
+
             if not new_graph:
                 stop = True
             else:
                 g_inferred, edge_num = new_graph, new_edge_num
+                nppo_edges_added.append(new_edge)
 
             components = [c for c in nx.connected_components(g_inferred)]
 
@@ -365,8 +460,14 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                   pre_cluster, timeit.default_timer() - start_time, metric=metric)
 
             # print(g_inferred.nodes(), g_inferred.edges())
+        if nppo_edges_considered:
+            stage += 1
+            nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group', nppo_edges, nppo_edges_added,
+                                          g_truth)
 
 
+    # Test for NPPOs:
 
     inferred_j_edges = []
     join_list = None
@@ -375,16 +476,32 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     if join_edges:
         print('Checking for Joins')
 
+        nppo_edges_considered = set()
+        nppo_edges_added = []
+
         # NPPO Clustering Loop Starts here
         stop = False
-        while (len(components) > 1 and steps < 20 and not stop):
+        steps = 0
+        triple_dict = {}
+        while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
+            print('Join Detection: components', len(components), 'stop', stop, 'steps', steps)
             steps += 1
-            triple_dict = {}
-            new_graph, new_edge_num, triple_dict = nppo.find_components_join_edge(g_inferred, dataset, edge_num, triple_dict)
+            new_graph, new_edge_num, new_triple_dict, ne1, ne2 = nppo.find_components_join_edge(g_inferred, dataset, edge_num, triple_dict)
+            triple_dict.update(new_triple_dict)
+
+            if not nppo_edges_considered:
+                for e in triple_dict.keys():
+                    for e1, e2 in itertools.combinations(e, 2):
+                        nppo_edges_considered.add(frozenset((e1,e2)))
+
+
             if not new_graph:
                 stop = True
+                print('No new graph, stopping join detection')
             else:
                 g_inferred, edge_num = new_graph, new_edge_num
+                nppo_edges_added.append(ne1)
+                nppo_edges_added.append(ne2)
 
             components = [c for c in nx.connected_components(g_inferred)]
 
@@ -392,6 +509,19 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time, metric=metric)
+
+        if nppo_edges_considered:
+            stage += 1
+            nppo_edges = {tuple(e): 1.0 for e in nppo_edges_considered}
+            # Write out triple Dict:
+            with open(result_dir + metric + '_triple_dict.pkl', 'wb') as handle:
+                pickle.dump(triple_dict, handle)
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_join', nppo_edges, nppo_edges_added,
+                                          g_truth)
+
+
+
+
 
             # print(g_inferred.nodes(), g_inferred.edges())
 
@@ -426,20 +556,38 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         #                                                     cluster_dict=cluster_dict, join_list=None))
 
 
+
+
+
+
     if transform_edges:
         print('In transform checking')
 
+        stage += 1
+        nppo_edges_considered = set()
+        nppo_edges_added = []
+
+
         # NPPO Clustering Loop Starts here
         stop = False
+        steps = 0
         nppo_dict = {}
-        while (len(components) > 1 and steps < 20 and not stop):
+        while (len(components) > 1 and steps < len(dataset.keys())and not stop):
             steps += 1
-            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+            new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
                                                                                 nppo_dict, nppo_function=nppo.transform_detector, label='transform')
+
+
+            if not nppo_edges_considered:
+                for e in nppo_dict.keys():
+                    nppo_edges_considered.add(e)
+
+
             if not new_graph:
                 stop = True
             else:
                 g_inferred, edge_num = new_graph, new_edge_num
+                nppo_edges_added.append(new_edge)
 
             components = [c for c in nx.connected_components(g_inferred)]
 
@@ -468,21 +616,39 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                                              cluster_dict=cluster_dict, join_list=None))
 
         '''
+        if nppo_edges_considered:
+            stage += 1
+            nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_transform', nppo_edges, nppo_edges_added,
+                                      g_truth)
+
 
     if pivot_edges:
         print('In pivot checking')
 
+
+        nppo_edges_considered = set()
+        nppo_edges_added = []
+
         # NPPO Clustering Loop Starts here
         stop = False
+        steps = 0
         nppo_dict = {}
-        while (len(components) > 1 and steps < 20 and not stop):
+        while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             steps += 1
-            new_graph, new_edge_num, nppo_dict = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
-                                                                                nppo_dict, nppo_function=nppo.pivot_detector, label='pivot')
+            new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                nppo_dict, nppo_function=nppo.pivot_detector, label='pivot', g_truth=g_truth)
+
+            if not nppo_edges_considered:
+                for e in nppo_dict.keys():
+                    nppo_edges_considered.add(e)
+
+
             if not new_graph:
                 stop = True
             else:
                 g_inferred, edge_num = new_graph, new_edge_num
+                nppo_edges_added.append(new_edge)
 
             components = [c for c in nx.connected_components(g_inferred)]
 
@@ -491,7 +657,11 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time, metric=metric)
 
-
+        if nppo_edges_considered:
+            stage += 1
+            nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_pivot', nppo_edges, nppo_edges_added,
+                                          g_truth)
 
 
 
@@ -503,6 +673,11 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                              save_all=True,
                              duration=1000,
                              loop=0)
+
+
+    #print(stage_graph.edges(data=True))
+
+    nx.write_gpickle(stage_graph, result_dir + metric+'_stage_graph.pkl')
 
     return pr_df, image_frames
 
@@ -523,7 +698,7 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
 
             steps += 1
 
-            new_graph ,new_edge_num = clustering.find_components_join_edge(subgraph, df_dict, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=col)
+            new_graph ,new_edge_num, considered_edges, new_edge = clustering.find_components_join_edge(subgraph, df_dict, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=col)
             if not new_graph:
                 stop = True
             else:
@@ -536,13 +711,14 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
 
         for edge in subgraph.edges(data=True):
             g_inferred.add_edge(edge[0], edge[1], weight=edge[2]['weight'], num=edge[2]['num'], type=edge[2]['type'])
+            #new_edges.append((edge[0], edge_[1]))
             #edge_num += 1
 
 
     return g_inferred, edge_num
 
 
-def experiment_1(base_dir, nb_name, clustering, metric, swap, recompute, group, join, transform, pivot):
+def experiment_1(base_dir, nb_name, clustering, metric, swap, recompute, group, join, transform, pivot, cellt, colt):
     pd.set_option('display.max_columns', None)
 
     if group:
@@ -554,7 +730,12 @@ def experiment_1(base_dir, nb_name, clustering, metric, swap, recompute, group, 
     if pivot:
         metric = metric + '+pivot'
 
-    result, im_frames = lineage_inference_agglomerative(base_dir=base_dir, nb_name=nb_name, pre_cluster=clustering, metric=metric, flip_sim=swap, recompute=recompute, group_edges=group, join_edges=join, transform_edges=transform, pivot_edges=pivot)
+    result, im_frames = lineage_inference_agglomerative(base_dir=base_dir, nb_name=nb_name, pre_cluster=clustering,
+                                                        metric=metric, flip_sim=swap, recompute=recompute,
+                                                        group_edges=group, join_edges=join,
+                                                        transform_edges=transform, pivot_edges=pivot,
+                                                        cell_threshold=cellt, col_threshold=colt)
+
     print(result[['numclusters', 'edges_correct', 'edges_missing', 'edges_to_remove', 'F1', 'time']])
     result.to_csv(base_dir + nb_name + '/'+metric+'_relic_result.csv')
 
@@ -641,6 +822,14 @@ def setup_arguments(args):
                         help="Use Pivot Edge Detection",
                         type=bool, default=False)
 
+    parser.add_argument("--cellt",
+                        help="Cell-Level Edge Retention Threshold",
+                        type=float, default=0.1)
+
+    parser.add_argument("--colt",
+                        help="Column-Level Edge Retention Threshold",
+                        type=float, default=0.1)
+
 
     options = parser.parse_args(args)
 
@@ -651,7 +840,8 @@ def main(args=sys.argv[1:]):
 
     options = setup_arguments(args)
     #experiment_1(options.basedir, options.nbname, options.clustering)
-    experiment_1(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute, options.group, options.join, options.transform, options.pivot)
+    experiment_1(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute,
+                 options.group, options.join, options.transform, options.pivot, options.cellt, options.colt)
     #experiment_2(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute)
     #experiment_3(options.basedir, options.nbname, options.clustering, options.metric, options.swap, options.recompute)
 
