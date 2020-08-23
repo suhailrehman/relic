@@ -47,7 +47,7 @@ do
   do
     for row in 100 1000 #10000
     do
-      for iter in 1
+      for iter in 1 2 3 4 5 # 6 7 8 9 10
       do
         python fakergen.py --output_dir=dataset --col=$col --row=$row --ver=$ver  --npp=True
       done
@@ -57,7 +57,7 @@ done
 
 
 
-#python fakergen.py --output_dir=dataset --col=20 --row=1000 --ver=50  --npp=True
+#python fakergen.py --output_dir=dataset --col=20 --row=1000 --ver=20  --npp=True
 
 #for mat in 1 2 4 5 10
 #do

@@ -39,7 +39,6 @@ month
 month_name
 name_female
 name_male
-null_boolean
 postalcode
 postalcode_in_state
 postalcode_plus4

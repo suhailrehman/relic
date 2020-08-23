@@ -8,6 +8,8 @@ import networkx as nx
 import argparse
 import time
 import os
+import pickle
+
 from exceptions import *
 
 from tqdm.auto import tqdm
@@ -93,8 +95,8 @@ class FakerVersionGenerator:
         self.currentdf = None
         self.lastmatchoice = 0
 
-        self.lastargs = None
-        self.op_equv_set = []
+        self.lastargs = {}
+        self.op_equv_map = {}
 
     def load_function_dict(self, directory='./sources/'):
         return {
@@ -216,6 +218,8 @@ class FakerVersionGenerator:
         return pd.concat(series, axis=1, keys=selected_cols)
 
     def apply_op(self, op_function, **kwargs):
+        similar_versions = []
+
         if op_function == self.merge:  # Merge is special case
 
             #Select random dataset as left side of merge
@@ -240,10 +244,31 @@ class FakerVersionGenerator:
             self.dataset.append(df2)
 
             # Perform the merge and save result as new version
+
             new_df = self.merge(df1, df2, on=join_column).dropna()
 
             if type(new_df) is not pd.DataFrame or new_df.empty:
                 raise pd.errors.EmptyDataError
+
+
+            for i, d in enumerate(tqdm(self.dataset)):
+                if i == choice:
+                    continue
+                if compute_jaccard_DF(d, new_df) == 1.0:
+                    self.lastargs = {}
+                    raise TooSimilarException
+
+                try:
+                    other_new_df = self.merge(d, df2, on=join_column).dropna()
+                except Exception as e:
+                    continue
+
+                # TODO: Check the validity of this when matfreq neq 1
+                if type(other_new_df) is not pd.DataFrame or other_new_df.empty:
+                    continue
+                elif compute_jaccard_DF(other_new_df, new_df) == 1.0:
+                    similar_versions.append(i)
+
 
             self.lineage.new_item(str(len(self.dataset)), new_df)
             self.dataset.append(new_df)
@@ -252,7 +277,12 @@ class FakerVersionGenerator:
             self.lineage.link(merge_tbl_ver, self.get_last_label(),
                               str(op_function.__name__))
 
+            if similar_versions:
+                self.op_equv_map[(self.lastmatchoice, self.get_last_label())] = similar_versions
+
         else:
+
+
             if self.opcount == 0:
                 choice = self.select_rand_dataset()
                 self.lastmatchoice = choice
@@ -260,18 +290,35 @@ class FakerVersionGenerator:
             else:
                 base_df = self.currentdf
 
+            self.lastargs = {}
             new_df = op_function(base_df, **kwargs)
 
             if type(new_df) is not pd.DataFrame or new_df.empty:
+                self.lastargs = {}
                 raise pd.errors.EmptyDataError
 
             # Check if newly generated DF is identical (cell-wise to previous):
             if compute_jaccard_DF(new_df, base_df) == 1.0:
+                self.lastargs = {}
                 raise TooSimilarException
 
-            for d in tqdm(self.dataset):
+            for i, d in enumerate(tqdm(self.dataset)):
+                if i == choice:
+                    continue
                 if compute_jaccard_DF(d, new_df) == 1.0:
+                    self.lastargs = {}
                     raise TooSimilarException
+                try:
+                    other_new_df = op_function(d, **kwargs)
+                except Exception as e:
+                    continue
+
+                # TODO: Check the validity of this when matfreq neq 1
+                if type(other_new_df) is not pd.DataFrame or other_new_df.empty:
+                    continue
+                elif compute_jaccard_DF(other_new_df, new_df) == 1.0:
+                    similar_versions.append(i)
+
 
 
             #new_df = new_df.dropna()
@@ -285,20 +332,41 @@ class FakerVersionGenerator:
                                   str(op_function.__name__))
                 self.opcount = 0
                 self.currentdf = None
+                if similar_versions:
+                    self.op_equv_map[(self.lastmatchoice, self.get_last_label())] = similar_versions
+
 
     def select_rand_aggregate(self):
         return np.random.choice(['min', 'max', 'sum', 'mean', 'count'], 1)[0]
 
     def assign_numeric(self, df):
-        col = self.select_rand_col_group(df, 'numeric', 1)[0]
-        random_scalar = np.random.choice(range(2, 20), 1)[0]
-        random_func = np.random.choice(['pow', 'exp', 'log', 'cumsum'], 1)[0]
+        if 'col' in self.lastargs:
+            col = self.lastargs['col']
+            random_scalar = self.lastargs['random_scalar']
+            random_func = self.lastargs['random_func']
+            new_col_name = self.lastargs['new_col_name']
 
-        new_col_name = col+'__'+random_func+str(random_scalar)
+            if new_col_name in df.columns or col not in df.columns:
+                print("Assigned Column already exists / Original column does not exist")
+                return None
 
-        if new_col_name in df.columns:
-            print("Assigned Column already exists")
-            return None
+        else:
+            col = self.select_rand_col_group(df, 'numeric', 1)[0]
+            random_scalar = np.random.choice(range(2, 20), 1)[0]
+            random_func = np.random.choice(['pow', 'exp', 'log', 'cumsum'], 1)[0]
+            new_col_name = col+'__'+random_func+str(random_scalar)
+
+            if new_col_name in df.columns:
+                print("Assigned Column already exists")
+                return None
+
+            self.lastargs.update({
+                'col' : col,
+                'random_scalar' : random_scalar,
+                'random_func' : random_func,
+                'new_col_name' : new_col_name
+            })
+
 
         print("Applying function", random_func, "to column", col)
 
@@ -312,12 +380,27 @@ class FakerVersionGenerator:
             return df.assign(**{new_col_name: lambda x: np.nancumsum(x[col].astype('float64'))})
 
     def assign_string(self, df):
-        col = self.select_rand_col_group(df, 'string', 1)[0]
-        new_col_name = col+'__swapcase'
+        if 'new_col_name' in self.lastargs:
+            col = self.lastargs['col']
+            new_col_name = self.lastargs['new_col_name']
 
-        if new_col_name in df.columns:
-            print("Assigned Column already exists")
-            return None
+            if new_col_name in df.columns or col not in df.columns:
+                print("Assigned Column already exists/ Old Column not in DF")
+                return None
+
+        else:
+            col = self.select_rand_col_group(df, 'string', 1)[0]
+            new_col_name = col+'__swapcase'
+
+            if new_col_name in df.columns:
+                print("Assigned Column already exists")
+                return None
+
+            self.lastargs.update({
+                'col': col,
+                'new_col_name': new_col_name
+            })
+
 
         try:
             if type(df[col].iloc[0]) == list:
@@ -326,11 +409,16 @@ class FakerVersionGenerator:
                 return df.assign(**{new_col_name: lambda x: x[col].astype(str).apply(lambda y: y.swapcase())})
         except IndexError as e:
             print(df, col)
+            self.lastargs.pop('col')
+            self.lastargs.pop('new_col_name')
             return None
 
     def assign(self, df):
-        types = ['string', 'numeric']
-        string_or_numeric = np.random.choice(['string', 'numeric'], 1)[0]
+        if 'string_or_numeric' in self.lastargs:
+            string_or_numeric = self.lastargs['string_or_numeric']
+        else:
+            string_or_numeric = np.random.choice(['string', 'numeric'], 1)[0]
+            self.lastargs['string_or_numeric'] = string_or_numeric
 
         if string_or_numeric == 'string':
             return self.assign_string(df)
@@ -339,13 +427,23 @@ class FakerVersionGenerator:
 
 
     def groupby(self, df):
+        if 'col' in self.lastargs:
+            col = self.lastargs['col']
+            func = self.lastargs['func']
+            if any(c not in df.columns for c in col):
+                return None
+        else:
         #TODO: Ensure groupable columns exist in dataframe
-        col = self.select_rand_col_group(df, 'groupable', 1)
+            col = self.select_rand_col_group(df, 'groupable', 1)
+            func = 'count'
+            self.lastargs['col'] = col
+            self.lastargs['func'] = func
+
         #try:
         #    self.select_rand_col_group(df, 'numeric', 1)[0] # Raises error if no numerics
         #    func = self.select_rand_aggregate()
         #except ColumnTypeException as e:
-        func = 'count'
+
         print("Grouping By: ", col[0], 'aggregation: ', func)
         method = getattr(df.groupby(col[0]), func)
         new_df = method().reset_index() #TODO: Verify drop behavior
@@ -358,13 +456,23 @@ class FakerVersionGenerator:
         # Maybe select at-least 10% of the rows?
         if len(df.index) < 10:
             return None
-        stop = False
-        while not stop:
-            num1 = np.random.randint(0, len(df.index))
-            num2 = np.random.randint(num1, len(df.index))
-            print("Random iloc range %:", (num2 - num1) / len(df.index))
-            if (num2 - num1) / len(df.index) >= 0.1:
-                stop = True
+
+        if 'num1' in self.lastargs:
+            num1 = self.lastargs['num1']
+            num2 = self.lastargs['num2']
+            if num2 >= len(df.index):
+                return None
+        else:
+            stop = False
+            while not stop:
+                num1 = np.random.randint(0, len(df.index))
+                num2 = np.random.randint(num1, len(df.index))
+                print("Random iloc range %:", (num2 - num1) / len(df.index))
+                if (num2 - num1) / len(df.index) >= 0.1:
+                    stop = True
+
+            self.lastargs['num1'] = num1
+            self.lastargs['num2'] = num2
 
         return df.iloc[num1:num2]
 
@@ -401,7 +509,12 @@ class FakerVersionGenerator:
         return round((maximum - minimum) * np.random.random_sample() + minimum,  2)
 
     def sample(self, df):
-        return df.sample(frac=self.get_rand_percentage())
+        if 'frac' in self.lastargs:
+            frac = self.lastargs['frac']
+        else:
+            frac = self.get_rand_percentage()
+
+        return df.sample(frac=frac)
 
     def sort_values(self, df):
         col = self.select_rand_col_group(df, 'numeric', 1)[0]
@@ -412,9 +525,18 @@ class FakerVersionGenerator:
             return None
 
     def point_edit(self, df):
-        col = self.select_rand_cols(df, 1)[0]
-        print("Selected Column", col)
-        if col:
+        if 'old_value' in self.lastargs:
+            col = self.lastargs['col']
+            old_value = self.lastargs['old_value']
+            new_value = self.lastargs['new_value']
+            if col not in df.columns or old_value not in df[col].values:
+                return None
+        else:
+            col = self.select_rand_cols(df, 1)[0]
+            print("Selected Column", col)
+            if not col:
+                return None
+
             colvalues = set(df[col].values)
             if not colvalues:
                 return None
@@ -430,18 +552,28 @@ class FakerVersionGenerator:
             while new_value == old_value: #In case we end up with same value
                 old_value = np.random.choice(list(colvalues), 1)[0]
                 new_value = self.fake.format(colname)
-            print("Replacing", col,"value",old_value,"with", new_value)
-            new_df = df.copy()
-            new_df.loc[new_df[col] == old_value, col] = new_value
-            return new_df
 
-        else:
-            return None
+            self.lastargs = {
+                'col': col,
+                'old_value': old_value,
+                'new_value': new_value
+            }
+
+        new_df = df.copy()
+        print("Replacing", col, "value", old_value, "with", new_value)
+        new_df.loc[new_df[col] == old_value, col] = new_value
+        return new_df
+
 
     def dropcol(self, df):
-        col = self.select_rand_cols(df, 1)[0]
-        if col:
+        if 'col' in self.lastargs:
+            col = self.lastargs['col']
+        else:
+            col = self.select_rand_cols(df, 1)[0]
             print("Dropping column", col)
+
+        if col and col in df.columns:
+            self.lastargs['col'] =col
             new_df = df.copy()
             new_df = df.drop(col, axis=1)
             return new_df
@@ -453,13 +585,25 @@ class FakerVersionGenerator:
         return df1.merge(df2, on=on, suffixes=['__x','__y'])
 
     def pivot(self, df):
-        index, column = self.select_rand_col_group(df, 'groupable', 2)
-        numeric = self.select_rand_col_group(df, 'numeric', 1)[0]
-        print('Pivoting using index:', index, ' column:', column, 'and values:', numeric)
+        if 'index' in self.lastargs:
+            index = self.lastargs['index']
+            column = self.lastargs['column']
+            numeric = self.lastargs['numeric']
+            if not all(col in df.columns for col in [index, column, numeric]):
+                return None
+
+        else:
+            index, column = self.select_rand_col_group(df, 'groupable', 2)
+            numeric = self.select_rand_col_group(df, 'numeric', 1)[0]
+            print('Pivoting using index:', index, ' column:', column, 'and values:', numeric)
 
         newdf = df.pivot_table(index=index, columns=column, values=numeric, aggfunc=sum)
         newdf.columns = newdf.columns.map(str)
         newdf.rename(columns = {x: str(x)+'__pivoted' for x in newdf.columns})
+
+        self.lastargs['index'] = index
+        self.lastargs['column'] = column
+        self.lastargs['numeric'] = numeric
 
         return newdf
 
@@ -493,7 +637,7 @@ class FakerVersionGenerator:
                 ]
             )
 
-
+        '''
         operations = {
             self.assign: 0.122,
             self.sample: 0.066,
@@ -507,6 +651,8 @@ class FakerVersionGenerator:
         ops, probs = zip(*operations.items())
 
         return np.random.choice(ops, 1, p=probs)[0]
+        '''
+        return np.random.choice(operations, 1)[0]
 
     def write_graph_files(self):
         def csv_mapping(x):
@@ -517,7 +663,8 @@ class FakerVersionGenerator:
         nx.write_gpickle(csv_graph, self.out_directory+self.gt_prefix+'_gt_fixed.pkl')
         nx.write_edgelist(csv_graph, self.out_directory+self.gt_prefix+'_gt_edgelist.txt')
 
-
+        with open(self.out_directory+self.gt_prefix+'_gt_similar_nodes.pkl', 'wb') as handle:
+            pickle.dump(self.op_equv_map, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 
@@ -550,12 +697,15 @@ def generate_dataset(shape, n, output_dir, scale=10., gt_prefix='dataset', npp=F
             pass
 
         except Exception as e:
+            dataset.lastargs = {}
             print(dataset.lastmatchoice)
             tb = traceback.format_exc()
             errors.append({choice: tb})
+            print(dataset.lastargs)
             pass
 
     dataset.write_graph_files()
+    print(dataset.op_equv_map)
     return dataset, errors
 
 
