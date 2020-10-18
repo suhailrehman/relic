@@ -98,7 +98,7 @@ def compute_jaccard_label(df1,df2, dataset, d_graph, pk_col_name=None, reindex=F
     return compute_jaccard_DF(dataset[df1],dataset[df2],pk_col_name, reindex, column_match)
 
 #Assumes corresponding column names are same and PK refers to same column.
-def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=False):
+def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=False, containment=False):
 
     # fill NaN values in df1, df2 to some token val
     df1 = df1.fillna('jac_tmp_NA')
@@ -155,6 +155,9 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
     intersection = np.sum(np.sum(df3))
     union = df3.size
     #print(intersection, union)
+
+    if containment:
+        return float(intersection) / df2.size
 
     return float(intersection) / union
 
@@ -660,8 +663,8 @@ def compute_df_pair_features(df1, df2, df1_value_set_dict=None, df2_value_set_di
 
     result = {
         'common_cols': len(common_cols),
-        'cell_jaccard': cell_jaccard,
-        'col_jaccard': col_jaccard,
+        'cell': cell_jaccard,
+        'col': col_jaccard,
         'valset_jaccard': valset_jaccard,
         'rowvalset_jaccard': ivalset_jaccard,
         'colvalset_jaccard': colvalset_jaccard,
@@ -721,5 +724,8 @@ def get_all_node_pair_scores(dataset, gt_graph):
 
     return pairwise_scores
 
+
+def hash_edge(u, v):
+    return
 
 

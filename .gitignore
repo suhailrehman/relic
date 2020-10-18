@@ -102,3 +102,13 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+.ipynb_checkpoints/
+
+# Project Specific
+primitives/python/generator/dataset*
+primitives/python/generator/result*
+*.html
+*.csv
+*.log
+*.pkl
+*.pdf

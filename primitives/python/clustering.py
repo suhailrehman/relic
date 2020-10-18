@@ -9,6 +9,12 @@ import numpy as np
 
 from lineage import similarity, precomputed_sim
 
+from hashlib import md5
+
+
+def hash_edge(x):
+    w = "+".join(sorted(x[:-1])).encode('utf8')
+    return md5(w).hexdigest()
 
 
 def exact_schema_cluster(df_dict):
@@ -107,6 +113,8 @@ def tiebreak_pairscores(df_dict, pairlist):
 
     if len(score_dict[max_raw_score])>1:
         print("Multiple Overlap candidates: ", score_dict[max_raw_score])
+        s_edge_list = sorted(score_dict[max_raw_score], key=hash_edge)
+        return s_edge_list[0]
 
 
     return max_pair
@@ -134,6 +142,8 @@ def tiebreak_pairscores_col(df_dict, pairlist):
 
     if len(score_dict[min_raw_score])>1:
         print("Multiple Min SymDiff candidates.", score_dict[min_raw_score])
+        s_edge_list = sorted(score_dict[min_raw_score], key=hash_edge)
+        return s_edge_list[0]
 
     return min_pair
 
@@ -159,6 +169,9 @@ def tiebreak_pairscores_cell(df_dict, pairlist):
 
     if len(score_dict[max_cell_score])>1:
         print("Multiple Cell-Level candidates.", score_dict[max_cell_score])
+        s_edge_list = sorted(score_dict[max_cell_score], key=hash_edge)
+        return s_edge_list[0]
+
 
     return max_pair
 
@@ -301,20 +314,20 @@ def max_spanning_tree(pw_graph, edge_type='cell'):
 
 
 
-def max_spanning_tree_tie_breaker(pw_graph, g_truth, edge_type='cell'):
+def max_spanning_tree_tie_breaker(pw_graph, g_truth=None, edge_type='cell'):
     G = nx.Graph()
     i = 0
     for i, e in enumerate(max_spanning_edges_tie_breaker(pw_graph, g_truth)):
+        print('Adding edge number', i, ':', e, 'weight:', pw_graph[e[0]][e[1]]['weight'])
         G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i, type=edge_type)
 
     return G, i+1
 
 
-def max_spanning_edges_tie_breaker(G, g_truth, weight='weight', data=True):
+def max_spanning_edges_tie_breaker(G, g_truth=None, weight='weight', data=True):
     from networkx.utils import UnionFind
     if G.is_directed():
-        raise nx.NetworkXError(
-            "Mimimum spanning tree not defined for directed graphs.")
+        raise nx.NetworkXError("Mimimum spanning tree not defined for directed graphs.")
 
     subtrees = UnionFind()
     edges_dict = OrderedDict()
@@ -322,15 +335,23 @@ def max_spanning_edges_tie_breaker(G, g_truth, weight='weight', data=True):
     for e in sorted(G.edges(data=True), key=lambda t: t[2].get(weight, 1), reverse=True):
         edges_dict.setdefault(e[2][weight],[]).append(e)
 
-    g_truth_copy = g_truth.to_undirected()
+    g_truth_copy = None
+
+    if g_truth:
+        g_truth_copy = g_truth.to_undirected()
 
     for w, edge_list in edges_dict.items():
-        print('Column Weight:', w)
+        #print('Column Weight:', w)
         if len(edge_list) > 1:
-            print('Number of Edges with this weight:', len(edge_list))
-            for edge in edge_list:
-                if g_truth_copy.has_edge(edge[0],edge[1]) and subtrees[edge[0]] != subtrees[edge[1]]:
-                        print('Selecting Tie Breaker GT edge', edge, edge[0], edge[1])
+            print('Number of Edges with weight:', w, len(edge_list))
+            s_edge_list = sorted(edge_list, key=hash_edge)
+            print('Sorted & Hash Values:', s_edge_list, list(map(hash_edge, s_edge_list)))
+            for edge in s_edge_list:
+                if g_truth_copy:
+                    if not g_truth_copy.has_edge(edge[0],edge[1]):
+                        continue
+                if subtrees[edge[0]] != subtrees[edge[1]]:
+                        print('Selecting Tie Breaker edge', edge, edge[0], edge[1])
                         yield (edge[0], edge[1], edge[2])
                         subtrees.union(edge[0], edge[1])
 
@@ -338,3 +359,5 @@ def max_spanning_edges_tie_breaker(G, g_truth, weight='weight', data=True):
             if subtrees[edge[0]] != subtrees[edge[1]]:
                 yield (edge[0], edge[1], edge[2])
                 subtrees.union(edge[0], edge[1])
+
+

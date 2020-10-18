@@ -1,9 +1,9 @@
 #!/bin/bash
 
-BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_full/"
+#BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_full/"
 #BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset_ppo/"
 #BASE_DIR="/home/suhail/ok/"
-#BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected/"
+BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/"
 
 # Run on a list of notebooks
 #nb_list=`cat nblist.txt`
@@ -16,7 +16,7 @@ for f in "$BASE_DIR"*; do
         # Will not run if no directories are available
         nb_name=$(basename $f)
 
-        rm -rf $BASE_DIR$nb_name'/inferred/'
+        #rm -rf $BASE_DIR$nb_name'/inferred/'
 
         python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='No Precluster' --metric=cell --recompute=True --cellt=-1.0
 

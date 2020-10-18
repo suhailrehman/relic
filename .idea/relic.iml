@@ -2,12 +2,25 @@
 <module type="PYTHON_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/primitives/python" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (3rd copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (4th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (5th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (6th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (7th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (8th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (9th copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (another copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset (copy)" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/dataset_ppo" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/rejects" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/results" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/generator/test" />
+      <excludeFolder url="file://$MODULE_DIR$/primitives/python/notebooks" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Python 3.7 (relic)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-  </component>
-  <component name="TestRunnerService">
-    <option name="PROJECT_TEST_RUNNER" value="Unittests" />
   </component>
 </module>

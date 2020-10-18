@@ -70,7 +70,8 @@ def mark_edge_stage(stage_graph, stage_name, edges_considered, edges_selected, g
     return stage_graph
 
 
-def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster, time, metric='pandas_cell'):
+def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
+                  missing_files, pre_cluster, time, metric='pandas_cell', stage_name='default'):
     result = graphs.get_precision_recall(g_truth, g_inferred)
 
     if '0.csv' not in df_dict:
@@ -100,6 +101,7 @@ def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
         'recall': result['Recall'],
         'F1': result['F1'],
         'missing_files': len(missing_files),
+        'stage_name': stage_name,
         'time': time
     }, ignore_index=True)
 
@@ -261,12 +263,12 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
     cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
 
+    g_inferred = nx.Graph()
+
     # Start with intra-cluster edges:
     #if(pre_cluster != 'No Precluster'):
 
     #else:
-
-
 
 
     # 02/02/2020
@@ -312,9 +314,9 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         print("Adding edges only above threshold: ", cell_threshold)
         threshold_graph = graphs.get_subgraph_threshold(jaccard_graph, cell_threshold)
         if 'gt' in metric:
-            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, g_truth, edge_type=metric.split('+')[0])
+            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, g_truth=g_truth, edge_type=metric.split('+')[0])
         else:
-            g_inferred, edge_num = clustering.max_spanning_tree(threshold_graph, edge_type=metric.split('+')[0])
+            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, edge_type=metric.split('+')[0])
 
         stage += 1
         # nx.set_edge_attributes(stage_graph, edge_t, 'stage' + str(stage))
@@ -324,12 +326,12 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         print('Total Edges selected at this stage: ', len(considered_edges.keys()))
         stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage), considered_edges, selected_edges, g_truth,)
 
-        for edge in g_inferred.edges(data=True):
-            print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t + "-level score:", edge[2]['weight'])
+        #for edge in g_inferred.edges(data=True):
+        #    print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t + "-level score:", edge[2]['weight'])
 
 
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric)
+                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_flat')
 
     elif pre_cluster == 'PC2':
 
@@ -348,7 +350,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
         # Draw first graph and get results
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric)
+                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_intra')
 
         selected_edges = [e for e in g_inferred.edges()]
         stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra', considered_edges, selected_edges, g_truth)
@@ -373,106 +375,6 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     components = [c for c in nx.connected_components(g_inferred)]
     #print('Components:', components)
 
-    steps = 0
-    stop = False
-
-    if pre_cluster == 'No Precluster':
-        stop = True
-
-    stage += 1
-    clustered_edges_considered = set()
-    clustered_edges_added = []
-
-    # Clustering Loop Starts here
-    while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
-
-        steps += 1
-
-        #new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
-        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_col_edge(g_inferred, dataset,
-                                                                                                  edge_num,
-                                                                                                  col_pw_graph=all_pw_col_jaccard_graph,
-                                                                                                  col_threshold=col_threshold)
-        for e in edges_considered:
-            clustered_edges_considered.add(e)
-
-        if not new_graph:
-            stop = True
-        else:
-            g_inferred, edge_num = new_graph, new_edge_num
-            clustered_edges_added.append(new_edge)
-
-        components = [c for c in nx.connected_components(g_inferred)]
-        #print('Components:', components)
-
-        #nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
-        nx.write_edgelist(g_inferred, result_dir + 'infered_mst_'+metric+'.csv', data=True)
-
-
-        # Draw inferred graph image:
-        if (len(clusters) > 1):
-            clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
-            cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
-        else:
-            cluster_dict = None
-
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric)
-        if draw:
-            img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
-                                                             cluster_dict=cluster_dict, join_list=None))
-
-
-    considered_edges = {(e1,e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
-    stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges, clustered_edges_added, g_truth)
-
-    group_list = None
-
-    if group_edges:
-        print('In group checking')
-
-        nppo_edges_considered = set()
-        nppo_edges_added = []
-
-        # NPPO Clustering Loop Starts here
-        stop = False
-        steps = 0
-        nppo_dict = {}
-        while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
-            steps += 1
-            new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
-                                                                                          nppo_dict, g_truth=g_truth)
-            if not nppo_edges_considered:
-                for e in nppo_dict.keys():
-                    nppo_edges_considered.add(e)
-
-            if not new_graph:
-                stop = True
-            else:
-                g_inferred, edge_num = new_graph, new_edge_num
-                nppo_edges_added.append(new_edge)
-
-            components = [c for c in nx.connected_components(g_inferred)]
-
-            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
-
-            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
-                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
-
-            # print(g_inferred.nodes(), g_inferred.edges())
-        if nppo_edges_considered:
-            stage += 1
-            nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
-            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group', nppo_edges, nppo_edges_added,
-                                          g_truth)
-
-
-    # Test for NPPOs:
-
-    inferred_j_edges = []
-    join_list = None
-    cluster_dict = None
-
     if join_edges:
         print('Checking for Joins')
 
@@ -482,7 +384,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         # NPPO Clustering Loop Starts here
         stop = False
         steps = 0
+        stage += 1
         triple_dict = {}
+
+        if os.path.exists(result_dir + 'triple_dict.pkl') and recompute:
+            with open(result_dir + 'triple_dict.pkl', 'rb') as handle:
+                triple_dict = pickle.load(handle)
+
         while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             print('Join Detection: components', len(components), 'stop', stop, 'steps', steps)
             steps += 1
@@ -508,23 +416,140 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
-                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+                                  pre_cluster, timeit.default_timer() - start_time,
+                                  metric=metric, stage_name=str(stage)+'_join')
 
         if nppo_edges_considered:
-            stage += 1
             nppo_edges = {tuple(e): 1.0 for e in nppo_edges_considered}
             # Write out triple Dict:
-            with open(result_dir + metric + '_triple_dict.pkl', 'wb') as handle:
+            with open(result_dir + 'triple_dict.pkl', 'wb') as handle:
                 pickle.dump(triple_dict, handle)
             stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_join', nppo_edges, nppo_edges_added,
                                           g_truth)
 
 
+    steps = 0
+    stop = False
+    clustered_edges_considered = set()
+    clustered_edges_added = []
+    stage += 1
+
+    # Clustering Loop Starts here
+    while (len(components) > 1 and steps < len(dataset.keys()) and not stop and pre_cluster != 'No Precluster'):
+
+        steps += 1
+        use_col = 'col' in metric
+
+        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset,
+                                                                                                   edge_num,
+                                                                                                   pw_graph=all_pw_jaccard_graph,
+                                                                                                   col_pw_graph=all_pw_col_jaccard_graph,
+                                                                                                   cell_threshold=cell_threshold,
+                                                                                                   col_threshold=col_threshold,
+                                                                                                   col=use_col)
+
+        '''
+        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_col_edge(g_inferred, dataset,
+                                                                                                  edge_num,
+                                                                                                  col_pw_graph=all_pw_col_jaccard_graph,
+                                                                                                  col_threshold=col_threshold)
+        '''
+
+        for e in edges_considered:
+            clustered_edges_considered.add(e)
+
+        if not new_graph:
+            stop = True
+        else:
+            g_inferred, edge_num = new_graph, new_edge_num
+            clustered_edges_added.append(new_edge)
+
+        components = [c for c in nx.connected_components(g_inferred)]
+        #print('Components:', components)
+
+        #nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
+        nx.write_edgelist(g_inferred, result_dir + 'infered_mst_'+metric+'.csv', data=True)
 
 
+        # Draw inferred graph image:
+        if (len(clusters) > 1):
+            clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
+            cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
+        else:
+            cluster_dict = None
+
+        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_inter')
+        if draw:
+            img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
+                                                             cluster_dict=cluster_dict, join_list=None))
+
+
+    considered_edges = {(e1,e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
+    stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges, clustered_edges_added, g_truth)
+
+
+    steps = 0
+    stop = False
+
+
+    #if pre_cluster == 'No Precluster':
+    #    stop = True
+
+    inferred_j_edges = []
+    join_list = None
+    cluster_dict = None
+
+
+
+
+    group_list = None
+
+    if group_edges:
+        print('In group checking')
+
+        nppo_edges_considered = set()
+        nppo_edges_added = []
+
+        # NPPO Clustering Loop Starts here
+        stop = False
+        steps = 0
+        stage += 1
+        nppo_dict = {}
+
+        if os.path.exists(result_dir + 'group_dict.pkl') and recompute:
+            with open(result_dir + 'group_dict.pkl', 'rb') as handle:
+                nppo_dict = pickle.load(handle)
+
+        while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
+            steps += 1
+            new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
+                                                                                          nppo_dict, g_truth=g_truth)
+            if not nppo_edges_considered:
+                for e in nppo_dict.keys():
+                    nppo_edges_considered.add(e)
+
+            if not new_graph:
+                stop = True
+            else:
+                g_inferred, edge_num = new_graph, new_edge_num
+                nppo_edges_added.append(new_edge)
+
+            components = [c for c in nx.connected_components(g_inferred)]
+
+            nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
+
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
+                                  pre_cluster, timeit.default_timer() - start_time,
+                                  metric=metric, stage_name=str(stage)+'_group')
 
             # print(g_inferred.nodes(), g_inferred.edges())
-
+        if nppo_edges_considered:
+            with open(result_dir + 'group_dict.pkl', 'wb') as handle:
+                pickle.dump(nppo_dict, handle)
+            nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group', nppo_edges, nppo_edges_added,
+                                          g_truth)
 
 
         '''
@@ -571,6 +596,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         # NPPO Clustering Loop Starts here
         stop = False
         steps = 0
+        stage += 1
         nppo_dict = {}
         while (len(components) > 1 and steps < len(dataset.keys())and not stop):
             steps += 1
@@ -594,7 +620,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
-                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+                                  pre_cluster, timeit.default_timer() - start_time,
+                                  metric=metric, stage_name=str(stage)+'_transform')
 
         '''
         import pprint
@@ -617,7 +644,6 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
         '''
         if nppo_edges_considered:
-            stage += 1
             nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
             stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_transform', nppo_edges, nppo_edges_added,
                                       g_truth)
@@ -633,7 +659,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         # NPPO Clustering Loop Starts here
         stop = False
         steps = 0
+        stage += 1
         nppo_dict = {}
+
+        if os.path.exists(result_dir + 'pivot_dict.pkl') and recompute:
+            with open(result_dir + 'pivot_dict.pkl', 'rb') as handle:
+                nppo_dict = pickle.load(handle)
+
         while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             steps += 1
             new_graph, new_edge_num, nppo_dict, new_edge = nppo.find_components_nppo_edge(g_inferred, dataset, edge_num,
@@ -655,14 +687,77 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
-                                  pre_cluster, timeit.default_timer() - start_time, metric=metric)
+                                  pre_cluster, timeit.default_timer() - start_time,
+                                  metric=metric, stage_name=str(stage)+'_pivot')
 
         if nppo_edges_considered:
-            stage += 1
+            with open(result_dir + 'pivot_dict.pkl', 'wb') as handle:
+                pickle.dump(nppo_dict, handle)
             nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
             stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_pivot', nppo_edges, nppo_edges_added,
                                           g_truth)
 
+
+
+
+    # Adding Cell-level at the end:
+
+    '''
+    steps = 0
+    stop = False
+    stage += 1
+    clustered_edges_considered = set()
+    clustered_edges_added = []
+
+    # Clustering Loop Starts here
+    while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
+
+        steps += 1
+        use_col = False
+        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=use_col)
+        #new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_col_edge(g_inferred, dataset,
+        #                                                                                          edge_num,
+        #                                                                                          col_pw_graph=all_pw_col_jaccard_graph,
+        #                                                                                          col_threshold=col_threshold)
+        for e in edges_considered:
+            clustered_edges_considered.add(e)
+
+        if not new_graph:
+            stop = True
+        else:
+            g_inferred, edge_num = new_graph, new_edge_num
+            clustered_edges_added.append(new_edge)
+
+        components = [c for c in nx.connected_components(g_inferred)]
+        # print('Components:', components)
+
+        # nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
+        nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
+
+        # Draw inferred graph image:
+        if (len(clusters) > 1):
+            clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
+            cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
+        else:
+            cluster_dict = None
+
+        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric)
+        if draw:
+            img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
+                                                             cluster_dict=cluster_dict, join_list=None))
+
+    considered_edges = {(e1, e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
+    stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges,
+                                  clustered_edges_added, g_truth)
+
+
+
+
+
+    # Stop adding cell level at the end:
+
+    '''
 
 
     image_frames = [Image.open(frame) for frame in img_frames]

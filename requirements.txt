@@ -7,3 +7,4 @@ datasketch
 pygraphviz
 jupyter
 Pillow
+numpy

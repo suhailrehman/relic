@@ -62,8 +62,9 @@ def draw_graph(G, canvas_size=(8, 12), node_size=2000,
     pos = layout_fn(G, root=root, prog='dot', args=GRAPH_EDGE_ARGS)
 
     try:
-        edge_labels = {i[0:2]: '{0:.2f}'.format(i[2]['weight'])
-                       for i in G.edges(data=True)}
+        #edge_labels = {i[0:2]: '{0:.2f}'.format(i[2]['weight'])
+        #               for i in G.edges(data=True)}
+        edge_labels = {e[0:2]: e[2]['operation'] for e in G.edges(data=True)}
     except:
         edge_labels = None
 
@@ -317,13 +318,13 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     # , bgcolor="#222222", font_color="white",
     nb_net = Network(height="750px", width="100%", notebook=True)
 
-    g = get_graph(RESULT_DIR, selected_nb)
+    g = get_graph(RESULT_DIR, selected_nb)#.to_undirected()
     g_inferred = get_graph_edge_list(RESULT_DIR, selected_nb, metric)
     df_dict = similarity.load_dataset_dir(RESULT_DIR + selected_nb + '/artifacts/', '*.csv', index_col=0)
 
 
     if os.path.exists(RESULT_DIR + selected_nb + '/inferred/'+ weight+'_sim.pkl') and cached:
-        nb_data = nx.read_gpickle(RESULT_DIR + selected_nb + '/inferred/'+ weight+'_sim.pkl')
+        nb_data = nx.read_gpickle(RESULT_DIR + selected_nb + '/inferred/'+weight+'_sim.pkl')
     else:
         nb_data = pd.DataFrame(similarity.get_all_node_pair_scores(df_dict, g))
 
@@ -332,9 +333,10 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     if '0.csv' not in df_dict:
         try:
             root_node = [x for x in nx.topological_sort(g)][0]  # TODO: Check more than one root issues
-        except nx.exception.NetworkXUnfeasible as e:
+        except nx.NetworkXError as e:
             print("ERROR: Cycle in Graph")
-            root_node = list(df_dict.keys())[0]
+            indeg = g.in_degree()
+            root_node = [n for n in indeg if indeg[n] == 0][0]
             pass
     else:
         root_node = '0.csv'
@@ -383,13 +385,18 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
         nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
                         color=node_color[dst])
 
+        # Ground Truth Operation Label:
+        if g.to_undirected().has_edge(src, dst):
+            hover_string += '<br> Operation: ' + str(g.to_undirected()[src][dst]['operation'])
+
         # Edge Coloring
         if edge_number is not None and 'type' in g_inferred[src][dst]:
             hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
             nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color, label=edge_number)
 
         else:
-            nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color)
+            if edge_color != '#D3D3D3':   # Hack to remove TP edges
+                nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color)
 
     return nb_net
 
