@@ -1,13 +1,2 @@
-/home/suhail/ok/nb_28174.ipynb
-/home/suhail/ok/nb_417011.ipynb
-/home/suhail/ok/nb_292141.ipynb
-/home/suhail/ok/nb_1172641.ipynb
-/home/suhail/ok/nb_315237.ipynb
-/home/suhail/ok/nb_814615.ipynb
-/home/suhail/ok/nb_442286.ipynb
-/home/suhail/ok/nb_422202.ipynb
-/home/suhail/ok/nb_339588.ipynb
-/home/suhail/ok/nb_264704.ipynb
-/home/suhail/ok/nb_120345.ipynb
-/home/suhail/ok/nb_458180.ipynb
-/home/suhail/ok/nb_495072.ipynb
+/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/nb_118732.ipynb
+/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/nb_1193283.ipynb

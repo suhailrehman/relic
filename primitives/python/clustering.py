@@ -92,6 +92,13 @@ def generate_score_dict(pairscores):
     return returndict
 
 
+def generate_tiebreak_score_dict(pairscores):
+    returndict = defaultdict(list)
+    for src,dst,score,tiebreak_score in pairscores:
+        returndict[tiebreak_score].append((src,dst,score))
+    return returndict
+
+
 def tiebreak_pairscores(df_dict, pairlist):
     max_pair = None
     max_raw_score = 0.0
@@ -103,13 +110,13 @@ def tiebreak_pairscores(df_dict, pairlist):
         dstdf = df_dict[dst]
         overlap_score = similarity.compute_DF_overlap(srcdf, dstdf)
 
-        scores_list.append((src,dst,overlap_score))
+        scores_list.append((src,dst,score, overlap_score))
 
         if overlap_score >= max_raw_score:
             max_pair = (src, dst, score)
             max_raw_score = overlap_score
 
-    score_dict = generate_score_dict(scores_list)
+    score_dict = generate_tiebreak_score_dict(scores_list)
 
     if len(score_dict[max_raw_score])>1:
         print("Multiple Overlap candidates: ", score_dict[max_raw_score])
@@ -131,14 +138,14 @@ def tiebreak_pairscores_col(df_dict, pairlist):
         dstdf = df_dict[dst]
         overlap_score = len(set(srcdf).symmetric_difference(set(dstdf)))
 
-        scores_list.append((src,dst,overlap_score))
+        scores_list.append((src,dst,score, overlap_score))
 
         if overlap_score <= min_raw_score:
             min_pair = (src, dst, score)
             min_raw_score = overlap_score
 
 
-    score_dict = generate_score_dict(scores_list)
+    score_dict = generate_tiebreak_score_dict(scores_list)
 
     if len(score_dict[min_raw_score])>1:
         print("Multiple Min SymDiff candidates.", score_dict[min_raw_score])
@@ -159,13 +166,13 @@ def tiebreak_pairscores_cell(df_dict, pairlist):
         dstdf = df_dict[dst]
         cell_score = similarity.compute_jaccard_DF(srcdf, dstdf)
 
-        scores_list.append((src,dst,cell_score))
+        scores_list.append((src,dst,score,cell_score))
 
         if cell_score >= max_cell_score:
             max_pair = (src, dst, score)
             max_cell_score = cell_score
 
-    score_dict = generate_score_dict(scores_list)
+    score_dict = generate_tiebreak_score_dict(scores_list)
 
     if len(score_dict[max_cell_score])>1:
         print("Multiple Cell-Level candidates.", score_dict[max_cell_score])
@@ -176,7 +183,37 @@ def tiebreak_pairscores_cell(df_dict, pairlist):
     return max_pair
 
 
-def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01, col=False):
+def tiebreak_pairscores_minsize(df_dict, pairlist):
+    # Get the smallest of max pair sizes to use for cell containment scoring.
+    min_pair = None
+    min_raw_score = np.inf
+
+    scores_list = []
+
+    for src, dst, score in pairlist:
+        srcdf = df_dict[src]
+        dstdf = df_dict[dst]
+        overlap_score = max(srcdf.size, dstdf.size)
+
+        scores_list.append((src,dst,score, overlap_score))
+
+        if overlap_score <= min_raw_score:
+            min_pair = (src, dst, score)
+            min_raw_score = overlap_score
+
+
+    score_dict = generate_tiebreak_score_dict(scores_list)
+
+    if len(score_dict[min_raw_score])>1:
+        print("Multiple Min Size candidates.", score_dict[min_raw_score])
+        s_edge_list = sorted(score_dict[min_raw_score], key=hash_edge)
+        return s_edge_list[0]
+
+    return min_pair
+
+
+def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_pw_graph=None, cell_threshold=0.01, col_threshold=0.01, col=False,
+                              cell_label='cell', col_label='col', primary_tie_break_function=tiebreak_pairscores, secondary_tie_break_function=tiebreak_pairscores_cell):
     schema_dict = exact_schema_cluster(df_dict)
 
     a_schema_dict = reverse_schema_dict(schema_dict)
@@ -207,12 +244,12 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
     if maxscore > cell_threshold:
         if len(score_dict[maxscore]) > 1:
             print("Breaking Tie for primary-level:", score_dict[maxscore])
-            src, dst, score = tiebreak_pairscores(df_dict, score_dict[maxscore])
+            src, dst, score = primary_tie_break_function(df_dict, score_dict[maxscore])
         else:
             src, dst, score = score_dict[maxscore][0]
 
         print('Adding primary edge', src, dst, score)
-        g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='cell')
+        g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=cell_label)
         edge_num += 1
         return g_inferred, edge_num, considered_edges, (src,dst)
 
@@ -234,14 +271,14 @@ def find_components_join_edge(g_inferred, df_dict, edge_num, pw_graph=None, col_
 
         if maxscore > col_threshold:
             if len(score_dict[maxscore]) > 1:
-                print("Breaking Tie for column-level using cell-level score:", score_dict[maxscore])
-                src, dst, score = tiebreak_pairscores_cell(df_dict, score_dict[maxscore])
+                print("Breaking Tie for column-level using secondary tie breaker:", score_dict[maxscore])
+                src, dst, score = secondary_tie_break_function(df_dict, score_dict[maxscore])
             else:
                 src, dst, score = score_dict[maxscore][0]
 
 
             print('Adding secondary edge', src, dst, score)
-            g_inferred.add_edge(src, dst, weight=score, num=edge_num, type='col')
+            g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=col_label)
             edge_num +=1
 
     else:
@@ -314,17 +351,32 @@ def max_spanning_tree(pw_graph, edge_type='cell'):
 
 
 
-def max_spanning_tree_tie_breaker(pw_graph, g_truth=None, edge_type='cell'):
+def max_spanning_tree_tie_breaker(pw_graph, g_truth=None, edge_type='cell', tiebreaker=None, df_dict=None):
     G = nx.Graph()
     i = 0
-    for i, e in enumerate(max_spanning_edges_tie_breaker(pw_graph, g_truth)):
+    for i, e in enumerate(max_spanning_edges_tie_breaker(pw_graph, g_truth, tiebreaker=tiebreaker, df_dict=df_dict)):
         print('Adding edge number', i, ':', e, 'weight:', pw_graph[e[0]][e[1]]['weight'])
         G.add_edge(e[0],e[1], weight=pw_graph[e[0]][e[1]]['weight'], num=i, type=edge_type)
 
     return G, i+1
 
 
-def max_spanning_edges_tie_breaker(G, g_truth=None, weight='weight', data=True):
+def tiebreak_spanning_edges(edge_list, df_dict):
+    # Get the smallest of max pair sizes to use for cell containment scoring.
+    scores_list = defaultdict(list)
+
+    for src, dst, data in edge_list:
+        srcdf = df_dict[src]
+        dstdf = df_dict[dst]
+        overlap_score = max(srcdf.size, dstdf.size)
+
+        scores_list[overlap_score].append((src,dst, data))
+
+    return scores_list[min(scores_list.keys())]
+
+
+
+def max_spanning_edges_tie_breaker(G, g_truth=None, weight='weight', data=True, tiebreaker=None, df_dict=None):
     from networkx.utils import UnionFind
     if G.is_directed():
         raise nx.NetworkXError("Mimimum spanning tree not defined for directed graphs.")
@@ -343,8 +395,14 @@ def max_spanning_edges_tie_breaker(G, g_truth=None, weight='weight', data=True):
     for w, edge_list in edges_dict.items():
         #print('Column Weight:', w)
         if len(edge_list) > 1:
-            print('Number of Edges with weight:', w, len(edge_list))
-            s_edge_list = sorted(edge_list, key=hash_edge)
+            edge_list_1 = edge_list
+            if tiebreaker:
+                print('TieBreaking with min/max containment')
+                print(edge_list)
+                edge_list_1 = tiebreaker(edge_list, df_dict)
+
+            print('Number of Edges with weight:', w, len(edge_list_1))
+            s_edge_list = sorted(edge_list_1, key=hash_edge)
             print('Sorted & Hash Values:', s_edge_list, list(map(hash_edge, s_edge_list)))
             for edge in s_edge_list:
                 if g_truth_copy:

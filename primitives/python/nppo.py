@@ -313,6 +313,8 @@ def get_group_agg_cols(df1, df2, contaiment_threshold=0.9, sim_threshold=0.9, la
     for col in common_cols:
         containment = col_containment(df1, df2, col)
         jsim = similarity.set_jaccard_similarity(set(df1[col].values), set(df2[col].values))
+        if debug:
+            print('Col, containment, jsim: ', col , containment, jsim)
         if containment >= contaiment_threshold and jsim >= sim_threshold:
             group_cols.append(col)
             group_col_containment.append(containment)
@@ -345,7 +347,7 @@ def colgroup_keyness_check(df, colgroup):
     return columnset_keyness_ratio(df, colgroup) == 1.0
 
 
-def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False, strict_schema=False, lattice_check=True):
+def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False, strict_schema=False, lattice_check=False, null_aggs=False):
     # TODO: Column matching
     df1 = df_dict[d1]
     df2 = df_dict[d2]
@@ -385,6 +387,11 @@ def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False, strict_schema
             print('No group columns detected')
         return 0.0
 
+    if not agg_cols and not null_aggs: # Don't allow aggregates to be null
+        if debug:
+            print('No agg cols in common between the dataframes')
+        return 0.0
+
     if missing_vals > 0.0:
         if debug:
             print('GroupBy has missing values')
@@ -396,23 +403,22 @@ def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False, strict_schema
 
     if src_group_keyness_ratio == 1.0:
         if debug:
-            print('Source group columns are also keys, groupby unlikely')
+            print('Source group columns are also keys, groupby unlikely', src_group_keyness_ratioc)
         return 0.0
 
     if dst_group_keyness_ratio < 1.0:
         if debug:
-            print('Group keyness below threshold')
+            print('Group keyness below threshold:', dst_group_keyness_ratio)
         return 0.0
 
     column_diff = similarity.set_jaccard_similarity(set(df1.columns), set(df2.columns))
 
     contraction_ratio = len(src.index) / len(dst.index)
 
-    final_val = ((1.0 * len(group_cols) * dst_group_keyness_ratio) - missing_vals) * column_diff
+    final_val = ((1.0 * len(group_cols) * dst_group_keyness_ratio) - missing_vals) #* column_diff
     if debug:
-        print('final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals * column_diff')
-        print(final_val, ' = ', '(1.0 *', len(group_cols), '*', dst_group_keyness_ratio, ')-', missing_vals, '*',
-              column_diff)
+        print('final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals') #* column_diff')
+        print(final_val, ' = ', '(1.0 *', len(group_cols), '*', dst_group_keyness_ratio, ')-', missing_vals)
 
     return final_val  # * contraction_ratio
 
@@ -448,7 +454,7 @@ def get_all_groupbys_dfdict(df_dict):
             return_result.append((df1, result[0], df2, result[1]))
     return return_result
 
-
+'''
 # Pivot Detection
 # Checks if df1 is a pivot of df2 or vice versa
 # df1, df2 are dataframes
@@ -469,7 +475,7 @@ def pivot_detector(df1, df2):
             return col, intersect
 
     return intersect
-
+'''
 
 # Improved Join Detectors
 
@@ -782,7 +788,7 @@ def score_join_schema(df1, df2, df3, df_dict, debug=False, replay=True):
 
 def columnset_keyness_ratio(df, colset):
     original_size = len(df[colset].index)
-    set_size = len(set(frozenset(u) for u in df[colset].values.tolist()))
+    set_size = len(set(tuple(u) for u in df[colset].values.tolist()))
 
     return set_size / original_size
 
@@ -933,7 +939,7 @@ def select_max_join_score(score_dict, g_inferred, threshold):
     return src, dst, score
 
 
-def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.9):
+def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.999):
     components = [c for c in nx.connected_components(g_inferred)]
     if len(components) > 2:
         combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
@@ -1044,13 +1050,13 @@ def tie_break_by_contraction_ratio(df_dict, pairlist):
 
     for src, dst, score in pairlist:
         contraction = compute_contraction_ratio(df_dict, src, dst)
-        scores_list.append((src, dst, contraction))
+        scores_list.append((src, dst, score, contraction))
 
         if contraction >= max_score:
             max_contraction = (src, dst, score)
             max_score = contraction
 
-    score_dict = clustering.generate_score_dict(scores_list)
+    score_dict = clustering.generate_tiebreak_score_dict(scores_list)
 
     if len(score_dict[max_score]) > 1:
         print("Multiple Contraction candidates:", score_dict[max_score])
@@ -1075,7 +1081,8 @@ def find_column_set_match(df, valueset, string_convert=False):
     return col_mapping_dict
 
 
-def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=True, debug=False):
+def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=True, schema_check=True, debug=False,
+                   index_match_threshold=0.99, col_match_threshold=0.99):
     df1 = df_dict[df1_name]
     df2 = df_dict[df2_name]
 
@@ -1088,6 +1095,11 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
 
     if debug:
         print('df1index, df2index, df1columns, df2columns', df1.index.name, df2.index.name, df1.columns, df2.columns)
+
+    if schema_check: # Check for at most one common column (index)
+        common_cols = set(df1).intersection(set(df2))
+        if len(common_cols) > 1:
+            return 0.0
 
     if df2.index.name:
         if df2.index.name in df1.columns:
@@ -1108,6 +1120,8 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
 
     # otherwise use containment to figure out src and dst:
     else:
+        return 0.0
+        '''
         try:
             df1coldict = find_column_set_match(df1, set(df2.index.values))
             df2coldict = find_column_set_match(df2, set(df1.index.values))
@@ -1126,8 +1140,13 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
                 src = df2
                 dst = df1
                 index_containment = maxdf2
+
         except ValueError as e:
             return 0.0
+        '''
+
+    if index_containment <= index_match_threshold:
+        return 0.0
 
     # Check column-value containment
     try:
@@ -1139,10 +1158,13 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
         return 0.0
 
     # print(index_containment, max_col_score)
+    if max_col_score <= col_match_threshold:
+        return 0.0
 
     # Check pivot value containment if flag is set:
     if match_values:
         flat_values = dst.values.flatten()
+
         if flat_values.dtype == 'float64':
             valdict = find_column_set_match(src, set([x for x in flat_values if ~np.isnan(x)]))
         else:
@@ -1238,16 +1260,30 @@ def replay_groupby(df1, df2, grouplist=None, agg_op='count', debug=False):
     return similarity.compute_jaccard_DF(dst, group_result)
 
 
-def replay_merge(src1, src2, dst, key):
+def replay_merge(src1, src2, dst, key, threshold=0.95):
+    inner_score = 0.0
+    left_score = 0.0
+    right_score = 0.0
+
     try:
         size = merge_size(src1, src2, key)
         if size / len(dst.index) > 10:
             return 0.0
 
-        merge_result = src1.merge(src2, on=key)
+        inner_result = src1.merge(src2, on=key)
+        inner_score = similarity.compute_jaccard_DF(dst, inner_result, containment=False)
+        if inner_score < threshold:
+            left_result = src1.merge(src2, on=key, how='left')
+            left_score = similarity.compute_jaccard_DF(dst, left_result, containment=False)
+            if left_score < threshold:
+                right_result = src1.merge(src2, on=key, how='right')
+                right_score = similarity.compute_jaccard_DF(dst, right_result, containment=False)
+
     except Exception as e:
+        raise
         return 0.0
-    return similarity.compute_jaccard_DF(dst, merge_result, containment=False)
+
+    return max([inner_score, left_score, right_score])
 
 
 def tiebreak_by_col_level(df_dict, pairlist):

@@ -196,6 +196,77 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         nx.write_gpickle(all_pw_col_jaccard_graph, result_dir + 'col_sim.pkl')
 
 
+    if os.path.exists(result_dir+'colms_sim.pkl') and recompute:
+        all_pw_colms_jaccard_graph = nx.read_gpickle(result_dir+'colms_sim.pkl')
+    else:
+        print('Computing pairwise column multiset similarity')
+        all_pairwise_col_jaccard = similarity.get_pairwise_similarity(dataset, similarity.compute_colms_jaccard_DF)
+        all_pw_colms_jaccard_graph = graphs.generate_pairwise_graph(all_pairwise_col_jaccard)
+
+        # Write out the Pairwise Distances as Adj list
+        nx.to_pandas_adjacency(all_pw_colms_jaccard_graph, weight='weight').to_csv(
+            result_dir + 'colms_sim.csv')
+        nx.write_gpickle(all_pw_colms_jaccard_graph, result_dir + 'colms_sim.pkl')
+
+
+    if os.path.exists(result_dir+'colms_con_sim.pkl') and recompute:
+        all_pw_colms_containment_graph = nx.read_gpickle(result_dir+'colms_con_sim.pkl')
+    else:
+        print('Computing pairwise column multiset containment similarity')
+        all_pairwise_col_containment = similarity.get_pairwise_similarity(dataset, similarity.compute_colms_containment_DF)
+        all_pw_colms_containment_graph = graphs.generate_pairwise_graph(all_pairwise_col_containment)
+
+        # Write out the Pairwise Distances as Adj list
+        nx.to_pandas_adjacency(all_pw_colms_containment_graph, weight='weight').to_csv(
+            result_dir + 'colms_con_sim.csv')
+        nx.write_gpickle(all_pw_colms_containment_graph, result_dir + 'colms_con_sim.pkl')
+
+
+    if os.path.exists(result_dir+'rowms_con_sim.pkl') and recompute:
+        all_pw_rowms_containment_graph = nx.read_gpickle(result_dir + 'rowms_con_sim.pkl')
+    else:
+        print('Computing pairwise row multiset containment similarity')
+        all_pw_rowms_containment_graph = nx.Graph()
+        for src, dst, e_data in all_pw_colms_containment_graph.edges(data=True):
+            srcdf = dataset[src]
+            dstdf = dataset[dst]
+            colms_containment = e_data['weight']
+
+            intersection = len(set(srcdf).intersection(set(dstdf)))
+            union = len(set(srcdf).union(set(dstdf)))
+            try:
+                rowms_containment = (colms_containment * union) / intersection
+            except ZeroDivisionError as e:
+                rowms_containment = 0.0
+
+            all_pw_rowms_containment_graph.add_edge(src, dst, weight=rowms_containment)
+
+        # Write out the Pairwise Distances as Adj list
+        nx.to_pandas_adjacency(all_pw_colms_containment_graph, weight='weight').to_csv(
+                                result_dir + 'rowms_con_sim.csv')
+        nx.write_gpickle(all_pw_rowms_containment_graph, result_dir + 'rowms_con_sim.pkl')
+
+
+    if os.path.exists(result_dir+'cc_con_sim.pkl') and recompute:
+        all_pw_cell_containment_graph = nx.read_gpickle(result_dir+'cc_con_sim.pkl')
+    else:
+        print('Computing pairwise cell containment similarity')
+        all_pairwise_col_containment = similarity.get_pairwise_similarity(dataset, similarity.compute_colms_containment_DF)
+        all_pw_cell_containment_graph = graphs.generate_pairwise_graph(all_pairwise_col_containment)
+
+        # Write out the Pairwise Distances as Adj list
+        nx.to_pandas_adjacency(all_pw_cell_containment_graph, weight='weight').to_csv(
+            result_dir + 'cc_con_sim.csv')
+        nx.write_gpickle(all_pw_cell_containment_graph, result_dir + 'cc_con_sim.pkl')
+
+    if 'colmscon' in metric:
+        all_pw_jaccard_graph = all_pw_colms_containment_graph
+    elif 'colms' in metric:
+        all_pw_jaccard_graph = all_pw_colms_jaccard_graph
+    #elif 'cc_con' in metric:
+    #    all_pw_jaccard_graph = all_pw_cell_containment_graph
+
+
     '''
     if os.path.exists(result_dir+'val_sim.pkl') and recompute:
         all_pw_val_jaccard_graph = nx.read_gpickle(result_dir+'val_sim.pkl')
@@ -296,8 +367,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     if pre_cluster == 'No Precluster':
 
-        pairwise_jaccard = precomputed_sim.get_pairwise_similarity_pc(dataset, all_pw_jaccard_graph, threshold=cell_threshold)
-        pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
+        #pairwise_jaccard = precomputed_sim.get_pairwise_similarity_pc(dataset, all_pw_jaccard_graph, threshold=cell_threshold)
+        #pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
 
 
         if metric == 'valset':
@@ -308,12 +379,24 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             jaccard_graph = all_pw_colval_jaccard_graph
         elif metric == 'cellvalset':
             jaccard_graph = all_pw_cellval_jaccard_graph
+        elif 'colmscon' in metric:
+            jaccard_graph = all_pw_colms_containment_graph
+        elif 'colms' in metric:
+            jaccard_graph = all_pw_colms_jaccard_graph
+        elif 'cc_con' in metric:
+            jaccard_graph = all_pw_cell_containment_graph
         else:
             jaccard_graph = all_pw_jaccard_graph
 
         print("Adding edges only above threshold: ", cell_threshold)
         threshold_graph = graphs.get_subgraph_threshold(jaccard_graph, cell_threshold)
-        if 'gt' in metric:
+        if 'cc_con' in metric:
+            print('Cell Containment with Tiebreaker graph')
+            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, g_truth=g_truth,
+                                                                            edge_type=metric.split('+')[0],
+                                                                            tiebreaker=clustering.tiebreak_spanning_edges,
+                                                                            df_dict=dataset)
+        elif 'gt' in metric:
             g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, g_truth=g_truth, edge_type=metric.split('+')[0])
         else:
             g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(threshold_graph, edge_type=metric.split('+')[0])
@@ -335,6 +418,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     elif pre_cluster == 'PC2':
 
+        if 'colmscon' in metric:
+            all_pw_jaccard_graph = all_pw_colms_containment_graph
+        elif 'colms' in metric:
+            all_pw_jaccard_graph = all_pw_colms_jaccard_graph
+        elif 'cc_con' in metric:
+            all_pw_jaccard_graph = all_pw_cell_containment_graph
+
         pairwise_jaccard = precomputed_sim.intra_cluster_similarity_pc(dataset, clusters, all_pw_jaccard_graph,
                                                                        threshold=cell_threshold)
         pw_jaccard_graph = graphs.generate_pairwise_graph(pairwise_jaccard)
@@ -343,17 +433,56 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
         #considered_edges = [e for e in pw_jaccard_graph.edges()]
         considered_edges = {(e1, e2): data['weight'] for e1, e2, data in pw_jaccard_graph.edges(data=True)}
-        g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
-
-        # Now try adding columnar edges to each disconnected cluster subgraph:
-        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=False)
+        if 'cc_con' in metric:
+            print('Cell Containment with Tiebreaker graph')
+            g_inferred, edge_num = clustering.max_spanning_tree_tie_breaker(pw_jaccard_graph, g_truth=g_truth,
+                                                                            edge_type=metric.split('+')[0],
+                                                                            tiebreaker=clustering.tiebreak_spanning_edges,
+                                                                            df_dict=dataset)
+        else:
+            g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
 
         # Draw first graph and get results
         pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_intra')
+                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage) + '_intra')
 
         selected_edges = [e for e in g_inferred.edges()]
-        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra', considered_edges, selected_edges, g_truth)
+        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra1',
+                                      considered_edges, selected_edges, g_truth)
+
+        # Add vertices to the graph if they don't exist
+        for artifact in dataset.keys():
+            if artifact not in [n for n in g_inferred.nodes()]:
+                print('Adding artifact to graph in intra-mode', artifact)
+                g_inferred.add_node(artifact)
+
+        # Now try adding columnar edges to each disconnected cluster subgraph:
+        ''' - Replace with Multiset Jaccard
+        g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num,
+                                                           all_pw_jaccard_graph,
+                                                           all_pw_col_jaccard_graph=all_pw_col_jaccard_graph,
+                                                           cell_threshold=cell_threshold,
+                                                           col_threshold=col_threshold, col=False)
+        '''
+
+        # Try using multiset jaccard containment to add edges that are still disconnected
+        if '+containment' in metric:
+            print('Check for contained edges')
+            g_inferred, edge_num = intra_cluster_add_col_edges(dataset, clusters, g_inferred, edge_num,
+                                                               all_pw_colms_containment_graph,
+                                                               all_pw_col_jaccard_graph=all_pw_cell_containment_graph,
+                                                               cell_threshold=0.99,
+                                                               col_threshold=col_threshold, col=False, debug=True,
+                                                               cell_label='cell_containment')
+
+
+        # Draw first graph and get results
+        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_intra2')
+
+        selected_edges = [e for e in g_inferred.edges()]
+        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra2',
+                                      considered_edges, selected_edges, g_truth)
 
 
         if draw:
@@ -394,7 +523,10 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             print('Join Detection: components', len(components), 'stop', stop, 'steps', steps)
             steps += 1
-            new_graph, new_edge_num, new_triple_dict, ne1, ne2 = nppo.find_components_join_edge(g_inferred, dataset, edge_num, triple_dict)
+            new_graph, new_edge_num, new_triple_dict, ne1, ne2 = nppo.find_components_join_edge(g_inferred,
+                                                                                                dataset,
+                                                                                                edge_num,
+                                                                                                triple_dict)
             triple_dict.update(new_triple_dict)
 
             if not nppo_edges_considered:
@@ -438,15 +570,45 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     while (len(components) > 1 and steps < len(dataset.keys()) and not stop and pre_cluster != 'No Precluster'):
 
         steps += 1
-        use_col = 'col' in metric
+        secondary_sim_metric = all_pw_col_jaccard_graph
+        secondary_threshold = col_threshold
+        secondary_edge_label = 'col'
+        tie_break_function = clustering.tiebreak_pairscores_cell
 
-        new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset,
-                                                                                                   edge_num,
-                                                                                                   pw_graph=all_pw_jaccard_graph,
-                                                                                                   col_pw_graph=all_pw_col_jaccard_graph,
-                                                                                                   cell_threshold=cell_threshold,
-                                                                                                   col_threshold=col_threshold,
-                                                                                                   col=use_col)
+        if 'pc2cc_con' in metric:
+            new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred,
+                                                                                                       dataset,
+                                                                                                       edge_num,
+                                                                                                       pw_graph=all_pw_cell_containment_graph,
+                                                                                                       cell_label='pc2cc_con',
+                                                                                                       primary_tie_break_function=clustering.tiebreak_pairscores_minsize,
+                                                                                                       col_pw_graph=secondary_sim_metric,
+                                                                                                       cell_threshold=cell_threshold,
+                                                                                                       col_threshold=secondary_threshold,
+                                                                                                       col=False,
+                                                                                                       col_label=secondary_edge_label,
+                                                                                                       secondary_tie_break_function=tie_break_function)
+
+        else:
+            if '+containment' in metric:
+                #print('Using Row metric')
+                use_col = True
+                secondary_sim_metric = all_pw_cell_containment_graph
+                secondary_threshold = 0.99
+                secondary_edge_label = 'cell_containment'
+                tie_break_function = clustering.tiebreak_pairscores_minsize
+            else:
+                use_col = 'col' in metric and 'colms' not in metric and not flip_sim
+
+            new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred, dataset,
+                                                                                                       edge_num,
+                                                                                                       pw_graph=all_pw_jaccard_graph,
+                                                                                                       col_pw_graph=secondary_sim_metric,
+                                                                                                       cell_threshold=cell_threshold,
+                                                                                                       col_threshold=secondary_threshold,
+                                                                                                       col=use_col,
+                                                                                                       col_label=secondary_edge_label,
+                                                                                                       secondary_tie_break_function=tie_break_function)
 
         '''
         new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_col_edge(g_inferred, dataset,
@@ -778,7 +940,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
 
 # Note: Edges in g_inferred should only be within a cluster
-def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=None, cell_threshold=0.1, col_threshold=0.1, col=True):
+def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_jaccard_graph, all_pw_col_jaccard_graph=None, cell_threshold=0.1, col_threshold=0.1, col=True, debug=False, cell_label='cell'):
 
     for cluster in clusters.values():
         subgraph = g_inferred.subgraph(cluster).copy()
@@ -790,10 +952,19 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
 
         # Clustering Loop Starts here
         while (len(components) > 1 and steps < limit and not stop):
+            if debug:
+                print('Components:', components)
 
             steps += 1
 
-            new_graph ,new_edge_num, considered_edges, new_edge = clustering.find_components_join_edge(subgraph, df_dict, edge_num, pw_graph=all_pw_jaccard_graph, col_pw_graph=all_pw_col_jaccard_graph, cell_threshold=cell_threshold, col_threshold=col_threshold, col=col)
+            new_graph ,new_edge_num, considered_edges, new_edge = clustering.find_components_join_edge(subgraph,
+                                                                                                       df_dict, edge_num,
+                                                                                                       pw_graph=all_pw_jaccard_graph,
+                                                                                                       col_pw_graph=all_pw_col_jaccard_graph,
+                                                                                                       cell_threshold=cell_threshold,
+                                                                                                       col_threshold=col_threshold,
+                                                                                                       col=col,
+                                                                                                       cell_label=cell_label)
             if not new_graph:
                 stop = True
             else:
@@ -801,13 +972,13 @@ def intra_cluster_add_col_edges(df_dict, clusters, g_inferred, edge_num, all_pw_
                 edge_num = new_edge_num
 
             components = [c for c in nx.connected_components(subgraph)]
-            # print('Components:', components)
+
 
 
         for edge in subgraph.edges(data=True):
             g_inferred.add_edge(edge[0], edge[1], weight=edge[2]['weight'], num=edge[2]['num'], type=edge[2]['type'])
             #new_edges.append((edge[0], edge_[1]))
-            #edge_num += 1
+            edge_num += 1
 
 
     return g_inferred, edge_num
