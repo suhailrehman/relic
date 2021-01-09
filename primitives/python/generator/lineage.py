@@ -25,7 +25,7 @@ class LineageTracker:
                              sep=',')
         self.num_files += 1
 
-    def link(self, src_label, dest_label, op_label):
+    def link(self, src_label, dest_label, op_label, args=None):
         if not self.item_exists(src_label):
             raise NameError(src_label)
         if not self.item_exists(dest_label):
@@ -33,7 +33,7 @@ class LineageTracker:
 
         self.graph.add_edge(src_label,
                             dest_label,
-                            operation=op_label)
+                            operation=op_label, args=args)
 
     def draw_graph(self, canvas_size=(8, 12), node_size=1500,
                    layout_fn=graphviz_layout, **kwargs):

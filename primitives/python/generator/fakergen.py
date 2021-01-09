@@ -402,7 +402,10 @@ class FakerVersionGenerator:
             print('Join Column: ', join_column)
             duplicate_columns = set(df1.columns)
             join_values = set(df1[join_column].values)
-            df2 = self.generate_base_df(num_rows=len(join_values), exclusions=duplicate_columns)
+            try:
+                df2 = self.generate_base_df(num_rows=len(join_values), exclusions=duplicate_columns)
+            except ValueError as e:
+                raise pd.errors.EmptyDataError
 
             #Add the join column to new df if not already present
             # TODO: Generate any length df2 and pad with newly generated faker values
@@ -442,9 +445,9 @@ class FakerVersionGenerator:
             self.lineage.new_item(str(len(self.dataset)), new_df)
             self.dataset.append(new_df)
             self.lineage.link(str(choice), self.get_last_label(),
-                              str(op_function.__name__))
+                              str(op_function.__name__), args={'key': join_column})
             self.lineage.link(merge_tbl_ver, self.get_last_label(),
-                              str(op_function.__name__))
+                              str(op_function.__name__), args={'key': join_column})
 
             if similar_versions:
                 self.op_equv_map[(self.lastmatchoice, self.get_last_label())] = similar_versions
@@ -486,7 +489,7 @@ class FakerVersionGenerator:
                 raise TooSimilarException
 
             for i, d in enumerate(tqdm(self.dataset)):
-                if i == choice:
+                if i == self.lastmatchoice:
                     continue
                 if compute_jaccard_DF(d, new_df) == 1.0:
                     self.lastargs = {}
@@ -508,6 +511,7 @@ class FakerVersionGenerator:
 
             if self.opcount == self.matfreq:
                 # Check for any dropped columns between the old and new dataframe if not pivot
+                '''
                 if op_function not in [self.pivot, self.dropcol]:
                     missing_cols = set(base_df) - set(new_df)
                     if missing_cols:
@@ -518,12 +522,12 @@ class FakerVersionGenerator:
                         self.dataset.append(middle_df)
                         self.lineage.link(str(self.lastmatchoice), self.get_last_label(), 'dropcol')
                         self.lastmatchoice = self.get_last_label()
-
+                '''
 
                 self.lineage.new_item(str(len(self.dataset)), new_df)
                 self.dataset.append(new_df)
                 self.lineage.link(str(self.lastmatchoice), self.get_last_label(),
-                                  str(op_function.__name__))
+                                  str(op_function.__name__), args=self.lastargs)
                 self.opcount = 0
                 self.currentdf = None
                 if similar_versions:
@@ -631,9 +635,10 @@ class FakerVersionGenerator:
                 return None
         else:
             # TODO: Ensure groupable columns exist in dataframe
-            col = self.select_rand_col_group(df, 'groupable', 1)
-            if col[0] not in self.groupby_cols:
-                self.groupby_cols.add(col[0])
+            group_size = np.random.randint(1,high=4)
+            col = self.select_rand_col_group(df, 'groupable', group_size)
+            #if col[0] not in self.groupby_cols:
+            #    self.groupby_cols.add(col[0])
             #else:
             #    return None # Cancel this groupby
             func = self.select_rand_aggregate()
@@ -641,8 +646,8 @@ class FakerVersionGenerator:
             self.lastargs['func'] = func
 
         try:
-            print("Grouping By: ", col[0], 'aggregation: ', func)
-            method = getattr(df.groupby(col[0]), func)
+            print("Grouping By: ", col, 'aggregation: ', func)
+            method = getattr(df.groupby(col), func)
             new_df = method().reset_index()  # TODO: Verify drop behavior
         except pd.core.base.DataError as e:
             print('Cannot apply selected groupby:', e)
@@ -718,6 +723,8 @@ class FakerVersionGenerator:
             frac = self.lastargs['frac']
         else:
             frac = self.get_rand_percentage()
+
+        self.lastargs['frac'] = frac
 
         return df.sample(frac=frac)
 
