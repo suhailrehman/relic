@@ -33,10 +33,12 @@ def load_dataset_dir(dirpath, glob_pattern, **kwargs):
 
 # Compute pairwise similarity metrics of dataset dict using similarity_metric
 # returns reverse sorted list of+ (pair1, pair2, similarity_score) tuples
-def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0):
+def get_pairwise_similarity(dataset, similarity_metric, threshold=-1.0, debug=False):
     pairwise_similarity = []
     pairs = list(itertools.combinations(dataset.keys(), 2))
     for d1, d2 in tqdm(pairs, desc='graph pairs', leave=False):
+        if debug:
+            print(d1,d2)
         score = similarity_metric(dataset[d1], dataset[d2])
         if score >= threshold:
             pairwise_similarity.append((d1, d2, score))
@@ -160,6 +162,70 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
         return float(intersection) / df2.size
 
     return float(intersection) / union
+
+
+def compute_cell_containment_DF(df1,df2, pk_col_name=None, reindex=False, column_match=False, debug=False):
+
+    # fill NaN values in df1, df2 to some token val
+    df1 = df1.fillna('jac_tmp_NA')
+    df2 = df2.fillna('jac_tmp_NA')
+
+    try:
+        if reindex:
+            df1, df2 = set_df_indices(df1, df2)
+
+        if column_match:
+            df1, df2 = fuzzy_column_match(df1, df2)
+    except IndexError as e:
+        print("Reindex error. Ignoring.")
+        pass
+
+    try:
+        if(pk_col_name):
+            df3 = df1.merge(df2, how='outer', on=pk_col_name, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+        else:
+            df3 = df1.merge(df2, how='outer', left_index=True, right_index=True, suffixes=['_jac_tmp_1','_jac_tmp_2'])
+    except TypeError as e:
+        # print("Can't Merge")
+        return 0
+
+    # Get set of column column names:
+    comparison_cols = set(col for col in df3.columns if'_jac_tmp_' in str(col))
+    common_cols = set(col.split('_jac_tmp_',1)[0] for col in comparison_cols)
+
+    if(len(common_cols) == 0):
+        return 0
+
+    # Get set of non-common columns:
+    uniq_cols = set(col for col in df3.columns if'_jac_tmp_' not in str(col))
+    if(pk_col_name):
+        uniq_cols.remove(pk_col_name)
+
+    # Check common cols and print True/False
+    for col in common_cols:
+        left = col+'_jac_tmp_1'
+        right = col+'_jac_tmp_2'
+        df3[col] = df3[left] == df3[right]
+
+    # Unique columns are already false
+
+    for col in uniq_cols:
+        df3[col] = False
+
+    #Drop superflous columns
+    df3 = df3.drop(columns=comparison_cols)
+    if(pk_col_name):
+        df3 = df3.drop(columns=[pk_col_name])
+
+    # Compute Jaccard Similarity
+    intersection = np.sum(np.sum(df3))
+    denom = min(df1.size, df2.size)
+
+    if debug:
+        print('Intersection / min(df1,df2)', intersection, df1.size, df2.size)
+    #print(intersection, union)
+
+    return float(intersection) / denom
 
 
 #Assumes corresponding column names and valid indices in both data frames
@@ -364,7 +430,7 @@ def set_containment(set1,set2):
 
 
 # Assumes corresponding column names and valid indices in both data frames
-def compute_col_jaccard_DF(df1,df2):
+def compute_col_jaccard_DF(df1,df2, debug=False):
 
     # Empty DF check
 
@@ -383,13 +449,18 @@ def compute_col_jaccard_DF(df1,df2):
     # Check common cols and print True/False
     for col in common_cols:
         try:
-            common_cols_jaccard.append(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+            sim = set_jaccard_similarity(set(df1[col].values), set(df2[col].values))
+            common_cols_jaccard.append(sim)
+            if debug:
+                print('col:', col, 'jaccard:', sim)
         except Exception as e:
             print(col)
             print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
             raise e
 
     # return np.average(common_cols_jaccard)
+    if debug:
+        print('num/denom', np.sum(common_cols_jaccard) , len(set(df1).union(set(df2))) )
     return np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))
 
 
@@ -729,3 +800,159 @@ def hash_edge(u, v):
     return
 
 
+def generate_colval_ms(df):
+    col_values = []
+    if df.empty:
+        if not df.index.empty:
+            col_df = df.index.value_counts().reset_index()
+            col_df.rename(columns={col_df.columns[0]: 'colvalue',
+                                   col_df.columns[1]: 'colcount'}, inplace=True)
+            col_df['colname'] = '_index'
+            col_values.append(col_df)
+    else:
+        for col in df:
+            col_df = df[col].value_counts().reset_index()
+            col_df.rename(columns={col_df.columns[0]: 'colvalue',
+                                   col_df.columns[1]: 'colcount'}, inplace=True)
+            col_df['colname'] = col
+            col_values.append(col_df)
+
+    return pd.concat(col_values, ignore_index=True)
+
+def colval_multiset_jaccard(df1, df2):
+    try:
+        merge_cols = ['colname', 'colvalue']
+        df1colvals = generate_colval_ms(df1).applymap(str)
+        df2colvals = generate_colval_ms(df2).applymap(str)
+
+        colvalmerge = df1colvals.merge(df2colvals, on=merge_cols,
+                                       how='outer',
+                                       suffixes=['_df1', '_df2'],
+                                       indicator=True)
+        countcols = ['colcount_df1', 'colcount_df2']
+        colvalmerge[countcols] = colvalmerge[countcols].fillna(0)
+        colvalmerge = colvalmerge.astype({x: 'int64' for x in countcols})
+        colvalmerge['maxcount'] = colvalmerge[countcols].max(axis=1)
+        colvalmerge['mincount'] = colvalmerge[countcols].min(axis=1)
+
+        return sum(colvalmerge['mincount']) / sum(colvalmerge['maxcount'])
+
+    except ValueError as e:
+        print(df1,df2)
+        raise e
+
+
+def cellval_multiset_jaccard(df1, df2):
+    try:
+        merge_cols = ['colname', 'colvalue']
+        df1colvals = generate_colval_ms(df1).applymap(str)
+        df2colvals = generate_colval_ms(df2).applymap(str)
+
+        colvalmerge = df1colvals.merge(df2colvals, on=merge_cols,
+                                       how='outer',
+                                       suffixes=['_df1', '_df2'],
+                                       indicator=True)
+        countcols = ['colcount_df1', 'colcount_df2']
+        colvalmerge[countcols] = colvalmerge[countcols].fillna(0)
+        colvalmerge = colvalmerge.astype({x: 'int64' for x in countcols})
+        colvalmerge['maxcount'] = colvalmerge[countcols].max(axis=1)
+        colvalmerge['mincount'] = colvalmerge[countcols].min(axis=1)
+
+        return sum(colvalmerge['mincount']) / sum(colvalmerge['maxcount'])
+
+    except ValueError as e:
+        print(df1,df2)
+        raise e
+
+def get_column_multiset(df,col):
+    col_df = df[col].value_counts().reset_index()
+    col_df.rename(columns={col_df.columns[0]: 'colvalue',
+                           col_df.columns[1]: 'colcount'}, inplace = True)
+    return col_df
+
+def get_colms_jaccard(df1,df2,col, containment=False):
+    df1colvals = get_column_multiset(df1, col)
+    df2colvals = get_column_multiset(df2, col)
+
+    merge_cols = 'colvalue'
+
+    colvalmerge = df1colvals.merge(df2colvals, on=merge_cols,
+                                       how='outer',
+                                       suffixes=['_df1','_df2'],
+                                       indicator=True)
+    countcols = ['colcount_df1', 'colcount_df2']
+    colvalmerge[countcols] = colvalmerge[countcols].fillna(0)
+    colvalmerge = colvalmerge.astype({x: 'int64' for x in countcols})
+    colvalmerge['maxcount'] = colvalmerge[countcols].max(axis=1)
+    colvalmerge['mincount'] = colvalmerge[countcols].min(axis=1)
+    denominator = sum(colvalmerge['maxcount'])
+    if containment:
+        denominator = min(sum(colvalmerge['colcount_df1']), sum(colvalmerge['colcount_df2']))
+    return sum(colvalmerge['mincount']) / denominator
+
+
+def compute_colms_jaccard_DF(df1,df2, debug=False):
+
+    # Empty DF check
+
+    # fill NaN values in df1, df2 to some token val
+    df1 = df1.fillna('jac_tmp_NA').reset_index(drop=True).applymap(str)
+    df2 = df2.fillna('jac_tmp_NA').reset_index(drop=True).applymap(str)
+
+    common_cols = set(df1).intersection(set(df2))
+
+    if(len(common_cols) == 0):
+        return 0.0
+
+
+    common_cols_jaccard = []
+
+    # Check common cols and print True/False
+    for col in common_cols:
+        try:
+            sim = get_colms_jaccard(df1,df2,col)
+            common_cols_jaccard.append(sim)
+            if debug:
+                print('col:', col, 'jaccard:', sim)
+        except Exception as e:
+            print(col)
+            print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+            raise e
+
+    # return np.average(common_cols_jaccard)
+    if debug:
+        print('num/denom', np.sum(common_cols_jaccard) , len(set(df1).union(set(df2))))
+    return np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))
+
+
+def compute_colms_containment_DF(df1, df2, debug=False):
+
+        # Empty DF check
+
+        # fill NaN values in df1, df2 to some token val
+        df1 = df1.fillna('jac_tmp_NA').reset_index(drop=True).applymap(str)
+        df2 = df2.fillna('jac_tmp_NA').reset_index(drop=True).applymap(str)
+
+        common_cols = set(df1).intersection(set(df2))
+
+        if (len(common_cols) == 0):
+            return 0.0
+
+        common_cols_jaccard = []
+
+        # Check common cols and print True/False
+        for col in common_cols:
+            try:
+                sim = get_colms_jaccard(df1, df2, col, containment=True)
+                common_cols_jaccard.append(sim)
+                if debug:
+                    print('col:', col, 'jaccard:', sim)
+            except Exception as e:
+                print(col)
+                print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+                raise e
+
+        # return np.average(common_cols_jaccard)
+        if debug:
+            print('num/denom', np.sum(common_cols_jaccard), len(set(df1).union(set(df2))))
+        return np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))

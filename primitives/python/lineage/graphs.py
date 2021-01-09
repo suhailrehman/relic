@@ -376,10 +376,10 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
 
         hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in hover_dict.items()])
 
-        src_node_hover_html = df_dict[src].head().to_html() + "<br> Rows:" + str(len(df_dict[src])) + " Columns:" + str(
-            len(set(df_dict[src])))
-        dst_node_hover_html = df_dict[dst].head().to_html() + "<br> Rows:" + str(len(df_dict[dst])) + " Columns:" + str(
-            len(set(df_dict[dst])))
+        src_node_hover_html = "Rows:" + str(len(df_dict[src])) + " Columns:" + str(len(set(df_dict[src]))) + \
+                              "<br>" + df_dict[src].head().to_html()
+        dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
+                              "<br>" + df_dict[dst].head().to_html()
         nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
                         color=node_color[src])
         nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
@@ -392,6 +392,7 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
         # Edge Coloring
         if edge_number is not None and 'type' in g_inferred[src][dst]:
             hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
+            hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
             nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color, label=edge_number)
 
         else:
