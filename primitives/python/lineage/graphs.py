@@ -388,6 +388,8 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
         # Ground Truth Operation Label:
         if g.to_undirected().has_edge(src, dst):
             hover_string += '<br> Operation: ' + str(g.to_undirected()[src][dst]['operation'])
+            if 'args' in g.to_undirected()[src][dst]:
+                hover_string += '<br> Args: ' + str(g.to_undirected()[src][dst]['args'])
 
         # Edge Coloring
         if edge_number is not None and 'type' in g_inferred[src][dst]:

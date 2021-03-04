@@ -819,7 +819,7 @@ def transform_detector(df1_name, df2_name, df_dict, g_inferred):
 ### Common NPPO component search routine:
 
 
-def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_function=df_groupby_check_new,
+def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, replay_dict=None, nppo_function=df_groupby_check_new,
                               label='groupby',
                               threshold=1.0, g_truth=None):
     components = [c for c in nx.connected_components(g_inferred)]
@@ -833,7 +833,7 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
         all_cmp_pairs_similarties.extend(similarites)
 
     if not all_cmp_pairs_similarties:
-        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties
+        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
 
     # TODO: Common scoring function. right now 1.0 for all edges found.
     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
@@ -846,7 +846,7 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
 
     if maxscore < threshold:
         print('No more edges above threshold')
-        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties
+        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
 
     if len(score_dict[maxscore]) > 1:
         '''
@@ -872,7 +872,7 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
             #print("Breaking tie by column-level", score_dict[maxscore])
             #src, dst, score = tiebreak_by_col_level(df_dict, score_dict[maxscore])
             print("Breaking tie by groupby-replay", score_dict[maxscore])
-            src, dst, score = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore])
+            src, dst, score, replay_dict = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], replay_dict)
         else:
             print("Breaking tie by contraction ratio", score_dict[maxscore])
             src, dst, score = tie_break_by_contraction_ratio(df_dict, score_dict[maxscore])
@@ -883,7 +883,7 @@ def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, nppo_fun
     print('Adding nppo/group edge', src, dst, score)
     g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=label)
     edge_num += 1
-    return g_inferred, edge_num, nppo_dict, (src, dst), all_cmp_pairs_similarties
+    return g_inferred, edge_num, nppo_dict, (src, dst), all_cmp_pairs_similarties, replay_dict
 
 
 def augment_triples(triples, g_inferred):
@@ -1073,6 +1073,7 @@ def find_column_set_match(df, valueset, string_convert=False):
 
     for col in df.columns:
         if string_convert:
+
             col_data = set(df[col].astype('str').values)
             valueset = set(str(x) for x in valueset)
         else:
@@ -1191,6 +1192,9 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
                     except Exception as e:
                         print('Cannot pivot:', df1_name, df2_name, index_name_match, col, val, e)
                         similarities.append(0.0)
+            if debug:
+                print('pivot replay', dst.head(), replaydf.head(), similarities)
+                return max(similarities), dst, replaydf
             return max(similarities)
 
     return index_containment * max_col_score
@@ -1224,14 +1228,18 @@ def tiebreak_by_timestamp_synthetic(df_dict, pairlist):
     return min_ts_diff
 
 
-def tiebreak_by_groupby_replay(df_dict, pairlist):
+def tiebreak_by_groupby_replay(df_dict, pairlist, replay_dict):
     max_replay_candidate = None
     max_cell_score = 0.0
 
     scores_list = []
 
     for src, dst, score in pairlist:
-        replay_score = replay_groupby(df_dict[src], df_dict[dst])
+        if frozenset((src,dst)) in replay_dict:
+            replay_score = replay_dict[frozenset((src,dst))]
+        else:
+            replay_score = replay_groupby(df_dict[src], df_dict[dst])
+            replay_dict[frozenset((src,dst))] = replay_score
 
         scores_list.append((src, dst, replay_score))
 
@@ -1244,9 +1252,9 @@ def tiebreak_by_groupby_replay(df_dict, pairlist):
     if len(score_dict[max_cell_score]) > 1:
         print("Multiple Replay candidates:", score_dict[max_cell_score])
         s_edge_list = sorted(score_dict[max_cell_score], key=hash_edge)
-        return s_edge_list[0]
+        return *s_edge_list[0], replay_dict
 
-    return max_replay_candidate
+    return *max_replay_candidate, replay_dict
 
 
 def replay_groupby(df1, df2, grouplist=None,
@@ -1263,21 +1271,31 @@ def replay_groupby(df1, df2, grouplist=None,
 
     similarities = []
 
-    group_object = src.groupby(grouplist)
+    # Order the groupcols based on order in the destination.
+    ordered_grouplist = []
+    for col in dst.columns:
+        if col in grouplist:
+            ordered_grouplist.append(col)
+
+    group_object = src.groupby(ordered_grouplist)
     for agg_op in agg_ops:
         try:
             agg_func = getattr(group_object, agg_op)
             group_result = agg_func().reset_index()
             similarities.append(similarity.compute_jaccard_DF(dst, group_result))
+            if debug:
+                print(agg_op)
+                print(dst.head())
+                print(group_result.head())
         except Exception as e:
             print('Warning GroupBy op failed: ', agg_op, e)
             similarities.append(0.0)
 
     if debug:
-        print('GroupBy performed on column: ', grouplist)
+        print('GroupBy performed on column: ', ordered_grouplist)
         print('Columns, rows df1: ', df1.columns, len(df1.index))
         print('Columns, rows df2: ', df2.columns, len(df2.index))
-        #print('Columns, rows group result: ', group_result.columns, len(group_result.index))
+        print('Columns, rows group result: ', group_result.columns, len(group_result.index))
         print('Similarities: ', similarities)
     return max(similarities)
 

@@ -71,12 +71,11 @@ def mark_edge_stage(stage_graph, stage_name, edges_considered, edges_selected, g
 
 
 def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
-                  missing_files, pre_cluster, time, metric='pandas_cell', stage_name='default'):
-    result = graphs.get_precision_recall(g_truth, g_inferred)
+                  missing_files, pre_cluster, time, metric='cell', stage_name='default', auxilliary=False):
 
     if '0.csv' not in df_dict:
         try:
-            root_node = [x for x in nx.topological_sort(g_truth)][0] #TODO: Check more than one root issues
+            root_node = [x for x in nx.topological_sort(g_truth)][0]  # TODO: Check more than one root issues
         except nx.exception.NetworkXUnfeasible as e:
             print("ERROR: Cycle in Graph")
             root_node = list(df_dict.keys())[0]
@@ -84,26 +83,42 @@ def append_result(pr_df, df_dict, g_truth, g_inferred, nb_name, index, clusters,
     else:
         root_node = '0.csv'
 
-    pr_df = pr_df.append({
-        'nb_name': nb_name,
-        'rows': df_dict[root_node].shape[0],
-        'columns': df_dict[root_node].shape[1],
-        'artifacts': len(df_dict),
-        'index': index,
-        'pre_cluster': pre_cluster,
-        'numclusters': len(clusters),
-        'distance_metric': metric,
-        'edges_correct': len(result['correct_edges']),
-        'edges_missing': len(result['to_add']),
-        'edges_to_remove': len(result['to_remove']),
-        # 'join_edges': len(inferred_j_edges),
-        'precision': result['Precision'],
-        'recall': result['Recall'],
-        'F1': result['F1'],
-        'missing_files': len(missing_files),
-        'stage_name': stage_name,
-        'time': time
-    }, ignore_index=True)
+    if auxilliary: # Auxilliary stage for timing information
+        pr_df = pr_df.append({
+            'nb_name': nb_name,
+            'rows': df_dict[root_node].shape[0],
+            'columns': df_dict[root_node].shape[1],
+            'artifacts': len(df_dict),
+            'index': index,
+            'pre_cluster': pre_cluster,
+            'distance_metric': metric,
+            'stage_name': stage_name,
+            'time': time
+        }, ignore_index=True)
+
+    else:
+        result = graphs.get_precision_recall(g_truth, g_inferred)
+
+        pr_df = pr_df.append({
+            'nb_name': nb_name,
+            'rows': df_dict[root_node].shape[0],
+            'columns': df_dict[root_node].shape[1],
+            'artifacts': len(df_dict),
+            'index': index,
+            'pre_cluster': pre_cluster,
+            'numclusters': len(clusters),
+            'distance_metric': metric,
+            'edges_correct': len(result['correct_edges']),
+            'edges_missing': len(result['to_add']),
+            'edges_to_remove': len(result['to_remove']),
+            # 'join_edges': len(inferred_j_edges),
+            'precision': result['Precision'],
+            'recall': result['Recall'],
+            'F1': result['F1'],
+            'missing_files': len(missing_files),
+            'stage_name': stage_name,
+            'time': time
+        }, ignore_index=True)
 
     return pr_df
 
@@ -120,7 +135,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                     draw=False,
                                     recompute=False,
                                     metric='cell',
-                                    flip_sim=False
+                                    flip_sim=False,
+                                    store_weights=False
                                     ):
 
 
@@ -155,21 +171,27 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     # Image Array for Animated GIF
     img_frames = []
 
+    # Time the Load Phase and write out
+
     # Load Dataset
     dataset = ds.build_df_dict_dir(artifact_dir)
-
     # Load Ground Truth:
     g_truth = nx.read_gpickle(wf_dir + '/' + nb_name + '_gt_fixed.pkl')
+
+    pr_df = append_result(pr_df, dataset, g_truth, None, nb_name, index, None, None, pre_cluster,
+                          timeit.default_timer() - start_time, metric=metric, stage_name='load', auxilliary=True)
 
     # Write ground truth image
     if draw:
         graphs.generate_notebook_image(base_dir, nb_name)
 
+    all_pw_jaccard_graph = None
+
     # Compute all-pairs similarity for visualization
     # Start with intra-cluster edges:
     if os.path.exists(result_dir+'cell_sim.pkl') and recompute:
         all_pw_jaccard_graph = nx.read_gpickle(result_dir+'cell_sim.pkl')
-    else:
+    elif 'cell' in metric:
         print('Computing pairwise cell similarity')
         all_pairwise_jaccard = similarity.get_pairwise_similarity(dataset, similarity.compute_jaccard_DF)
         all_pw_jaccard_graph = graphs.generate_pairwise_graph(all_pairwise_jaccard)
@@ -178,15 +200,21 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             result_dir + 'cell_sim.csv')
         nx.write_gpickle(all_pw_jaccard_graph, result_dir + 'cell_sim.pkl')
 
+        pr_df = append_result(pr_df, dataset, g_truth, None, nb_name, index, None, None, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric,
+                              stage_name='cell_pair_compute', auxilliary=True)
+
 
     # Stage Annotation:
+    if not all_pw_jaccard_graph:
+        all_pw_jaccard_graph = nx.read_gpickle(result_dir + 'cell_sim.pkl')
     stage_graph = all_pw_jaccard_graph.copy()
     nx.set_edge_attributes(stage_graph, 'input', 'stage_'+str(stage))
 
     recompute_col_sim = True
     if os.path.exists(result_dir+'col_sim.pkl') and recompute_col_sim:
         all_pw_col_jaccard_graph = nx.read_gpickle(result_dir+'col_sim.pkl')
-    else:
+    elif 'col' in metric:
         print('Computing pairwise col similarity')
         all_pairwise_col_jaccard = similarity.get_pairwise_similarity(dataset, similarity.compute_col_jaccard_DF)
         all_pw_col_jaccard_graph = graphs.generate_pairwise_graph(all_pairwise_col_jaccard)
@@ -195,6 +223,10 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         nx.to_pandas_adjacency(all_pw_col_jaccard_graph, weight='weight').to_csv(
             result_dir + 'col_sim.csv')
         nx.write_gpickle(all_pw_col_jaccard_graph, result_dir + 'col_sim.pkl')
+
+        pr_df = append_result(pr_df, dataset, g_truth, None, nb_name, index, None, None, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric,
+                              stage_name='col_pair_compute', auxilliary=True)
 
     '''
 
@@ -252,7 +284,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     if os.path.exists(result_dir+'cc_con_sim.pkl') and recompute:
         all_pw_cell_containment_graph = nx.read_gpickle(result_dir+'cc_con_sim.pkl')
-    else:
+    elif 'containment' in metric:
         print('Computing pairwise cell containment similarity')
         all_pairwise_col_containment = similarity.get_pairwise_similarity(dataset, similarity.compute_colms_containment_DF)
         all_pw_cell_containment_graph = graphs.generate_pairwise_graph(all_pairwise_col_containment)
@@ -261,6 +293,11 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         nx.to_pandas_adjacency(all_pw_cell_containment_graph, weight='weight').to_csv(
             result_dir + 'cc_con_sim.csv')
         nx.write_gpickle(all_pw_cell_containment_graph, result_dir + 'cc_con_sim.pkl')
+
+        pr_df = append_result(pr_df, dataset, g_truth, None, nb_name, index, None, None, pre_cluster,
+                              timeit.default_timer() - start_time, metric=metric,
+                              stage_name='contain_pair_compute', auxilliary=True)
+
 
     if 'colmscon' in metric:
         all_pw_jaccard_graph = all_pw_colms_containment_graph
@@ -334,33 +371,15 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     missing_files = ds.check_csv_graph(artifact_dir, g_truth)
 
     # Cluster for visualization
+
     clusters = clustering.exact_schema_cluster(dataset)
     clustering.write_clusters_to_file(clusters, result_dir + 'clusters_with_filename.csv')
     cluster_dict = clustering.get_graph_clusters(result_dir + 'clusters_with_filename.csv')
+    pr_df = append_result(pr_df, dataset, g_truth, None, nb_name, index, None, None, pre_cluster,
+                          timeit.default_timer() - start_time, metric=metric,
+                          stage_name='clustrering', auxilliary=True)
 
     g_inferred = nx.Graph()
-
-    # Start with intra-cluster edges:
-    #if(pre_cluster != 'No Precluster'):
-
-    #else:
-
-
-    # 02/02/2020
-    # Start with empty graph to try to force spanning tree tie breaking via columnar containment
-    # Doing this to try to reduce false positives at spanning tree stage.
-    # g_inferred = nx.empty_graph()
-
-
-
-
-
-
-    # Draw first graph and get results
-    #nx.write_edgelist(g_inferred, result_dir + 'infered_mst_cell.csv', data=True)
-    #if draw:
-    #    img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell', cluster_dict=cluster_dict,
-    #                                                     join_list=None))
 
     use_col = 'col' in metric
 
@@ -578,10 +597,11 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     while (len(components) > 1 and steps < len(dataset.keys()) and not stop and pre_cluster != 'No Precluster'):
 
         steps += 1
-        secondary_sim_metric = all_pw_col_jaccard_graph
-        secondary_threshold = col_threshold
-        secondary_edge_label = 'col'
-        tie_break_function = clustering.tiebreak_pairscores_cell
+        if 'col' in metric:
+            secondary_sim_metric = all_pw_col_jaccard_graph
+            secondary_threshold = col_threshold
+            secondary_edge_label = 'col'
+            tie_break_function = clustering.tiebreak_pairscores_cell
 
         if 'pc2cc_con' in metric:
             new_graph, new_edge_num, edges_considered, new_edge = clustering.find_components_join_edge(g_inferred,

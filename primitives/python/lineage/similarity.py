@@ -100,11 +100,18 @@ def compute_jaccard_label(df1,df2, dataset, d_graph, pk_col_name=None, reindex=F
     return compute_jaccard_DF(dataset[df1],dataset[df2],pk_col_name, reindex, column_match)
 
 #Assumes corresponding column names are same and PK refers to same column.
-def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=False, containment=False):
+def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False,
+                       column_match=False, containment=False, debug=False,
+                       string_cols=True):
 
     # fill NaN values in df1, df2 to some token val
     df1 = df1.fillna('jac_tmp_NA')
     df2 = df2.fillna('jac_tmp_NA')
+
+    # Cast column names to str in both:
+    if string_cols:
+        df1.columns = df1.columns.map(str)
+        df2.columns = df2.columns.map(str)
 
     try:
         if reindex:
@@ -130,6 +137,8 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
     common_cols = set(col.split('_jac_tmp_',1)[0] for col in comparison_cols)
 
     if(len(common_cols) == 0):
+        if debug:
+            print('no common cols', comparison_cols, common_cols, df3.head())
         return 0
 
     # Get set of non-common columns:
@@ -141,7 +150,10 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
     for col in common_cols:
         left = col+'_jac_tmp_1'
         right = col+'_jac_tmp_2'
-        df3[col] = df3[left] == df3[right]
+        try:
+            df3[col] = np.isclose(df3[left],df3[right])
+        except TypeError as e:
+            df3[col] = df3[left] == df3[right]
 
     # Unique columns are already false
 
@@ -157,6 +169,10 @@ def compute_jaccard_DF(df1,df2, pk_col_name=None, reindex=False, column_match=Fa
     intersection = np.sum(np.sum(df3))
     union = df3.size
     #print(intersection, union)
+    #print(df3)
+
+    if debug:
+        print(df3.head())
 
     if containment:
         return float(intersection) / df2.size

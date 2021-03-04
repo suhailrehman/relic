@@ -179,7 +179,7 @@ class FakerVersionGenerator:
 
     def search_upper(self, row_floor, card_choice, col_type=None, num_bins=10):
         c = card_choice
-        print(col_type, 'entry', c)
+        #print(col_type, 'entry', c)
         while c < num_bins:
             if str(c) not in self.config_dict['prob_dict'][str(row_floor)]:
                 pass
@@ -190,7 +190,7 @@ class FakerVersionGenerator:
                         print(col_type, 'exit', c)
                         return cols
             else:
-                print(col_type, 'exit', c)
+                #print(col_type, 'exit', c)
                 cols = None
                 try:
                     cols = [item for sublist in self.config_dict['prob_dict'][str(row_floor)][str(card_choice)].values()
@@ -203,7 +203,7 @@ class FakerVersionGenerator:
             c += 1
 
         # Did not find the requested type at all
-        print(col_type, 'final exit', c)
+        #print(col_type, 'final exit', c)
         return None
 
     def select_column_from_dist(self, num_rows, col_type=None):
@@ -224,7 +224,7 @@ class FakerVersionGenerator:
 
         if not col_options:
             # Error
-            print("COULD NOT FIND OPTION IN SELECTED ROW BRACKET")
+            #print("COULD NOT FIND OPTION IN SELECTED ROW BRACKET")
             return None
 
         return np.random.choice(col_options, 1)[0]
@@ -488,23 +488,6 @@ class FakerVersionGenerator:
                 self.lastargs = {}
                 raise TooSimilarException
 
-            for i, d in enumerate(tqdm(self.dataset)):
-                if i == self.lastmatchoice:
-                    continue
-                if compute_jaccard_DF(d, new_df) == 1.0:
-                    self.lastargs = {}
-                    raise TooSimilarException
-                try:
-                    other_new_df = op_function(d, **kwargs)
-                except Exception as e:
-                    continue
-
-                # TODO: Check the validity of this when matfreq neq 1
-                if type(other_new_df) is not pd.DataFrame or other_new_df.empty:
-                    continue
-                elif compute_jaccard_DF(other_new_df, new_df) == 1.0:
-                    similar_versions.append(i)
-
             #new_df = new_df.dropna()
             self.currentdf = new_df
             self.opcount +=1
@@ -523,6 +506,24 @@ class FakerVersionGenerator:
                         self.lineage.link(str(self.lastmatchoice), self.get_last_label(), 'dropcol')
                         self.lastmatchoice = self.get_last_label()
                 '''
+
+                for i, d in enumerate(tqdm(self.dataset)):
+                    if i == self.lastmatchoice:
+                        continue
+                    if compute_jaccard_DF(d, new_df) == 1.0:
+                        self.lastargs = {}
+                        raise TooSimilarException
+                    try:
+                        other_new_df = op_function(d, **kwargs)
+                    except Exception as e:
+                        continue
+
+                    # TODO: Check the validity of this when matfreq neq 1
+                    if type(other_new_df) is not pd.DataFrame or other_new_df.empty:
+                        continue
+                    elif compute_jaccard_DF(other_new_df, new_df) == 1.0:
+                        similar_versions.append(i)
+
 
                 self.lineage.new_item(str(len(self.dataset)), new_df)
                 self.dataset.append(new_df)
@@ -846,7 +847,7 @@ class FakerVersionGenerator:
         if self.npp:
             operations.extend(
                 [
-                    self.merge,
+                    #self.merge,
                     self.groupby,
                     self.pivot
                 ]
@@ -950,33 +951,55 @@ def generate_dataset(shape, n, output_dir, scale=10., gt_prefix='dataset', npp=F
     errors = []
 
     i = 0
+    chain_retries = 10
 
-    while i < n-1:
-        choice = dataset.select_rand_op()
-        try:
-            print("Version: "+dataset.get_next_label()+" applying: "+ str(choice.__name__))
-            dataset.apply_op(choice)
-            i += 1
-        except pd.errors.EmptyDataError as e:
-            print("Empty DF result")
-            pass
-        except ColumnTypeException as e:
-            print(e)
-            print("Cannot apply operation because of missing column type, skipping")
-            pass
-        except TooSimilarException as e:
-            print(e)
-            print("Cannot apply operation because generated dataframe is too similar to ones already generated, skipping")
-            pass
-        except Exception as e:
-            dataset.lastargs = {}
-            print(dataset.lastmatchoice)
-            tb = traceback.format_exc()
-            errors.append({choice: tb})
-            print(dataset.lastargs)
-            raise
+    while i < n-1 and chain_retries > 0:
+        retries = 10
+        while retries > 0:
+            print(retries)
+            choice = dataset.select_rand_op()
+            try:
+                if i == n-2 and choice.__name__ == 'merge':
+                    print('Last artifact, cannot do merge here')
+                    raise pd.errors.EmptyDataError
+                print("Version: "+dataset.get_next_label()+" applying: "+ str(choice.__name__))
+                dataset.apply_op(choice)
+                if choice.__name__ == 'merge':
+                    i += 1  # Extra artifact generated for merges
+                i += 1
+                chain_retries = 10
+                retries = 10
+                break
+            except pd.errors.EmptyDataError as e:
+                print("Empty DF result")
+                retries -= 1
+                pass
+            except ColumnTypeException as e:
+                print(e)
+                print("Cannot apply operation because of missing column type, skipping")
+                retries -= 1
+                pass
+            except TooSimilarException as e:
+                print(e)
+                print("Cannot apply operation because generated dataframe is too similar to ones already generated, skipping")
+                retries -= 1
+                pass
+            except Exception as e:
+                dataset.lastargs = {}
+                print(dataset.lastmatchoice)
+                tb = traceback.format_exc()
+                errors.append({choice: tb})
+                print(dataset.lastargs)
+                raise
 
-    dataset.write_graph_files()
+        if retries == 0:
+            dataset.opcount = 0
+            dataset.currentdf = None
+            chain_retries -= 1
+
+    if chain_retries > 0:
+        dataset.write_graph_files()
+
     print(dataset.op_equv_map)
     return dataset, errors
 
