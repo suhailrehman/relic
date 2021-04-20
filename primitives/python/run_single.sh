@@ -1,13 +1,16 @@
 
 #BASE_DIR='/home/suhail/ok/'
-BASE_DIR='/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
+#BASE_DIR='/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
 #BASE_DIR='/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/'
 #BASE_DIR='/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_exact/'
 #BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_timing/"
+BASE_DIR="/home/suhail/Projects/sample_workflows/relic_datasets_vldb_2021/mixed/"
+
 
 #nb_name='20210126-171907'
 
-nb_name='churn'
+nb_name='basenb'
+nb_name='syn2'
 
 
 #nb_name='nyc-property'
@@ -42,5 +45,7 @@ nb_name='churn'
 #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric="pc2cell_${i}_${j}+containment" --recompute=True --cellt=$i --intercellt=$j --group=True --join=True  --pivot=True
 
 
-python agglomerative_full.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --group=True --join=True --cellt=0.1 --pivot=True --transform=True
+#python agglomerative_full.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --group=True --join=True --cellt=0.1 --pivot=True --transform=True
+
+python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --recompute=True  --cellt=0.1 --join=True --pivot=True --group=True
 
