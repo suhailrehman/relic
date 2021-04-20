@@ -8,7 +8,8 @@
 #BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected_1/"
 #BASE_DIR='/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/'
 #BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected_timing/"
-BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/mattestnpp2/"
+#BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/mattestnpp2/"
+BASE_DIR="/home/suhail/Projects/sample_workflows/relic_datasets_vldb_2021/mixed/"
 
 
 
@@ -33,7 +34,7 @@ for f in "$BASE_DIR"*; do
 
         # Cluster + Cell
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell' --recompute=True --group=True --join=True --cellt=0.1 --pivot=True
-        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --recompute=True  --cellt=0.1 --pivot=True --group=True
+        python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --recompute=True  --cellt=0.1 --join=True --pivot=True --group=True
         #python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cellcolj1' --recompute=True --group=True --join=True --colt=0.3 --cellt=0.1 --pivot=True
 
         # Column BaseLine and w/ Detectors

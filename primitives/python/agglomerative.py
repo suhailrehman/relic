@@ -120,7 +120,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                     draw=False,
                                     recompute=False,
                                     metric='cell',
-                                    flip_sim=False
+                                    flip_sim=False,
+                                    ground_truth=False
                                     ):
 
 
@@ -159,7 +160,10 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
     dataset = ds.build_df_dict_dir(artifact_dir)
 
     # Load Ground Truth:
-    g_truth = nx.read_gpickle(wf_dir + '/' + nb_name + '_gt_fixed.pkl')
+    if ground_truth:
+        g_truth = nx.read_gpickle(wf_dir + '/' + nb_name + '_gt_fixed.pkl')
+    else:
+        g_truth = None
 
     # Write ground truth image
     if draw:
@@ -331,7 +335,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
 
     # Check for files in the ground truth that are missing in file list
-    missing_files = ds.check_csv_graph(artifact_dir, g_truth)
+    if ground_truth:
+        missing_files = ds.check_csv_graph(artifact_dir, g_truth)
 
     # Cluster for visualization
     clusters = clustering.exact_schema_cluster(dataset)
@@ -411,13 +416,14 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         print('Total Edges considered at this stage: ', len(considered_edges.keys()))
         selected_edges = [e for e in g_inferred.edges()]
         print('Total Edges selected at this stage: ', len(considered_edges.keys()))
-        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage), considered_edges, selected_edges, g_truth,)
+        if ground_truth:
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage), considered_edges, selected_edges, g_truth,)
 
         #for edge in g_inferred.edges(data=True):
         #    print('Adding Intra-Cluster Tree Edge:', edge[0], edge[1], edge_t + "-level score:", edge[2]['weight'])
 
-
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+        if ground_truth:
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_flat')
 
     elif pre_cluster == 'PC2':
@@ -450,11 +456,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             g_inferred, edge_num = clustering.max_spanning_tree(pw_jaccard_graph, edge_type=edge_t)
 
         # Draw first graph and get results
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+        if ground_truth:
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric, stage_name=str(stage) + '_intra')
 
         selected_edges = [e for e in g_inferred.edges()]
-        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra1',
+        if ground_truth:
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra1',
                                       considered_edges, selected_edges, g_truth)
 
         # Add vertices to the graph if they don't exist
@@ -485,11 +493,13 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         '''
 
         # Draw first graph and get results
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+        if ground_truth:
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
                               timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_intra2')
 
         selected_edges = [e for e in g_inferred.edges()]
-        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra2',
+        if ground_truth:
+            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_intra2',
                                       considered_edges, selected_edges, g_truth)
 
 
@@ -555,7 +565,8 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
-            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
+            if ground_truth:
+                pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time,
                                   metric=metric, stage_name=str(stage)+'_join')
 
@@ -564,8 +575,9 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             # Write out triple Dict:
             with open(result_dir + 'triple_dict.pkl', 'wb') as handle:
                 pickle.dump(triple_dict, handle)
-            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_join', nppo_edges, nppo_edges_added,
-                                          g_truth)
+            if ground_truth:
+                stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_join', nppo_edges, nppo_edges_added,
+                                            g_truth)
 
 
     steps = 0
@@ -648,15 +660,17 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
         else:
             cluster_dict = None
 
-        pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
-                              timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_inter')
+        if ground_truth:
+            pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files, pre_cluster,
+                                  timeit.default_timer() - start_time, metric=metric, stage_name=str(stage)+'_inter')
         if draw:
             img_frames.append(graphs.generate_and_draw_graph(base_dir, nb_name, 'cell',
                                                              cluster_dict=cluster_dict, join_list=None))
 
 
-    considered_edges = {(e1,e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
-    stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges, clustered_edges_added, g_truth)
+    if ground_truth:
+        considered_edges = {(e1,e2): all_pw_jaccard_graph[e1][e2]['weight'] for e1, e2 in clustered_edges_considered}
+        stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_inter', considered_edges, clustered_edges_added, g_truth)
 
 
     steps = 0
@@ -718,6 +732,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
+        if ground_truth:
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time,
                                   metric=metric, stage_name=str(stage)+'_group')
@@ -730,9 +745,10 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                 pickle.dump(replay_dict, handle)
             nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
             replay_edges = {tuple(e): replay_dict[e] for e in replay_dict.keys()}
-            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group', nppo_edges, nppo_edges_added,
+            if ground_truth:
+                stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group', nppo_edges, nppo_edges_added,
                                           g_truth)
-            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group_replay', replay_edges, nppo_edges_added,
+                stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_group_replay', replay_edges, nppo_edges_added,
                                           g_truth)
 
         '''
@@ -806,6 +822,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
+        if ground_truth:
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time,
                                   metric=metric, stage_name=str(stage)+'_transform')
@@ -830,7 +847,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                                                              cluster_dict=cluster_dict, join_list=None))
 
         '''
-        if nppo_edges_considered:
+        if nppo_edges_considered and ground_truth:
             nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
             stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_transform', nppo_edges, nppo_edges_added,
                                       g_truth)
@@ -881,6 +898,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
+        if ground_truth:
             pr_df = append_result(pr_df, dataset, g_truth, g_inferred, nb_name, index, clusters, missing_files,
                                   pre_cluster, timeit.default_timer() - start_time,
                                   metric=metric, stage_name=str(stage)+'_pivot')
@@ -889,8 +907,9 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             with open(result_dir + 'pivot_dict.pkl', 'wb') as handle:
                 pickle.dump(nppo_dict, handle)
             nppo_edges = {tuple(e): nppo_dict[e] for e in nppo_edges_considered}
-            stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_pivot', nppo_edges, nppo_edges_added,
-                                          g_truth)
+            if ground_truth:
+                stage_graph = mark_edge_stage(stage_graph, 'stage_' + str(stage) + '_pivot', nppo_edges, nppo_edges_added,
+                                                g_truth)
 
 
 
@@ -957,7 +976,7 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
 
     image_frames = [Image.open(frame) for frame in img_frames]
 
-    if draw:
+    if draw and ground_truth:
         image_frames[0].save(base_dir+nb_name+'/'+metric+'_relic_construction.gif',
                              format='GIF', append_images=image_frames[1:],
                              save_all=True,
