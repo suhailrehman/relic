@@ -2,9 +2,9 @@ networkx
 matplotlib
 pandas
 tqdm
-psycopg2
+faker
+fuzzywuzzy
 datasketch
+pillow
 pygraphviz
-jupyter
-Pillow
-numpy
+pqdict

@@ -29,6 +29,7 @@ from tqdm.auto import tqdm
 from hashlib import md5
 
 import math
+import logging
 
 
 def hash_edge(x):
@@ -656,6 +657,56 @@ def df_join_check_new(df1, df2, df_dict, g_inferred):
         return 0.0
 
 
+def check_join_schema(colset1, colset2, colset3, logger=logging.getLogger('relic.core')):
+    combo_set = set([colset1,colset2,colset3])
+    max_combo = None
+    max_col_number = 0
+
+    # First Check for at least one common column in triple to act as key
+    common_cols = colset1.intersection(colset2).intersection(colset3)
+
+    if not common_cols:
+        logger.debug(colset1, colset2, colset3, 'No Common Columns')
+        return False
+
+    for join_dest in combo_set:
+        join_sources = combo_set - set([join_dest])
+
+        # Whats the jaccard distance of the dest as a union of the sources?
+
+        set_iterator = iter(join_sources)
+        source = next(set_iterator)
+        other_source = next(set_iterator)
+
+        symm_diff = source.intersection(join_dest) - other_source
+        column_union = symm_diff.union(other_source.intersection(join_dest) - source)
+
+        jaccard = similarity.set_jaccard_similarity(join_dest, column_union) * len(join_dest)
+
+        logging.debug(source, other_source, join_dest, symm_diff, column_union, jaccard)
+
+        if jaccard > max_col_number:
+            max_col_number = jaccard
+            max_combo = (tuple(join_sources), join_dest)
+
+    if not max_combo or not common_cols:
+        logger.debug(colset1, colset2, colset3, 'No Max Combo')
+        return False
+
+
+    s1, s2 = max_combo[0]
+    dest = max_combo[1]
+
+    df1_columns = s1.intersection(dest) - s2
+    df2_columns = s2.intersection(dest) - s1
+
+    # Check for non-key contributions from either side:
+    if not df1_columns or not df2_columns:
+        logger.debug('Poor contribution from either side')
+        return False
+
+    return True
+
 def score_join_schema(df1, df2, df3, df_dict, debug=False, replay=True):
     if debug:
         print("Join Scoring:", df1, df2, df3)
@@ -941,25 +992,36 @@ def select_max_join_score(score_dict, g_inferred, threshold):
     return src, dst, score
 
 
-def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.999):
-    components = [c for c in nx.connected_components(g_inferred)]
-    if len(components) > 2:
-        combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
-        triples = set(item for sublist in combos for item in sublist)
-        print(len(triples), "number of join combinations to be explored")
-        # print(triples)
-        triples = augment_triples(triples, g_inferred)
-        print(len(triples), "number of join combinations to be explored after augmentation")
+def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.999, cluster_dict=None, uf=None):
+    if cluster_dict:
+        # Limit join search to eligible clusters only
+        triples = []
+        for c in itertools.combinations(cluster_dict.keys(), 3):
+            if check_join_schema(c[0], c[1], c[2]):
+                combos = [frozenset(i) for i in itertools.product(cluster_dict[c[0]], cluster_dict[c[1]], cluster_dict[c[2]])]
+                for d1,d2,d3 in combos:
+                    same_comp_count = sum([uf[d1] == uf[d2], uf[d2] == uf[d3], uf[d1] == uf[d3]])
+                    if same_comp_count <= 1:
+                        triples.append((d1,d2,d3))
     else:
-        # Only two components:
-        combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 2)]
-        tuples = set(item for sublist in combos for item in sublist)
-        print(len(tuples), "number of join combinations to be explored")
-        # print(triples)
-        triples = augment_tuples(tuples, g_inferred)
-        print(len(triples), "number of join combinations to be explored after augmentation")
+        components = [c for c in nx.connected_components(g_inferred)]
+        if len(components) > 2:
+            combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
+            triples = set(item for sublist in combos for item in sublist)
+            print(len(triples), "number of join combinations to be explored")
+            # print(triples)
+            triples = augment_triples(triples, g_inferred)
+            print(len(triples), "number of join combinations to be explored after augmentation")
+        else:
+            # Only two components:
+            combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 2)]
+            tuples = set(item for sublist in combos for item in sublist)
+            print(len(tuples), "number of join combinations to be explored")
+            # print(triples)
+            triples = augment_tuples(tuples, g_inferred)
+            print(len(triples), "number of join combinations to be explored after augmentation")
 
-        # print(triples)
+            # print(triples)
 
     join_scores = []
 

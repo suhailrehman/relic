@@ -9,6 +9,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="cb3f8bd5-39d3-4144-88a6-930976ab609c" name="roscoe.cs.uchicago.edu" url="http://flamigo.cs.uchicago.edu">
+        <fileTransfer rootFolder="/tank/local/suhail/" accessType="SFTP" host="roscoe.cs.uchicago.edu" port="22" sshConfigId="922d2a94-e246-433d-aa08-f4d436029da8" sshConfig="suhail@roscoe.cs.uchicago.edu:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

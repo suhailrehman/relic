@@ -3,6 +3,7 @@
   <component name="SshConfigs">
     <configs>
       <sshConfig authType="PASSWORD" host="flamingo.cs.uchicago.edu" id="8d066911-a404-497e-ab0a-12aaa9664b36" port="22" nameFormat="DESCRIPTIVE" username="suhail" />
+      <sshConfig authType="PASSWORD" host="roscoe.cs.uchicago.edu" id="922d2a94-e246-433d-aa08-f4d436029da8" port="22" nameFormat="DESCRIPTIVE" username="suhail" />
     </configs>
   </component>
 </project>
