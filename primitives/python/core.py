@@ -18,19 +18,19 @@ module_logger = logging.getLogger('relic.core')
 
 class RelicAlgorithm:
 
-    def __init__(self, base_dir, nb_name, artifact_suffix='/artifacts/', inferred_suffix='/inferred/', **kwargs):
+    def __init__(self, input_dir, output_dir, name='wf_', **kwargs):
         # Logging Setup
         self.logger = logging.getLogger('relic.core.RelicAlgorithm')
         self.logger.info('Starting instance of RelicAlgorithm on %s', nb_name)
 
         # Directory Setup
-        self.base_dir = base_dir
-        self.nb_name = nb_name
-        self.artifact_dir = base_dir + nb_name + artifact_suffix
-        self.inferred_dir = base_dir + nb_name + inferred_suffix
-        os.makedirs(self.inferred_dir, exist_ok=True)
+        self.nb_name = name
+        self.artifact_dir = input_dir
+        self.inferred_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
 
         # Load the dataset
+        # TODO: Change to load/read on demand infrastructure
         self.dataset = ds.build_df_dict_dir(self.artifact_dir)
 
         # Create the initial graph
@@ -43,12 +43,15 @@ class RelicAlgorithm:
         self.cluster_lookup = {}
 
         # Create the pairwise weights_dict
-        self.weight_df = None
-        self.set_weight_df()
-        self.weight_dict = defaultdict(dict)
+        # TODO: store multiple weights
+        # TODO: Priority queue or self-sorting datastructure in association with unionfind
+        #self.weight_df = None
+        #self.set_weight_df()
+        #self.weight_dict = defaultdict(dict)
 
         # Load the Ground Truth
-        self.g_truth = graphs.get_graph(self.base_dir, self.nb_name).to_undirected()
+        # TODO: Optional GT annotation or remove entirely
+        # self.g_truth = graphs.get_graph(self.base_dir, self.nb_name).to_undirected()
 
         # Current Edge being added
         self.edge_no = 0
@@ -56,6 +59,9 @@ class RelicAlgorithm:
         # Tie Breaker Info
         self.tied_edges = {}
         self.two_tie_edges = {}
+
+        # TODO : Instantenous Precision/Recall/F1 and other accuracy score by calling a single function
+        # TODO : Instantaneous Graph
 
     def create_initial_graph(self):
         self.logger.debug('Creating the initial graph of artifact nodes')
@@ -76,14 +82,6 @@ class RelicAlgorithm:
 
         return self.initial_cluster
 
-    def set_weight_df(self):
-        index = [frozenset((u, v)) for u, v in itertools.combinations(self.dataset.keys(), 2)]
-        self.weight_df = pd.DataFrame(index=index)
-        self.weight_df['nb'] = self.nb_name
-        self.weight_df['artifacts'] = len(self.dataset)
-        #self.weight_df['rows'] = len(self.dataset['0.csv'].index)
-        #self.weight_df['columns'] = len(self.dataset['0.csv'])
-        return self.weight_df
 
     def initialize_components(self):
         # Initializes the current list of graph components:
@@ -91,13 +89,13 @@ class RelicAlgorithm:
         self.components = UnionFind(elements=[n for c in nx.connected_components(self.g_inferred) for n in c])
         return self.components
 
-    def compute_inter_component_edges(self, distance_function=similarity.compute_jaccard_label,
-                                    weight_label='celljaccard'):
-        if weight_label not in self.weight_df:
-            self.weight_df[weight_label] = np.nan
-        if not self.components:
+    def compute_inter_component_weights(self, components=self.components, distance_function=similarity.compute_jaccard_label,
+                                    weight_label='cell_jaccard', ntuples=2):
+        ''' if weight_label not in self.weight_df:
+            self.weight_df[weight_label] = np.nan '''
+        if not components:
             self.update_components()
-        for src_nodes, dst_nodes in itertools.combinations(self.components, 2):
+        for src_nodes, dst_nodes in itertools.combinations(components, ntuples):
             self.compute_pairs_distances(src_nodes, dst_nodes, distance_function, weight_label=weight_label)
         return self.weight_df
 
@@ -131,51 +129,13 @@ class RelicAlgorithm:
                 self.weight_df.at[key, weight_label] = score
                 self.logger.debug('Edge %s has %s score of %s', key, weight_label, score)
 
-    def check_edge_pair(self, key):
-        if key in self.weight_df.index:
-            return True
-        else:
-            self.logger.warning('Edge %s not present in Weight DF', key)
-            return False
-
-    def augment_ground_truth(self):
-        self.weight_df['ground_truth'] = False
-        #self.weight_df['operation'] = np.nan
-
-        for u, v, data in self.g_truth.edges(data=True):
-            key = frozenset((u, v))
-            if self.check_edge_pair(key):
-                self.weight_df.at[key, 'ground_truth'] = True
-                self.weight_df.at[key, 'operation'] = data['operation']
-
-        return self.weight_df
 
 
-    def augment_inferred_graph(self):
-        self.weight_df['g_inferred'] = False
-        #self.weight_df['operation'] = np.nan
 
-        for u, v, data in self.g_inferred.edges(data=True):
-            key = frozenset((u, v))
-            if self.check_edge_pair(key):
-                self.weight_df.at[key, 'g_inferred'] = True
-                self.weight_df.at[key, 'type'] = data['type']
-
-        return self.weight_df
-
-    def augment_cluster_info(self):
-        cluster_result = []
-
-        for ix in self.weight_df.index:
-            edge_pair = list(ix)
-            cluster_result.append(self.cluster_lookup[edge_pair[0]] == self.cluster_lookup[edge_pair[1]])
-
-        self.weight_df['same_cluster'] = pd.Series(cluster_result, index=self.weight_df.index)
-        return self.weight_df
 
     def compute_component_pairs(self):
         component_test = lambda x: self.components[list(x.name)[0]] != self.components[list(x.name)[1]]
-        component_label = lambda x: str(self.components[list(x.name)[0]]) + str(self.components[list(x.name)[1]])
+        component_label = lambda x: str(self.components[list(x.name)[0]]) + str2(self.components[list(x.name)[1]])
         self.weight_df['cross_comp'] = self.weight_df.apply(component_test, axis=1)
         self.weight_df['cross_comp_label'] = self.weight_df.apply(component_label, axis=1)
         return self.weight_df
@@ -212,6 +172,10 @@ class RelicAlgorithm:
             self.logger.debug('Component List: %s', cross_comp_max)
             steps += 1
 
+
+    '''
+    Tie Breaking Functions
+    '''
     def tie_break_max_score(self, sorted_cross_comp_max, tb_label='contraction_ratio'):
         max_score = sorted_cross_comp_max[0]
         tied_edges = sorted_cross_comp_max[sorted_cross_comp_max == max_score]
@@ -237,3 +201,60 @@ class RelicAlgorithm:
             self.weight_df.at[key, tb_label] = score
         return self.weight_df
 
+
+    '''
+    Weight DF Methods 
+    '''
+
+    def set_weight_df(self):
+        index = [frozenset((u, v)) for u, v in itertools.combinations(self.dataset.keys(), 2)]
+        self.weight_df = pd.DataFrame(index=index)
+        self.weight_df['nb'] = self.nb_name
+        self.weight_df['artifacts'] = len(self.dataset)
+        #self.weight_df['rows'] = len(self.dataset['0.csv'].index)
+        #self.weight_df['columns'] = len(self.dataset['0.csv'])
+        return self.weight_df
+
+
+    def check_edge_pair(self, key):
+        if key in self.weight_df.index:
+            return True
+        else:
+            self.logger.warning('Edge %s not present in Weight DF', key)
+            return False
+
+
+    def augment_ground_truth(self):
+        self.weight_df['ground_truth'] = False
+        #self.weight_df['operation'] = np.nan
+
+        for u, v, data in self.g_truth.edges(data=True):
+            key = frozenset((u, v))
+            if self.check_edge_pair(key):
+                self.weight_df.at[key, 'ground_truth'] = True
+                self.weight_df.at[key, 'operation'] = data['operation']
+
+        return self.weight_df
+
+
+    def augment_inferred_graph(self):
+        self.weight_df['g_inferred'] = False
+        #self.weight_df['operation'] = np.nan
+
+        for u, v, data in self.g_inferred.edges(data=True):
+            key = frozenset((u, v))
+            if self.check_edge_pair(key):
+                self.weight_df.at[key, 'g_inferred'] = True
+                self.weight_df.at[key, 'type'] = data['type']
+
+        return self.weight_df
+
+    def augment_cluster_info(self):
+        cluster_result = []
+
+        for ix in self.weight_df.index:
+            edge_pair = list(ix)
+            cluster_result.append(self.cluster_lookup[edge_pair[0]] == self.cluster_lookup[edge_pair[1]])
+
+        self.weight_df['same_cluster'] = pd.Series(cluster_result, index=self.weight_df.index)
+        return self.weight_df

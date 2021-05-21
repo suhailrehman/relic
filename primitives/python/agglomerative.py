@@ -19,9 +19,7 @@ import timeit
 import itertools
 import pickle
 
-
-#BASE_DIR = '/home/suhail/Projects/sample_workflows/million_notebooks/selected/'
-#BASE_DIR = '/home/suhail/Projects/relic/primitives/python/generator/dataset/'
+from networkx.utils import UnionFind
 
 BASE_DIR="/home/suhail/Projects/sample_workflows/million_notebooks/selected/"
 
@@ -38,7 +36,7 @@ notebooks = [
     'retail'
 ]
 
-notebooks = [d for d in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, d))]
+# notebooks = [d for d in os.listdir(BASE_DIR) if os.path.isdir(os.path.join(BASE_DIR, d))]
 
 
 def edge_cat(truth, inferred):
@@ -538,13 +536,17 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
             with open(result_dir + 'triple_dict.pkl', 'rb') as handle:
                 triple_dict = pickle.load(handle)
 
+        uf = UnionFind(elements=[n for c in components for n in c])
+
         while (len(components) > 1 and steps < len(dataset.keys()) and not stop):
             print('Join Detection: components', len(components), 'stop', stop, 'steps', steps)
             steps += 1
             new_graph, new_edge_num, new_triple_dict, ne1, ne2 = nppo.find_components_join_edge(g_inferred,
                                                                                                 dataset,
                                                                                                 edge_num,
-                                                                                                triple_dict)
+                                                                                                triple_dict,
+                                                                                                cluster_dict=clusters,
+                                                                                                uf=uf)
             triple_dict.update(new_triple_dict)
 
             if not nppo_edges_considered:
@@ -560,9 +562,9 @@ def lineage_inference_agglomerative(nb_name=NB_NAME, base_dir=BASE_DIR,
                 g_inferred, edge_num = new_graph, new_edge_num
                 nppo_edges_added.append(ne1)
                 nppo_edges_added.append(ne2)
+                uf.union(ne1[0], ne2[0], ne1[1])
 
             components = [c for c in nx.connected_components(g_inferred)]
-
             nx.write_edgelist(g_inferred, result_dir + 'infered_mst_' + metric + '.csv', data=True)
 
             if ground_truth:

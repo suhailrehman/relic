@@ -23,4 +23,7 @@
     <orderEntry type="jdk" jdkName="3.8 @ Ubuntu 20.04" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
+  <component name="TestRunnerService">
+    <option name="PROJECT_TEST_RUNNER" value="pytest" />
+  </component>
 </module>

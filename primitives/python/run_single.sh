@@ -4,14 +4,15 @@
 #BASE_DIR='/home/suhail/Projects/sample_workflows/million_notebooks/new_selection/'
 #BASE_DIR='/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_exact/'
 #BASE_DIR="/home/suhail/Projects/relic/primitives/python/generator/dataset_flat_timing/"
-BASE_DIR="/home/suhail/Projects/sample_workflows/relic_datasets_vldb_2021/mixed/"
+#BASE_DIR="/home/suhail/Projects/sample_workflows/relic_datasets_vldb_2021/mixed/"
+BASE_DIR='/tank/local/suhail/data/relic/mixed/'
 
 
 #nb_name='20210126-171907'
-
-nb_name='basenb'
+#nb_name='20210126-153738'
+#nb_name='basenb'
 nb_name='syn2'
-
+#nb_name='20210126-153738'
 
 #nb_name='nyc-property'
 #nb_name='london-crime'
@@ -49,3 +50,8 @@ nb_name='syn2'
 
 python agglomerative.py --basedir=$BASE_DIR --nbname=$nb_name --clustering='PC2' --metric='pc2cell+containment' --recompute=True  --cellt=0.1 --join=True --pivot=True --group=True
 
+
+# Seperate Join Score
+#input_spec='/tank/local/suhail/data/relic/mixed/syn2/inferred/join_triples_1.txt'
+#output_file='/tank/local/suhail/data/relic/mixed/syn2/inferred/join_scores_1.txt'
+#python compute_joins.py $input_spec $output_file
