@@ -2,9 +2,14 @@ networkx
 matplotlib
 pandas
 tqdm
-psycopg2
+#psycopg2
 datasketch
 pygraphviz
 jupyter
 Pillow
 numpy
+pqdict
+fuzzywuzzy
+Faker
+pytest
+python-Levenshtein

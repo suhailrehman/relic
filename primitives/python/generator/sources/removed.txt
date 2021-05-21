@@ -1,8 +1,0 @@
-paragraphs
-texts
-words
-sentences
-
-pydecimal
-
-null_boolean

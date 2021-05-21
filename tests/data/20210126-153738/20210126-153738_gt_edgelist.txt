@@ -1,0 +1,19 @@
+0.csv 1.csv {'operation': 'point_edit', 'args': {'col': 'ipv4_network_class', 'old_value': 'c', 'new_value': 'a'}}
+0.csv 2.csv {'operation': 'dropcol', 'args': {'col': 'first_name'}}
+0.csv 4.csv {'operation': 'merge', 'args': {'key': 'safe_email'}}
+0.csv 10.csv {'operation': 'dropcol', 'args': {'col': 'company_suffix'}}
+3.csv 4.csv {'operation': 'merge', 'args': {'key': 'safe_email'}}
+3.csv 5.csv {'operation': 'point_edit', 'args': {'col': 'paragraph', 'old_value': 'Behind decade glass. Can hair enter better teach me. Major that face consumer century dark begin.', 'new_value': 'Talk have collection peace probably. Team big big firm million along people past.'}}
+3.csv 6.csv {'operation': 'point_edit', 'args': {'col': 'paragraph', 'old_value': 'House laugh industry carry who peace. However economic artist have including pay mother.', 'new_value': 'Floor computer set concern simple relate. Up personal century continue need member sport I.'}}
+5.csv 7.csv {'operation': 'sample', 'args': {'frac': 0.95}}
+5.csv 18.csv {'operation': 'dropcol', 'args': {'col': 'language_code'}}
+7.csv 8.csv {'operation': 'dropcol', 'args': {'col': 'language_code'}}
+7.csv 14.csv {'operation': 'point_edit', 'args': {'col': 'safari', 'old_value': 'Mozilla/5.0 (Windows; U; Windows NT 6.2) AppleWebKit/532.13.4 (KHTML, like Gecko) Version/5.0.3 Safari/532.13.4', 'new_value': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_3 rv:4.0; yue-HK) AppleWebKit/532.21.3 (KHTML, like Gecko) Version/5.0 Safari/532.21.3'}}
+8.csv 9.csv {'operation': 'point_edit', 'args': {'col': 'state', 'old_value': 'Illinois', 'new_value': 'Iowa'}}
+8.csv 19.csv {'operation': 'sample', 'args': {'frac': 0.27}}
+9.csv 12.csv {'operation': 'merge', 'args': {'key': 'pystr'}}
+9.csv 13.csv {'operation': 'dropcol', 'args': {'col': 'pystr'}}
+11.csv 12.csv {'operation': 'merge', 'args': {'key': 'pystr'}}
+13.csv 15.csv {'operation': 'groupby', 'args': {'col': ['state'], 'func': 'count'}}
+13.csv 17.csv {'operation': 'merge', 'args': {'key': 'bothify'}}
+16.csv 17.csv {'operation': 'merge', 'args': {'key': 'bothify'}}
