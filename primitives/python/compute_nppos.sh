@@ -4,7 +4,7 @@ input_spec='/tank/local/suhail/data/relic/mixed/syn2/inferred/groupbys/'
 output_dir='/tank/local/suhail/data/relic/mixed/syn2/inferred/groupby_score/'
 
 #Generate Pairs
-#python compute_nppos.py $artifact_dir $output_file
+#python compute_tuple_distances.py $artifact_dir $output_file
 
 #split pairs
 

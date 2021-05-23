@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="roscoe.cs.uchicago.edu" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" serverName="roscoe.cs.uchicago.edu" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="flamingo.cs.uchicago.edu">
         <serverdata>
@@ -12,11 +12,10 @@
       <paths name="roscoe.cs.uchicago.edu">
         <serverdata>
           <mappings>
-            <mapping deploy="/relic" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/relic/" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
     </serverData>
-    <option name="myAutoUpload" value="ALWAYS" />
   </component>
 </project>

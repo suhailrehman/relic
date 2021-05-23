@@ -350,8 +350,13 @@ def colgroup_keyness_check(df, colgroup):
 
 def df_groupby_check_new(d1, d2, df_dict, g_inferred, debug=False, strict_schema=False, lattice_check=False, null_aggs=False):
     # TODO: Column matching
-    df1 = df_dict[d1]
-    df2 = df_dict[d2]
+    if type(d1)  == str:
+        df1 = df_dict[d1]
+        df2 = df_dict[d2]
+    else:
+        df1 = d1
+        df2 = d2
+
     common_cols = set(list(df1)).intersection(set(list(df2)))
 
     # Strict Schema Check
@@ -1148,8 +1153,12 @@ def find_column_set_match(df, valueset, string_convert=False):
 
 def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=True, schema_check=True, debug=False,
                    index_match_threshold=0.99, col_match_threshold=0.99, replay_threshold=0.99):
-    df1 = df_dict[df1_name]
-    df2 = df_dict[df2_name]
+    if type(df1_name) == str:
+        df1 = df_dict[df1_name]
+        df2 = df_dict[df2_name]
+    else:
+        df1 = df1_name
+        df2 = df2_name
 
     index_name_match = None
     src = None
