@@ -1,6 +1,7 @@
 import pqdict
 from operator import lt, gt
 
+
 class PQEdges(pqdict.pqdict):
     def __init__(self, max_q=True, *args, **kwargs):
         if max_q:

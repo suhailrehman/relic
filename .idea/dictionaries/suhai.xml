@@ -3,6 +3,7 @@
     <words>
       <w>jaccard</w>
       <w>pqdict</w>
+      <w>tuplewise</w>
     </words>
   </dictionary>
 </component>

@@ -1,7 +1,6 @@
-
-
 def set_jaccard_distance(set1, set2):
     return 1 - set_jaccard_similarity(set1, set2)
+
 
 def set_jaccard_similarity(set1, set2):
     intersect = set1.intersection(set2)

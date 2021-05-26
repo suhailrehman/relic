@@ -1,4 +1,3 @@
-
 import numpy as np
 import logging
 
@@ -7,6 +6,7 @@ from relic.utils.matching import fuzzy_column_match, set_df_indices
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
+
 
 def _return_zero(ppo):
     result_dict = {
@@ -22,6 +22,7 @@ def _return_zero(ppo):
         return {ppo: result_dict[ppo]}
     else:
         raise ValueError('Unknown distance type requested', ppo)
+
 
 # Assumes corresponding column names are same and PK refers to same column.
 def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
@@ -92,10 +93,10 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
     logger.debug(df3.head())
 
     result_dict = {
-        'jaccard' : float(intersection) / union,
-        'containment' : float(intersection) / minsize,
-        'overlap' : float(intersection),
-        'containment_oneside' : float(intersection) / df2.size
+        'jaccard': float(intersection) / union,
+        'containment': float(intersection) / minsize,
+        'overlap': float(intersection),
+        'containment_oneside': float(intersection) / df2.size
     }
 
     if ppo == 'all':
@@ -108,7 +109,6 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
 
 # Assumes corresponding column names and valid indices in both data frames
 def compute_col_jaccard_df(df1, df2):
-
     # fill NaN values in df1, df2 to some token val
     df1 = df1.fillna('jac_tmp_NA').reset_index(drop=True)
     df2 = df2.fillna('jac_tmp_NA').reset_index(drop=True)

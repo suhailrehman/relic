@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 import os
@@ -9,10 +8,11 @@ import networkx as nx
 from networkx.utils import UnionFind
 
 from relic.distance.ppo import compute_all_ppo
+from relic.distance.tiebreakers import tiebreak_hash_edge
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict
 from relic.utils.pqedge import PQEdges
 from relic.utils.serialize import build_df_dict_dir
-from relic.algorithm import get_tuplewise_similarity
+from relic.algorithm import compute_tuplewise_similarity
 
 module_logger = logging.getLogger('relic.core')
 
@@ -28,7 +28,7 @@ class RelicAlgorithm:
         self.nb_name = name
         self.artifact_dir = input_dir
         self.inferred_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.inferred_dir, exist_ok=True)
 
         # Load the dataset
         # TODO: Change to load/read on demand infrastructure
@@ -44,12 +44,12 @@ class RelicAlgorithm:
         self.cluster_lookup = {}
 
         # Create the pairwise weights_dict
-        # TODO: store multiple weights
-        # TODO: Priority queue or self-sorting datastructure in association with unionfind
+        # store multiple weights
+        # Priority queue or self-sorting datastructure in association with unionfind
         self.pairwise_weights = defaultdict(PQEdges)
-        #self.weight_df = None
-        #self.set_weight_df()
-        #self.weight_dict = defaultdict(dict)
+        # self.weight_df = None
+        # self.set_weight_df()
+        # self.weight_dict = defaultdict(dict)
 
         # Load the Ground Truth
         # TODO: Optional GT annotation or remove entirely
@@ -62,7 +62,7 @@ class RelicAlgorithm:
         self.tied_edges = {}
         self.two_tie_edges = {}
 
-        # TODO : Instantenous Precision/Recall/F1 and other accuracy score by calling a single function
+        # TODO : Instantaneous Precision/Recall/F1 and other accuracy score by calling a single function
         # TODO : Instantaneous Graph
 
     def create_initial_graph(self):
@@ -100,14 +100,17 @@ class RelicAlgorithm:
 
     def add_edges_of_type(self, edge_type='jaccard', similarity_function=compute_all_ppo,
                           tie_break_type='overlap', tie_break_function=None, final_function=None,
-                          sim_threshold=0.1, tie_break_threshold=0.1, n_pairs=2, max_edges=len(self.dataset),
+                          sim_threshold=0.1, tie_break_threshold=0.1, n_pairs=2, max_edges=None,
                           max_step=False):
+
+        if not max_edges:
+            max_edges = len(self.dataset)
 
         # Compute all pairwise edges first
         # TODO: Add custom pairs function for join and other detectors
         if edge_type not in self.pairwise_weights:
-            self.pairwise_weights = get_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
-                                                             threshold=sim_threshold, n_pairs=n_pairs)
+            self.pairwise_weights = compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
+                                                                 threshold=sim_threshold, n_pairs=n_pairs)
         self.update_components()
         steps = 0
         stop = False
@@ -118,20 +121,30 @@ class RelicAlgorithm:
             max_edges = self.pairwise_weights[edge_type].pop_max()
             if len(max_edges) > 1:
                 tie_break_edges = tie_break_function(max_edges)
+                if len(tie_break_edges) > 1:
+                    edge = tiebreak_hash_edge(tie_break_edges)
+                else:
+                    edge = max_edges[0]
+            else:
+                edge = max_edges[0]
 
-            self.logger.info('Adding edge #%d: %s, type %s, weight %f', self.edge_no, list(edge), weight_label, weight)
+            weight = edge[1]
+
+            self.logger.info('Adding edge #%d: %s, type %s', self.edge_no, list(edge), edge_type)
             self.add_edges_and_merge_components(list(edge), {'weight': weight,
-                                                             'type': weight_label,
+                                                             'type': edge_type,
                                                              'num': self.edge_no})
+            '''
             self.compute_component_pairs()
-            cross_comp_max = self.compute_component_link_edges(weight_label=weight_label, threshold=threshold)
+            cross_comp_max = self.compute_component_link_edges(weight_label=edge_type, threshold=sim_threshold)
             self.logger.debug('Component List: %s', cross_comp_max)
+            '''
             steps += 1
-
 
     '''
     Tie Breaking Functions
-    '''
+    
+
     def tie_break_max_score(self, sorted_cross_comp_max, tb_label='contraction_ratio'):
         max_score = sorted_cross_comp_max[0]
         tied_edges = sorted_cross_comp_max[sorted_cross_comp_max == max_score]
@@ -150,22 +163,21 @@ class RelicAlgorithm:
 
         else:
             return sorted_cross_comp_max.index[0], sorted_cross_comp_max[0]
-
-
+            
+    '''
 
     '''
-    Weight DF Methods 
-    '''
+    Deprecated: Weight DF Methods 
+    
 
     def set_weight_df(self):
         index = [frozenset((u, v)) for u, v in itertools.combinations(self.dataset.keys(), 2)]
         self.weight_df = pd.DataFrame(index=index)
         self.weight_df['nb'] = self.nb_name
         self.weight_df['artifacts'] = len(self.dataset)
-        #self.weight_df['rows'] = len(self.dataset['0.csv'].index)
-        #self.weight_df['columns'] = len(self.dataset['0.csv'])
+        # self.weight_df['rows'] = len(self.dataset['0.csv'].index)
+        # self.weight_df['columns'] = len(self.dataset['0.csv'])
         return self.weight_df
-
 
     def check_edge_pair(self, key):
         if key in self.weight_df.index:
@@ -174,10 +186,9 @@ class RelicAlgorithm:
             self.logger.warning('Edge %s not present in Weight DF', key)
             return False
 
-
     def augment_ground_truth(self):
         self.weight_df['ground_truth'] = False
-        #self.weight_df['operation'] = np.nan
+        # self.weight_df['operation'] = np.nan
 
         for u, v, data in self.g_truth.edges(data=True):
             key = frozenset((u, v))
@@ -187,10 +198,9 @@ class RelicAlgorithm:
 
         return self.weight_df
 
-
     def augment_inferred_graph(self):
         self.weight_df['g_inferred'] = False
-        #self.weight_df['operation'] = np.nan
+        # self.weight_df['operation'] = np.nan
 
         for u, v, data in self.g_inferred.edges(data=True):
             key = frozenset((u, v))
@@ -209,3 +219,9 @@ class RelicAlgorithm:
 
         self.weight_df['same_cluster'] = pd.Series(cluster_result, index=self.weight_df.index)
         return self.weight_df
+    
+    '''
+
+    def add_edges_and_merge_components(self, param, param1):
+        pass
+

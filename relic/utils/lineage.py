@@ -21,7 +21,7 @@ class LineageTracker:
             raise NameError(label)
         self.graph.add_node(label)
         if type(dataframe) != 'NoneType':
-            dataframe.to_csv(self.directory+label+'.csv',
+            dataframe.to_csv(self.directory + label + '.csv',
                              sep=',')
         self.num_files += 1
 
@@ -55,9 +55,9 @@ class LineageTracker:
             pos = layout_fn(self.graph, root=0)
         try:
             edge_labels = {
-                            (i[0], i[1]): i[2]['operation']
-                            for i in self.graph.edges(data=True)
-                          }
+                (i[0], i[1]): i[2]['operation']
+                for i in self.graph.edges(data=True)
+            }
         except Exception:
             edge_labels = None
 

@@ -11,9 +11,9 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelnam
 logger = logging.getLogger(__name__)
 
 
-def get_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, threshold=-1.0,
-                            silent=False, pairs=None, n_pairs=2,
-                            tuplewise_similarity=None, **kwargs):
+def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, threshold=-1.0,
+                                 silent=False, pairs=None, n_pairs=2,
+                                 tuplewise_similarity=None, **kwargs):
     """Compute pairwise similarity metrics of dataset dict using similarity_metric
     returns reverse sorted pqdict of frozenset(pair1, pair2) -> similarity_score mappings
 
@@ -50,11 +50,12 @@ def get_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, thresho
     return tuplewise_similarity
 
 
-def _generate_tuples(dataset, sets):
+def _generate_tuples(sets):
     for tup in product(*sets):
         if len(set(tup)) != len(tup):
             continue
         yield tup
+
 
 '''
 def intra_cluster_similarity(df_dict, clusters, threshold=0.25):

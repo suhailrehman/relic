@@ -35,7 +35,7 @@ def set_graph_weights(G, dataset, similarity_metric):
     weights = {}
     for node1, node2 in G.edges:
         weights[(node1, node2)] = \
-         similarity_metric(dataset[node1], dataset[node2])
+            similarity_metric(dataset[node1], dataset[node2])
 
     nx.set_edge_attributes(G, name='weight', values=weights)
     return G
@@ -58,7 +58,7 @@ def draw_graph(G, canvas_size=(8, 12), node_size=2000,
     pos = layout_fn(G, root=root, prog='dot', args=GRAPH_EDGE_ARGS)
 
     try:
-        #edge_labels = {i[0:2]: '{0:.2f}'.format(i[2]['weight'])
+        # edge_labels = {i[0:2]: '{0:.2f}'.format(i[2]['weight'])
         #               for i in G.edges(data=True)}
         edge_labels = {e[0:2]: e[2]['operation'] for e in G.edges(data=True)}
     except:
@@ -78,12 +78,12 @@ def get_precision_recall(G_truth, T_inferred):
 
     correct = g_edge_set.intersection(t_edge_set)
 
-    to_add  = g_edge_set - t_edge_set
+    to_add = g_edge_set - t_edge_set
     to_remove = t_edge_set - g_edge_set
 
     try:
-        precision = float(len(correct))/len(t_edge_set)
-        recall = float(len(correct))/len(g_edge_set)
+        precision = float(len(correct)) / len(t_edge_set)
+        recall = float(len(correct)) / len(g_edge_set)
         f1 = 2 * ((precision * recall) / (precision + recall))
     except ZeroDivisionError as e:
         precision = 0.0
@@ -103,26 +103,27 @@ def load_dataset_list(dslist):
 
 
 def get_graph(base_dir, nb_name):
-    result_file = base_dir+nb_name+'/'+nb_name+'_gt_fixed.pkl'
+    result_file = base_dir + nb_name + '/' + nb_name + '_gt_fixed.pkl'
     return nx.read_gpickle(result_file)
 
+
 def get_graph_edge_list(base_dir, nb_name, metric):
-    result_file = base_dir+nb_name+'/inferred/infered_mst_'+metric+'.csv'
-    #return nx.read_edgelist(result_file, delimiter=',', data=(('weight', float),))
+    result_file = base_dir + nb_name + '/inferred/infered_mst_' + metric + '.csv'
+    # return nx.read_edgelist(result_file, delimiter=',', data=(('weight', float),))
     return nx.read_edgelist(result_file)
 
+
 def get_distance_matrix(base_dir, nb_name, metric):
-    result_file = base_dir+nb_name+'/inferred/'+metric+'_sim.csv'
+    result_file = base_dir + nb_name + '/inferred/' + metric + '_sim.csv'
     return pd.read_csv(result_file, index_col=0)
 
 
-def generate_notebook_image(base_dir, nb_name, canvas_size=(50,50)):
+def generate_notebook_image(base_dir, nb_name, canvas_size=(50, 50)):
     g_truth = get_graph(base_dir, nb_name)
     plt = draw_graph(g_truth, canvas_size=canvas_size, show=False)
-    plt.savefig(base_dir+nb_name+'/'+nb_name+'_gt.png')
+    plt.savefig(base_dir + nb_name + '/' + nb_name + '_gt.png')
     plt.clf()
     return plt
-
 
 
 def generate_explaination_graph(g_truth, g_inferred, distance_matrix):
@@ -131,11 +132,11 @@ def generate_explaination_graph(g_truth, g_inferred, distance_matrix):
     for edge_t in g_inferred.edges(data=True):
         exp_graph.add_edge(edge_t[0], edge_t[1], inferred=True)
         if g_truth.has_edge(edge_t[0], edge_t[1]):
-            exp_graph[edge_t[0]][edge_t[1]]['correct']=True
+            exp_graph[edge_t[0]][edge_t[1]]['correct'] = True
         elif g_truth.has_edge(edge_t[1], edge_t[0]):
-            exp_graph[edge_t[0]][edge_t[1]]['correct']=True
+            exp_graph[edge_t[0]][edge_t[1]]['correct'] = True
         else:
-            exp_graph[edge_t[0]][edge_t[1]]['correct']=False
+            exp_graph[edge_t[0]][edge_t[1]]['correct'] = False
 
     for edge_t in exp_graph.edges():
         try:
@@ -147,8 +148,8 @@ def generate_explaination_graph(g_truth, g_inferred, distance_matrix):
 
 
 def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
-               layout_fn=graphviz_layout, g_truth=None,
-               cluster_dict=None, join_list=None, group_list=None, **kwargs):
+                   layout_fn=graphviz_layout, g_truth=None,
+                   cluster_dict=None, join_list=None, group_list=None, **kwargs):
     # Set Canvas Size
     plt.figure(10, figsize=canvas_size)
 
@@ -160,11 +161,11 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
     ax.margins(0.30)
 
     root = kwargs.pop('root', None)
-    #print(root)
+    # print(root)
     if root is None:
-        #print(G)
+        # print(G)
         root = sorted(nx.degree(G), key=lambda kv: kv[1])[0][0]
-        #print(root)
+        # print(root)
 
     if g_truth:
         pos = layout_fn(g_truth, root=root, prog='dot', args=GRAPH_EDGE_ARGS)
@@ -178,53 +179,49 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
         edge_labels = None
 
     if cluster_dict:
-        node_color = [cluster_dict[e]/20 for e in G.nodes()]
+        node_color = [cluster_dict[e] / 20 for e in G.nodes()]
         cmap = 'rainbow'
-    else :
+    else:
         node_color = 'r'
         cmap = None
     nx.draw_networkx_nodes(G, pos,
-                       node_color=node_color,
-                       node_size=500,
-                       alpha=0.9,
-                       cmap=cmap)
+                           node_color=node_color,
+                           node_size=500,
+                           alpha=0.9,
+                           cmap=cmap)
     nx.draw_networkx_labels(G, pos, font_size=20)
-
 
     correct_edges = [edge for edge in G.edges(data=True)
                      if 'correct' in edge[2] and edge[2]['correct']]
 
-    #print(correct_edges)
+    # print(correct_edges)
 
     nx.draw_networkx_edges(G, pos, edgelist=correct_edges, width=8, alpha=0.5, edge_color='green', arrows=False)
 
     incorrect_edges = [edge for edge in G.edges(data=True)
                        if 'correct' in edge[2] and edge[2]['correct'] == False]
 
-    nx.draw_networkx_edges(G, pos, edgelist=incorrect_edges, width=3, alpha=0.5, edge_color='red', style='dashed', connectionstyle='Arc3, rad=0.1', arrows=False)
+    nx.draw_networkx_edges(G, pos, edgelist=incorrect_edges, width=3, alpha=0.5, edge_color='red', style='dashed',
+                           connectionstyle='Arc3, rad=0.1', arrows=False)
 
     # print(incorrect_edges)
 
-
     if join_list:
-         nx.draw_networkx_edges(G, pos,
-                       edgelist=join_list,
-                       width=3, alpha=0.7, edge_color='purple', style='dotted',
-                       arrows=False)
-
+        nx.draw_networkx_edges(G, pos,
+                               edgelist=join_list,
+                               width=3, alpha=0.7, edge_color='purple', style='dotted',
+                               arrows=False)
 
     if group_list:
-         nx.draw_networkx_edges(G, pos,
-                       edgelist=group_list,
-                       width=4, alpha=0.7, edge_color='cyan', style='dashed',
-                       arrows=False)
+        nx.draw_networkx_edges(G, pos,
+                               edgelist=group_list,
+                               width=4, alpha=0.7, edge_color='cyan', style='dashed',
+                               arrows=False)
 
     gt_edges = [edge for edge in G.edges(data=True)
-                       if 'truth' in edge[2] and edge[2]['truth'] == True]
+                if 'truth' in edge[2] and edge[2]['truth'] == True]
 
     nx.draw_networkx_edges(G, pos, edgelist=gt_edges, width=2, alpha=0.75, edge_color='black', arrows=True)
-
-
 
     already_marked = {}
     edge_labels = {}
@@ -233,13 +230,13 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
         if 'truth' in i[2] and i[2]['truth'] == True:
             if i[2]['operation'] is not None:
                 edge_label = edge_label + i[2]['operation']
-                already_marked[(i[0],i[1])] = True
+                already_marked[(i[0], i[1])] = True
 
         if 'weight' in i[2]:
-            edge_label = edge_label + ' ('+'{0:.8f}'.format(i[2]['weight'])+')'
+            edge_label = edge_label + ' (' + '{0:.8f}'.format(i[2]['weight']) + ')'
 
-        if (i[1],i[0]) not in already_marked.keys():
-            edge_labels[(i[0],i[1])] = edge_label
+        if (i[1], i[0]) not in already_marked.keys():
+            edge_labels[(i[0], i[1])] = edge_label
 
     nx.draw_networkx_edge_labels(G, pos=pos, edge_labels=edge_labels, font_size=16)
 
@@ -249,22 +246,23 @@ def draw_exp_graph(G, canvas_size=(30, 30), node_size=2000,
 def generate_and_draw_graph(base_dir, nb_name, metric, root=None, cluster_dict=None, join_list=None,
                             group_list=None):
     g_truth = get_graph(base_dir, nb_name)
-    g_infered = get_graph_edge_list(base_dir, nb_name,metric)
-    dist = get_distance_matrix(base_dir, nb_name,metric)
+    g_infered = get_graph_edge_list(base_dir, nb_name, metric)
+    dist = get_distance_matrix(base_dir, nb_name, metric)
     exp_graph = generate_explaination_graph(g_truth, g_infered, dist)
 
-    plt=draw_exp_graph(exp_graph, canvas_size=(100, 100), g_truth=g_truth, root=root, cluster_dict=cluster_dict, join_list=join_list)
+    plt = draw_exp_graph(exp_graph, canvas_size=(100, 100), g_truth=g_truth, root=root, cluster_dict=cluster_dict,
+                         join_list=join_list)
 
-    figure_file = base_dir+nb_name+'/'+nb_name+'_inferred.png'
+    figure_file = base_dir + nb_name + '/' + nb_name + '_inferred.png'
     if os.path.isfile(figure_file):
-        #print('Overwriting file: ' + figure_file)
+        # print('Overwriting file: ' + figure_file)
         os.remove(figure_file)
     plt.savefig(figure_file)
 
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
     plt.clf()
-    #plt.show()
+    # plt.show()
     return buf
 
 
@@ -277,9 +275,6 @@ def get_subgraph_threshold(graph, threshold):
         g_copy.remove_edge(u, v)
 
     return g_copy
-
-
-
 
 
 ### New pyviz Graph Generators
@@ -302,10 +297,10 @@ def get_edge_color(e1, e2, g_truth, g_inferred):
         return '#D3D3D3'
 
 
-def get_edge_number(e1,e2, g_inferred):
-    if g_inferred.has_edge(e1,e2) and 'num' in g_inferred[e1][e2]:
+def get_edge_number(e1, e2, g_inferred):
+    if g_inferred.has_edge(e1, e2) and 'num' in g_inferred[e1][e2]:
         return g_inferred[e1][e2]['num']
-    elif g_inferred.has_edge(e2,e1) and 'num' in g_inferred[e2][e1]:
+    elif g_inferred.has_edge(e2, e1) and 'num' in g_inferred[e2][e1]:
         return g_inferred[e2][e1]['num']
     return None
 
@@ -314,13 +309,12 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     # , bgcolor="#222222", font_color="white",
     nb_net = Network(height="750px", width="100%", notebook=True)
 
-    g = get_graph(RESULT_DIR, selected_nb)#.to_undirected()
+    g = get_graph(RESULT_DIR, selected_nb)  # .to_undirected()
     g_inferred = get_graph_edge_list(RESULT_DIR, selected_nb, metric)
     df_dict = ppo.load_dataset_dir(RESULT_DIR + selected_nb + '/artifacts/', '*.csv', index_col=0)
 
-
-    if os.path.exists(RESULT_DIR + selected_nb + '/inferred/'+ weight+'_sim.pkl') and cached:
-        nb_data = nx.read_gpickle(RESULT_DIR + selected_nb + '/inferred/'+weight+'_sim.pkl')
+    if os.path.exists(RESULT_DIR + selected_nb + '/inferred/' + weight + '_sim.pkl') and cached:
+        nb_data = nx.read_gpickle(RESULT_DIR + selected_nb + '/inferred/' + weight + '_sim.pkl')
     else:
         nb_data = pd.DataFrame(ppo.get_all_node_pair_scores(df_dict, g))
 
@@ -394,9 +388,7 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
             nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color, label=edge_number)
 
         else:
-            if edge_color != '#D3D3D3':   # Hack to remove TP edges
+            if edge_color != '#D3D3D3':  # Hack to remove TP edges
                 nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color)
 
     return nb_net
-
-

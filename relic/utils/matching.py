@@ -7,7 +7,7 @@ from relic.distance.set import set_jaccard_similarity
 
 
 def fuzzy_column_match(df1, df2):
-    #print('Performing Fuzzy Match')
+    # print('Performing Fuzzy Match')
     left_side = {col: set(df1[col].values) for col in df1}
     right_side = {col: set(df2[col].values) for col in df2}
 
@@ -18,7 +18,7 @@ def fuzzy_column_match(df1, df2):
         g = nx.DiGraph()
         for l in left_mismatch:
             for r in right_mismatch:
-                logging.debug(l,r, fuzz.ratio(l,r))
+                logging.debug(l, r, fuzz.ratio(l, r))
                 g.add_edge(l, r, weight=fuzz.WRatio(l, r))
         try:
             matching = nx.max_weight_matching(g)
@@ -40,20 +40,20 @@ def set_df_indices(df1, df2, indexing_threshold=0.5):
     index1 = set(df1.index.values)
     index2 = set(df2.index.values)
 
-    #print("Checking Indices")
+    # print("Checking Indices")
     if set_jaccard_similarity(index1, index2) < indexing_threshold:
-        #print("")
-        df2_col, value1 = find_best_index_match(df2,index1)
-        df1_col, value2 = find_best_index_match(df1,index2)
+        # print("")
+        df2_col, value1 = find_best_index_match(df2, index1)
+        df1_col, value2 = find_best_index_match(df1, index2)
         if value1 < indexing_threshold and value2 < indexing_threshold:
-            #TODO: Check if index is autonumbered and do something else
-            #print("Resetting both indices")
+            # TODO: Check if index is autonumbered and do something else
+            # print("Resetting both indices")
             df1 = df1.reset_index()
             df2 = df2.reset_index()
         elif value1 > value2:
-            #print("Resetting DF2 index to ", df2_col, value1)
+            # print("Resetting DF2 index to ", df2_col, value1)
             df2 = df2.set_index(df2_col, inplace=False)
         else:
-            #print("Resetting DF1 index to ", df1_col, value2)
+            # print("Resetting DF1 index to ", df1_col, value2)
             df1 = df1.set_index(df1_col, inplace=False)
     return df1, df2
