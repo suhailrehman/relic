@@ -28,3 +28,7 @@ class TestRelicAlgorithm:
     def test_create_initial_graph(self, relic_instance):
         logging.info('Testing initial graph creation')
         assert nx.is_empty(relic_instance.create_initial_graph())
+
+    def test_load_artifacts(self, relic_instance):
+        logging.info('Testing initial graph creation')
+        assert nx.is_empty(relic_instance.create_initial_graph())

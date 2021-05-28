@@ -65,6 +65,9 @@ class RelicAlgorithm:
         # TODO : Instantaneous Precision/Recall/F1 and other accuracy score by calling a single function
         # TODO : Instantaneous Graph
 
+    def load_artifacts(self):
+        pass
+
     def create_initial_graph(self):
         self.logger.debug('Creating the initial graph of artifact nodes')
         self.g_inferred = nx.Graph()
