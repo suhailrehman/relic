@@ -13,6 +13,7 @@ from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict
 from relic.utils.pqedge import PQEdges
 from relic.utils.serialize import build_df_dict_dir
 from relic.algorithm import compute_tuplewise_similarity
+from relic.utils.artifactdict import ArtifactDict
 
 module_logger = logging.getLogger('relic.core')
 
@@ -32,7 +33,8 @@ class RelicAlgorithm:
 
         # Load the dataset
         # TODO: Change to load/read on demand infrastructure
-        self.dataset = build_df_dict_dir(self.artifact_dir)
+        #self.dataset = build_df_dict_dir(self.artifact_dir)
+        self.dataset = ArtifactDict(self.artifact_dir)
 
         # Create the initial graph
         self.g_inferred = nx.Graph()

@@ -9,7 +9,7 @@ import pandas as pd
 from relic.utils.artifactdict import ArtifactDict
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(THIS_DIR, 'data/20210126-153738/artifacts/')
+data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
 files = glob.glob(data_dir+'/*.csv')
 
 

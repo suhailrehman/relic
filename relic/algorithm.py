@@ -37,15 +37,15 @@ def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, thr
     else:
         total_len = len(pairs)
     for tup in tqdm(pairs, desc='graph pairs', leave=False, disable=silent, total=total_len):
-        logger.debug('Evaluating tuple: ', tup)
-        tuple_dfs = [dataset[x] for x in tup]
-        scores_dict = similarity_metric(*tuple_dfs, **kwargs)
+        logger.debug('Evaluating tuple: ' + str(tup))
+        #tuple_dfs = [dataset[x] for x in tup]
+        scores_dict = similarity_metric(*tup, dataset, **kwargs)
         for ppo_type, score in scores_dict.items():
             if score >= threshold:
                 # TODO : add threshold dict of default thresholds for various PPOs
                 tuplewise_similarity[ppo_type].additem(frozenset(tup), scores_dict[ppo_type])
             else:
-                logger.debug('Dropping tuple: ', tup, ' below threshold ', score)
+                logger.debug('Dropping tuple: ' + tup + ' below threshold ' + score)
 
     return tuplewise_similarity
 

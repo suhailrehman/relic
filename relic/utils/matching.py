@@ -3,7 +3,8 @@ import logging
 import networkx as nx
 from fuzzywuzzy import fuzz
 
-from relic.distance.set import set_jaccard_similarity
+from relic.distance.set_functions import set_jaccard_similarity
+from itertools import combinations
 
 
 def fuzzy_column_match(df1, df2):
@@ -57,3 +58,30 @@ def set_df_indices(df1, df2, indexing_threshold=0.5):
             # print("Resetting DF1 index to ", df1_col, value2)
             df1 = df1.set_index(df1_col, inplace=False)
     return df1, df2
+
+
+def get_common_cols(df1, df2):
+    df1_cols = set(df1)
+    df2_cols = set(df2)
+    return df1_cols.intersection(df2_cols)
+
+
+# Generates a common column lattice between dataframes df1 and df2
+def generate_common_lattice(df1, df2):
+    #TODO: Convert to generator expression with early exit conditions.
+    df1_cols = set(df1)
+    df2_cols = set(df2)
+
+    common_cols = get_common_cols(df1, df2)
+    lattice = []
+
+    for i in range(1, len(common_cols) + 1):
+        print('Lattice Generation:', i)
+        level_lattice = list(combinations(common_cols, i))
+        print('level:', level_lattice)
+        lattice.append(level_lattice)
+
+    # lattice = [list(itertools.combinations(common_cols, i)) for i in range(1,len(common_cols)+1)]
+
+    # print(lattice)
+    return lattice
