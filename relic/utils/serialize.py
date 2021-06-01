@@ -75,3 +75,7 @@ def combine_and_create_pkl(indir, outfile, ntuples=2):
 def load_distances_from_file(filename, ntuples=2):
     col_names = ['df'+str(x) for x in range(1, ntuples+1)].append('score')
     return pd.read_csv(filename, header=None, names=col_names)
+
+def load_distances_from_file(filename, ntuples=2):
+    col_names = ['df'+str(x) for x in range(1, ntuples+1)].append('score')
+    return pd.read_csv(filename, header=None, names=col_names)

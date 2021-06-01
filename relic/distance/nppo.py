@@ -350,7 +350,7 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
     logging.debug(f'GB({d1},{d2}): final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals')
     logging.debug(f'GB({d1},{d2}): {final_val} = (1.0 * {len(group_cols)} * {dst_group_keyness_ratio} - {missing_vals}')
 
-    return src, dst, final_val  # * contraction_ratio
+    return d1, d2, final_val  # * contraction_ratio
 
 
 #### Groupby
@@ -760,9 +760,9 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
                         logging.warning(f'Cannot pivot:', df1_name, df2_name, index_name_match, col, val, e)
                         similarities.append(0.0)
                 logging.debug(f'pivot replay result: {dst.head()}, {replaydf.head()}, {similarities}')
-            return src, dst, max(similarities)
+            return df1_name, df2_name, max(similarities)
 
-    return src, dst, index_containment * max_col_score
+    return df1_name, df2_name, index_containment * max_col_score
 
 
 def tiebreak_by_timestamp_synthetic(df_dict, pairlist):

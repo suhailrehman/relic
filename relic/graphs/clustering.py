@@ -19,7 +19,7 @@ def hash_edge(x):
 def exact_schema_cluster(df_dict):
     clusters = defaultdict(list)
     for fname, df in df_dict.items():
-        clusters[frozenset(df)].append(fname)
+        clusters[frozenset(df.columns)].append(fname)
     return clusters
 
 
@@ -49,6 +49,18 @@ def get_graph_clusters(clusters_file):
             for item in items:
                 cluster_assign[item] = int(cluster_id)
         return cluster_assign
+
+
+def get_graph_clusters_set(clusters_file):
+    with open(clusters_file, 'r') as fp:
+        reader = csv.reader(fp)
+        cluster_list = list(reader)
+        cluster_set = set()
+        for cluster in cluster_list:
+            cluster_id = cluster[0]
+            items = cluster[2:]
+            cluster_set.add(frozenset(items))
+        return cluster_set
 
 
 # Duplicate function
