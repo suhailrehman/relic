@@ -5,13 +5,13 @@ from math import comb
 import logging
 
 from relic.utils.pqedge import PQEdges
-from relic.distance.ppo import compute_all_ppo
+from relic.distance.ppo import compute_all_ppo_labels
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 
-def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, threshold=-1.0,
+def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo_labels, threshold=-1.0,
                                  silent=False, pairs=None, n_pairs=2,
                                  tuplewise_similarity=None, label=None, **kwargs):
     """Compute pairwise similarity metrics of dataset dict using similarity_metric
@@ -40,17 +40,27 @@ def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo, thr
     for tup in tqdm(pairs, desc='graph pairs', leave=False, disable=silent, total=total_len):
         logger.debug('Evaluating tuple: ' + str(tup))
         # tuple_dfs = [dataset[x] for x in tup]
-        scores_dict = similarity_metric(*tup, dataset, **kwargs)
-        if label in ['join', 'groupby', 'pivot']:
-            # Special case handling for NPPO (not in dict form currently)
-            logger.debug(f'Adding {label} score: {scores_dict}')
-            tuplewise_similarity[label].additem((scores_dict[0], scores_dict[1]), scores_dict[2])
-        else:
-            for ppo_type, score in scores_dict.items():
-                if score >= threshold:
-                    tuplewise_similarity[ppo_type].additem(tup, scores_dict[ppo_type])
-                else:
-                    logger.debug('Dropping tuple: ' + tup + ' below threshold ' + score)
+
+        edge, scores_dict = similarity_metric(*tup, dataset, **kwargs)
+
+        for ppo_type, score in scores_dict.items():
+            logger.debug(f'Adding {ppo_type} score: {scores_dict[ppo_type]} to edge {edge}')
+            tuplewise_similarity[ppo_type].additem(edge, scores_dict[ppo_type])
+
+
+        # scores_dict returns: ((srcs), dest)), {score_dict}
+
+        # Previous code
+        # if label in ['join', 'groupby', 'pivot']:
+        #     # Special case handling for NPPO (not in dict form currently)
+        #     logger.debug(f'Adding {label} score: {scores_dict}')
+        #     tuplewise_similarity[label].additem((scores_dict[0], scores_dict[1]), scores_dict[2])
+        # else:
+        #     for ppo_type, score in scores_dict.items():
+        #         if score >= threshold:
+        #             tuplewise_similarity[ppo_type].additem(tup, scores_dict[ppo_type])
+        #         else:
+        #             logger.debug('Dropping tuple: ' + tup + ' below threshold ' + score)
 
     return tuplewise_similarity
 

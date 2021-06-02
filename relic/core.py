@@ -7,7 +7,7 @@ import logging
 import networkx as nx
 from networkx.utils import UnionFind
 
-from relic.distance.ppo import compute_all_ppo
+from relic.distance.ppo import compute_all_ppo_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
@@ -33,7 +33,7 @@ class RelicAlgorithm:
 
         # Load the dataset
         # Load/read on demand infrastructure
-        #self.dataset = ArtifactDict(self.artifact_dir)
+        # self.dataset = ArtifactDict(self.artifact_dir)
         self.dataset = build_df_dict_dir(self.artifact_dir)
 
         # Create the initial graph
@@ -46,14 +46,10 @@ class RelicAlgorithm:
         self.initial_cluster = {}
         self.cluster_lookup = {}
 
-        # Create the pairwise weights_dict
-        # store multiple weights
+        # Create the pairwise weights_dict to store multiple weights
         # Priority queue or self-sorting datastructure in association with unionfind
         self.pairwise_weights = defaultdict(PQEdges)
         self.initialize_components()
-        # self.weight_df = None
-        # self.set_weight_df()
-        # self.weight_dict = defaultdict(dict)
 
         # Load the Ground Truth
         # Optional GT annotation or remove entirely
@@ -65,9 +61,6 @@ class RelicAlgorithm:
         # Tie Breaker Info
         self.tied_edges = {}
         self.two_tie_edges = {}
-
-        # TODO : Instantaneous Precision/Recall/F1 and other accuracy score by calling a single function
-        # TODO : Instantaneous Graph
 
     def load_artifacts(self):
         pass
@@ -102,7 +95,7 @@ class RelicAlgorithm:
     def add_edge_and_merge_components(self, edge, data):
         self.logger.debug(f'About to add and merge edge {edge}')
 
-        if type(edge[0]) == tuple:  # two source edges
+        if type(edge[0]) == tuple:  # two sources, like join
             for e in edge[0]:
                 self.g_inferred.add_edge(e, edge[1], **data)
                 self.components.union(e, edge[1])
@@ -114,7 +107,7 @@ class RelicAlgorithm:
         self.edge_no += 1
         self.num_components = len([x for x in self.components])
 
-    def compute_edges_of_type(self, edge_type='all', similarity_function=compute_all_ppo,
+    def compute_edges_of_type(self, edge_type='all', similarity_function=compute_all_ppo_labels,
                               n_pairs=2):
         self.pairwise_weights.update(compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
                                                                   label=edge_type, n_pairs=n_pairs))

@@ -1,7 +1,7 @@
 import os
 from relic.algorithm import *
 from relic.utils.serialize import build_df_dict_dir
-from relic.distance.ppo import compute_all_ppo
+from relic.distance.ppo import compute_all_ppo_labels
 import pytest
 import logging
 
@@ -15,8 +15,8 @@ expected_max = [(frozenset(('0.csv', '1.csv')), 0.9999523809523809)]
 def test_compute_tuplewise_similarity():
     logging.info('Input and output directories:' + THIS_DIR + data_dir)
     dataset = build_df_dict_dir(data_dir)
-    sim_dict = compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo)
-    test_pair = (file1, file2)
+    sim_dict = compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo_labels)
+    test_pair = frozenset((file1, file2))
     logging.debug('PQDict Contents: ' + str(sim_dict['jaccard']))
     max_vals = sim_dict['jaccard'].pop_max()
     logging.info('PQDict Maxedges: ' + str(max_vals))

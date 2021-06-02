@@ -55,7 +55,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
 
     if not common_cols:
         logging.debug(f'{df1}, {df2}, {df3}, No common cols')
-        return ((df1, df2), df3, 0.0)
+        return ((df1, df2), df3), {'join': 0.0}
 
     for join_dest in combo_set:
         join_sources = combo_set - set([join_dest])
@@ -80,7 +80,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
 
     if not max_combo or not common_cols:
         logging.debug(f'{df1}, {df2}, {df3}, No Max Combo')
-        return ((df1, df2), df3, 0.0)
+        return ((df1, df2), df3), {'join': 0.0}
 
     df1, df2 = max_combo[0]
     df3 = max_combo[1]
@@ -91,7 +91,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
     # Check for non-key contributions from either side:
     if not df1_columns or not df2_columns:
         logging.debug(f'{df1}, {df2}, {df3}, Poor contribution from either side')
-        return ((df1, df2), df3, 0.0)
+        return ((df1, df2), df3), {'join': 0.0}
 
     keys = columns_dict[df1].intersection(columns_dict[df2])
 
@@ -124,7 +124,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
 
     if containments[max_containment] < 0.001:
         logging.debug(f'{df1}, {df2}, {df3}, Poor max containment')
-        return ((df1, df2), df3, 0.0)
+        return ((df1, df2), df3), {'join': 0.0}
 
     if debug:
         print('df1,df2,df3:', df1, df2, df3)
@@ -136,7 +136,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
 
     if df1_containment < 0.01 or df2_containment < 0.01:
         logging.debug(f'{df1}, {df2}, {df3}, Poor single-sided containments')
-        return ((df1, df2), df3, 0.0)
+        return ((df1, df2), df3), {'join': 0.0}
 
     # TODO: Check coherency here
     # Do Join replay for now:
@@ -153,10 +153,9 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
     else:
         replay_score = df1_containment * df2_containment
 
-
     logging.debug(f'max_col_ratio, maxcontain, replay_score: {max_col_number}, {containments[max_containment]}, {replay_score}')
 
-    return (max_combo[0], max_combo[1], replay_score)
+    return (max_combo[0], max_combo[1]), {'join': replay_score}
 
 
 def get_max_coherent_columns_1(df1, df2):
@@ -278,9 +277,9 @@ def get_group_agg_cols(df1, df2, contaiment_threshold=0.9, sim_threshold=0.9, la
     srcvalset = set(frozenset(u) for u in df1[group_cols].values.tolist())
     dstvalset = set(frozenset(u) for u in df2[group_cols].values.tolist())
 
-    logging.debug(f'Source Val set: {srcvalset}')
-    logging.debug(f'Dest Val set: {dstvalset}')
-    logging.debug(f'Symmdiff: {srcvalset.symmetric_difference(dstvalset)}')
+    #logging.debug(f'Source Val set: {srcvalset}')
+    #logging.debug(f'Dest Val set: {dstvalset}')
+    #logging.debug(f'Symmdiff: {srcvalset.symmetric_difference(dstvalset)}')
 
     missing_vals = (len(srcvalset.symmetric_difference(dstvalset)) / len(srcvalset))
 
@@ -298,18 +297,24 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
     sym_diff_cols = set(list(df1)).symmetric_difference(set(list(df2)))
     if sym_diff_cols and strict_schema:
         logging.debug(f'GB({d1},{d2}): Failed Strict schema check')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     if not common_cols:
         logging.debug(f'GB({d1},{d2}): DFs have no common columns')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     # Contraction Check:
     if len(df1.index) == len(df2.index):
         logging.debug(f'GB({d1},{d2}): There is no len contraction')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
-    src, dst = ((df1, df2) if len(df1.index) > len(df2.index) else (df2, df1))
+
+    if len(df1.index) > len(df2.index):
+        src, src_label = df1, d1
+        dst, dst_label = df2, d2
+    else:
+        src, src_label = df2, d2
+        dst, dst_label = df1, d1
 
     # Containment check and dividing columns into group and aggregate
     group_cols, agg_cols, missing_vals = get_group_agg_cols(src, dst, sim_threshold=1.0,
@@ -321,15 +326,15 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
 
     if not group_cols:
         logging.debug(f'GB({d1},{d2}): No group columns detected')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     if not agg_cols and not null_aggs:  # Don't allow aggregates to be null
         logging.debug(f'GB({d1},{d2}): No agg cols in common between the dataframes)')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     if missing_vals > 0.0:
         logging.debug(f'GB({d1},{d2}): GroupBy has missing values')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     # TODO: Lattice exploration
     src_group_keyness_ratio = columnset_keyness_ratio(src, group_cols)
@@ -337,11 +342,11 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
 
     if src_group_keyness_ratio == 1.0:
         logging.debug(f'GB({d1},{d2}): Source group columns are also keys, groupby unlikely: {src_group_keyness_ratio}')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     if dst_group_keyness_ratio < 1.0:
         logging.debug(f'GB({d1},{d2}): Group keyness below threshold: {dst_group_keyness_ratio}')
-        return d1, d2, 0.0
+        return frozenset((d1, d2)), {'groupby': 0.0}
 
     column_diff = set_functions.set_jaccard_similarity(set(df1.columns), set(df2.columns))
     contraction_ratio = len(src.index) / len(dst.index)
@@ -350,7 +355,7 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
     logging.debug(f'GB({d1},{d2}): final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals')
     logging.debug(f'GB({d1},{d2}): {final_val} = (1.0 * {len(group_cols)} * {dst_group_keyness_ratio} - {missing_vals}')
 
-    return d1, d2, final_val  # * contraction_ratio
+    return frozenset((d1, d2)), {'groupby': final_val}  # * contraction_ratio
 
 
 #### Groupby
@@ -658,6 +663,7 @@ def find_column_set_match(df, valueset, string_convert=False):
 
 def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=True, schema_check=True, debug=False,
                    index_match_threshold=0.99, col_match_threshold=0.99, replay_threshold=0.99):
+
     df1 = df_dict[df1_name]
     df2 = df_dict[df2_name]
 
@@ -672,19 +678,19 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
     if schema_check:  # Check for at most one common column (index)
         common_cols = set(df1).intersection(set(df2))
         if len(common_cols) > 1:
-            return df1_name, df2_name, 0.0
+            return frozenset((df1_name, df2_name)), {'pivot': 0.0}
 
     if df2.index.name:
         if df2.index.name in df1.columns:
             index_name_match = df2.index.name
-            src = df1
-            dst = df2
+            src, src_label = df1, df1_name
+            dst, dst_label = df2, df2_name
 
     elif df1.index.name:
         if df1.index.name in df2.columns:
             index_name_match = df1.index.name
-            src = df2
-            dst = df1
+            src, src_label = df2, df2_name
+            dst, dst_label = df1, df1_name
 
     if index_name_match:
         index_containment = ppo.set_jaccard_similarity(set(src[index_name_match].values), set(dst.index.values))
@@ -692,7 +698,7 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
 
     # otherwise use containment to figure out src and dst:
     else:
-        return df1_name, df2_name, 0.0
+        return frozenset((df1_name, df2_name)), {'pivot': 0.0}
         '''
         try:
             df1coldict = find_column_set_match(df1, set(df2.index.values))
@@ -718,7 +724,7 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
         '''
 
     if index_containment <= index_match_threshold:
-        return df1_name, df2_name, 0.0
+        return frozenset((df1_name, df2_name)), {'pivot': 0.0}
 
     # Check column-value containment
     try:
@@ -726,11 +732,11 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
         max_col_score = max(coldict.keys())
         logging.debug(f'Column match dict: {coldict}')
     except ValueError as e:
-        return df1_name, df2_name, 0.0
+        return frozenset((df1_name, df2_name)), {'pivot': 0.0}
 
     # print(index_containment, max_col_score)
     if max_col_score <= col_match_threshold:
-        return df1_name, df2_name, 0.0
+        return frozenset((df1_name, df2_name)), {'pivot': 0.0}
 
     # Check pivot value containment if flag is set:
     if match_values:
@@ -755,14 +761,14 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
                 for val in valdict[max_val_score]:
                     try:
                         replaydf = src.pivot_table(index=index_name_match, columns=col, values=val, aggfunc=max)
-                        similarities.append(ppo.compute_all_ppo(dst, replaydf, None)['jaccard'])
+                        similarities.append(ppo.compute_all_ppo(dst, replaydf)['jaccard'])
                     except Exception as e:
                         logging.warning(f'Cannot pivot:', df1_name, df2_name, index_name_match, col, val, e)
                         similarities.append(0.0)
                 logging.debug(f'pivot replay result: {dst.head()}, {replaydf.head()}, {similarities}')
-            return df1_name, df2_name, max(similarities)
+            return frozenset((df1_name, df2_name)), {'pivot': max(similarities)}
 
-    return df1_name, df2_name, index_containment * max_col_score
+    return frozenset((df1_name, df2_name)), {'pivot': index_containment * max_col_score}
 
 
 def tiebreak_by_timestamp_synthetic(df_dict, pairlist):
@@ -877,16 +883,17 @@ def replay_merge(src1, src2, dst, key, threshold=0.95):
             return 0.0
 
         inner_result = src1.merge(src2, on=key)
-        inner_score = ppo.compute_all_ppo(dst, inner_result, None, ppo='jaccard')['jaccard']
+        inner_score = ppo.compute_all_ppo(dst, inner_result, ppo='jaccard')['jaccard']
         if inner_score < threshold:
             left_result = src1.merge(src2, on=key, how='left')
-            left_score = ppo.compute_all_ppo(dst, left_result, None, ppo='jaccard')['jaccard']
+            left_score = ppo.compute_all_ppo(dst, left_result, ppo='jaccard')['jaccard']
             if left_score < threshold:
                 right_result = src1.merge(src2, on=key, how='right')
-                right_score = ppo.compute_all_ppo(dst, right_result, None, ppo='jaccard')['jaccard']
+                right_score = ppo.compute_all_ppo(dst, right_result, ppo='jaccard')['jaccard']
 
     except Exception as e:
         logger.debug(f'Merge raised exception: {e}')
+        #raise
         return 0.0
 
     return max([inner_score, left_score, right_score])

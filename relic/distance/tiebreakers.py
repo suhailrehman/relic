@@ -3,7 +3,7 @@ from relic.utils.pqedge import PQEdges
 
 
 def hash_edge(x):
-    w = "+".join(sorted([x[0][0], x[0][1]])).encode('utf8')
+    w = "+".join(sorted(list(x[0]))).encode('utf8')
     return md5(w).hexdigest()
 
 

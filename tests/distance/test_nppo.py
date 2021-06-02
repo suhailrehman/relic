@@ -21,7 +21,7 @@ def test_join_detector():
     df_dict = {file1: src1, file2: src2, file3: dst}
     result_tuple = join_detector(file1, file2, file3, df_dict)
     logging.info(f'JD Test Result: {result_tuple}')
-    assert result_tuple[2] == pytest.approx(1.0)
+    assert result_tuple[1]['join'] == pytest.approx(1.0)
     
     
 def test_groupby_detector():
@@ -32,7 +32,7 @@ def test_groupby_detector():
     df_dict = {file1: src, file2: dst}
     result_tuple = groupby_detector(file1, file2, df_dict)
     logging.info(f'GBD Test Result: {result_tuple}')
-    assert result_tuple[2] >= 1.0
+    assert result_tuple[1]['groupby'] >= 1.0
 
 
 def test_pivot_detector():
@@ -43,4 +43,4 @@ def test_pivot_detector():
     df_dict = {file1: src, file2: dst}
     result_tuple = pivot_detector(file1, file2, df_dict)
     logging.info(f'PD Test Result: {result_tuple}')
-    assert result_tuple[2] >= 1.0
+    assert result_tuple[1]['pivot'] >= 1.0

@@ -48,7 +48,7 @@ def test_set_initial_clusters(relic_instance):
 
 def test_add_ppo_edges(relic_instance):
     logging.info('Testing PPO Cell Jaccard Edges')
-    relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo, n_pairs=2)
+    relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True, tiebreak_function=tiebreak_from_computed_scores,
                                      final_function=tiebreak_hash_edge,
                                      tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
@@ -71,7 +71,8 @@ def test_add_join_edges(relic_instance):
                                      )
     expected_graph = nx.read_edgelist(expected_out_dir+'infered_mst_pc2cell+containment+group+join+pivot.csv')
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if data['type'] == 'join')
-    actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'join')
+    actual_edge_set = set(frozenset((u, v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'join')
+    logging.info([x for x in relic_instance.g_inferred.edges(data=True)])
     assert expected_edge_set == actual_edge_set
 
 
@@ -87,7 +88,7 @@ def test_inter_cell_edges(relic_instance):
     expected_graph = nx.read_edgelist(expected_out_dir+'infered_mst_pc2cell+containment+group+join+pivot.csv')
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if 'cell' in data['type'])
     actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'jaccard')
-    assert expected_edge_set == actual_edge_set
+    assert actual_edge_set == expected_edge_set
 
 
 def test_groupby_edges(relic_instance):
@@ -102,7 +103,7 @@ def test_groupby_edges(relic_instance):
     expected_graph = nx.read_edgelist(expected_out_dir+'infered_mst_pc2cell+containment+group+join+pivot.csv')
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if data['type'] == 'groupby')
     actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'groupby')
-    assert expected_edge_set == actual_edge_set
+    assert actual_edge_set == expected_edge_set
 
 
 def test_pivot_edges(relic_instance):
@@ -117,5 +118,5 @@ def test_pivot_edges(relic_instance):
     expected_graph = nx.read_edgelist(expected_out_dir+'infered_mst_pc2cell+containment+group+join+pivot.csv')
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if data['type'] == 'pivot')
     actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'pivot')
-    assert expected_edge_set == actual_edge_set
+    assert actual_edge_set == expected_edge_set
 
