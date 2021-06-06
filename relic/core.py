@@ -1,3 +1,5 @@
+import copy
+
 import pandas as pd
 import numpy as np
 import os
@@ -62,6 +64,10 @@ class RelicAlgorithm:
         self.tied_edges = {}
         self.two_tie_edges = {}
 
+        # Serialization Info
+        self.serialize = True
+        self.score_records = dict()
+
     def load_artifacts(self):
         pass
 
@@ -109,8 +115,12 @@ class RelicAlgorithm:
 
     def compute_edges_of_type(self, edge_type='all', similarity_function=compute_all_ppo_labels,
                               n_pairs=2):
-        self.pairwise_weights.update(compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
-                                                                  label=edge_type, n_pairs=n_pairs))
+        edge_scores = compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
+                                                                  label=edge_type, n_pairs=n_pairs)
+        self.pairwise_weights.update(edge_scores)
+        if self.serialize == True:
+            for edge_type, score_dict in edge_scores.items():
+                self.score_records[edge_type] = copy.deepcopy(score_dict)
 
     def add_edges_of_type(self, edge_type='jaccard', intra_cluster=False, tiebreak_function=None,
                           final_function=tiebreak_hash_edge,

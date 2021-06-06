@@ -26,7 +26,7 @@
   <h3 align="center"> REtrospective Lineage InferenCe </h3>
 
   <p align="center">
-     RELIC is a research project to enable lineage reconstruction of arbitrary data workflows from generated artifacts.
+     RELIC is a research project to enable lineage reconstruction of arbitrary data workflows from generated artifacts. </br>
     <a href="https://suhailrehman.com/demo-mockup"><strong>View Demo »</strong></a>
     <a href="https://github.com/suhailrehman/relic/wiki"><strong>Explore the docs »</strong></a>
   </p>

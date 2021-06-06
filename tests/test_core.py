@@ -2,6 +2,7 @@ import glob
 
 import networkx as nx
 
+import relic.distance.ppo
 from relic.core import *
 from relic.distance.nppo import join_detector, groupby_detector, pivot_detector
 from relic.distance.tiebreakers import tiebreak_from_computed_scores, tiebreak_hash_edge
@@ -10,6 +11,7 @@ import pytest
 import logging
 
 from relic.graphs.clustering import get_graph_clusters_set
+from relic.utils.serialize import store_all_distances, load_distances_from_file
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
@@ -120,3 +122,29 @@ def test_pivot_edges(relic_instance):
     actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'pivot')
     assert actual_edge_set == expected_edge_set
 
+
+def test_store_load_distances(relic_instance, tmpdir):
+    logging.info('Testing Distances Write to File')
+    output = tmpdir.mkdir("inferred_actual")
+    store_all_distances(relic_instance.score_records, str(output))
+    ppo_labels = []
+    for label in relic_instance.score_records.keys():
+        if label not in relic.distance.ppo.PPO_LABELS:
+            distance_file = output.join('/'+label+'_scores.csv')
+            logging.info(f'Checking {label} Score File: {distance_file}')
+            assert os.path.exists(distance_file)
+            pairwise_scores = load_distances_from_file(distance_file)
+            assert set(pairwise_scores[label].keys()) == set(relic_instance.score_records[label].keys())
+            for k in set(pairwise_scores[label].keys()):
+                assert pairwise_scores[label][k] == pytest.approx(relic_instance.score_records[label][k])
+        else:
+            ppo_labels.append(label)
+
+    if ppo_labels:
+        distance_file = output.join('/ppo_scores.csv')
+        pairwise_scores = load_distances_from_file(distance_file)
+        for label in ppo_labels:
+            assert set(pairwise_scores[label].keys()) == set(relic_instance.score_records[label].keys())
+            for k in set(pairwise_scores[label].keys()):
+                logging.info(f'Checking {label} Score File: {distance_file}')
+                assert pairwise_scores[label][k] == pytest.approx(relic_instance.score_records[label][k])
