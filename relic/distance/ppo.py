@@ -17,11 +17,10 @@ PPO_LABELS = [
 
 
 def _return_zero(ppo):
-    result_dict = {label: 0.0 for label in ppo_labels}
-
+    result_dict = {label: 0.0 for label in PPO_LABELS}
     if ppo == 'all':
         return result_dict
-    elif ppo in result_dict:
+    elif ppo in PPO_LABELS:
         return {ppo: result_dict[ppo]}
     else:
         raise ValueError('Unknown distance type requested', ppo)

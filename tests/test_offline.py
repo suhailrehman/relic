@@ -25,7 +25,3 @@ def test_enumeration(tmpdir):
 
 def test_join_enumeration(tmpdir):
     assert True
-
-
-def
-
