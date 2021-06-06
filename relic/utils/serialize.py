@@ -1,8 +1,12 @@
 # Load a directory and return filename:df pairs
+from collections import defaultdict
+
 import pandas as pd
 import glob
 import os
 import networkx as nx
+
+from relic.utils.pqedge import PQEdges
 
 
 def build_df_dict(nb_name, base_dir):
@@ -72,10 +76,22 @@ def combine_and_create_pkl(indir, outfile, ntuples=2):
     pd.concat(all_dfs).sort_values('score', ascending=False).to_csv(outfile)
 
 
-def load_distances_from_file(filename, ntuples=2):
-    col_names = ['df'+str(x) for x in range(1, ntuples+1)].append('score')
-    return pd.read_csv(filename, header=None, names=col_names)
+def load_distances_from_file(filename, labels=['score'], ntuples=2):
+    col_names = ['df'+str(x) for x in range(1, ntuples+1)]
+    col_names.extend(labels)
+    score_dataframe = pd.read_csv(filename, header=None, names=col_names)
+    pairwise_scores = defaultdict(PQEdges)
+    for ix, row in score_dataframe.iterrows():
+        df1 = row['df1']
+        df2 = row['df2']
+        for label in labels:
+            if label == 'join':
+                df3 = row['df3']
+                edge = ((df1, df2), df3)
+            else:
+                edge = frozenset([df1,df2])
 
-def load_distances_from_file(filename, ntuples=2):
-    col_names = ['df'+str(x) for x in range(1, ntuples+1)].append('score')
-    return pd.read_csv(filename, header=None, names=col_names)
+            pairwise_scores[label].additem(edge, row[label])
+
+    return pairwise_scores
+

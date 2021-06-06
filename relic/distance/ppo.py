@@ -8,13 +8,16 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelnam
 logger = logging.getLogger(__name__)
 
 
+PPO_LABELS = [
+        'jaccard',
+        'containment',
+        'overlap',
+        'containment_oneside'
+]
+
+
 def _return_zero(ppo):
-    result_dict = {
-        'jaccard': 0.0,
-        'containment': 0.0,
-        'overlap': 0,
-        'containment_oneside': 0.0
-    }
+    result_dict = {label: 0.0 for label in ppo_labels}
 
     if ppo == 'all':
         return result_dict

@@ -951,3 +951,54 @@ def merge_size(left_frame, right_frame, group_by, how='inner'):
     elif how == 'right':
         return sum(sizes + right_size)
     return sum(sizes + left_size + right_size)
+
+
+def check_join_schema(colset1, colset2, colset3, logger=logging.getLogger('relic.core')):
+    combo_set = set([colset1, colset2, colset3])
+    max_combo = None
+    max_col_number = 0
+
+    # First Check for at least one common column in triple to act as key
+    common_cols = colset1.intersection(colset2).intersection(colset3)
+
+    if not common_cols:
+        logger.debug(colset1, colset2, colset3, 'No Common Columns')
+        return False
+
+    for join_dest in combo_set:
+        join_sources = combo_set - set([join_dest])
+
+        # Whats the jaccard distance of the dest as a union of the sources?
+
+        set_iterator = iter(join_sources)
+        source = next(set_iterator)
+        other_source = next(set_iterator)
+
+        symm_diff = source.intersection(join_dest) - other_source
+        column_union = symm_diff.union(other_source.intersection(join_dest) - source)
+
+        jaccard = set_functions.set_jaccard_similarity(join_dest, column_union) * len(join_dest)
+
+        logging.debug(source, other_source, join_dest, symm_diff, column_union, jaccard)
+
+        if jaccard > max_col_number:
+            max_col_number = jaccard
+            max_combo = (tuple(join_sources), join_dest)
+
+    if not max_combo or not common_cols:
+        logger.debug(colset1, colset2, colset3, 'No Max Combo')
+        return False
+
+
+    s1, s2 = max_combo[0]
+    dest = max_combo[1]
+
+    df1_columns = s1.intersection(dest) - s2
+    df2_columns = s2.intersection(dest) - s1
+
+    # Check for non-key contributions from either side:
+    if not df1_columns or not df2_columns:
+        logger.debug('Poor contribution from either side')
+        return False
+
+    return True
