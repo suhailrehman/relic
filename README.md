@@ -14,7 +14,6 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 -->
 
-[![Build Status](https://travis-ci.com/suhailrehman/relic.svg?token=t8U2hzgp1btUxBBFMtEf&branch=master)](https://travis-ci.com/suhailrehman/relic)
 
 <!-- PROJECT LOGO -->
 <br />
@@ -31,6 +30,12 @@
     <a href="https://suhailrehman.com/demo-mockup"><strong>View Demo »</strong></a>
     <a href="https://github.com/suhailrehman/relic/wiki"><strong>Explore the docs »</strong></a>
   </p>
+
+-----------------
+
+[![Build Status](https://travis-ci.com/suhailrehman/relic.svg?token=t8U2hzgp1btUxBBFMtEf&branch=master)](https://travis-ci.com/suhailrehman/relic)
+[![codecov](https://codecov.io/gh/suhailrehman/relic/branch/master/graph/badge.svg?token=VIAVSG7LBM)](https://codecov.io/gh/suhailrehman/relic)
+[![Twitter URL](https://img.shields.io/twitter/url/https/twitter.com/fold_left.svg?style=social&label=Follow%20%40suhailrehman)](https://twitter.com/suhailrehman)
 
 
 

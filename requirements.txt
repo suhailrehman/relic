@@ -12,4 +12,5 @@ pqdict
 fuzzywuzzy
 Faker
 pytest
+pytest-cov
 python-Levenshtein
