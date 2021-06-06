@@ -1,15 +1,3 @@
-<!--
-*** Thanks for checking out the Best-README-Template. If you have a suggestion
-*** that would make this better, please fork the repo and create a pull request
-*** or simply open an issue with the tag "enhancement".
-*** Thanks again! Now go create something AMAZING! :D
-***
-***
-***
--->
-
-
-
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -26,6 +14,7 @@
 [![LinkedIn][linkedin-shield]][linkedin-url]
 -->
 
+[![Build Status](https://travis-ci.com/suhailrehman/relic.svg?token=t8U2hzgp1btUxBBFMtEf&branch=master)](https://travis-ci.com/suhailrehman/relic)
 
 <!-- PROJECT LOGO -->
 <br />
@@ -160,19 +149,5 @@ ChiData Group @ UChicago: [https://uchi-db.github.io/chidatasite/](https://uchi-
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-<!-- #TODO: Remove or find replacements because sheilds dont fully support private repos
-[contributors-shield]: https://img.shields.io/github/contributors/suhailrehman/repo.svg?style=for-the-badge
-[contributors-url]: https://github.com/suhailrehman/repo/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/suhailrehman/repo.svg?style=for-the-badge
-[forks-url]: https://github.com/suhailrehman/repo/network/members
-[stars-shield]: https://img.shields.io/github/stars/suhailrehman/repo.svg?style=for-the-badge
-[stars-url]: https://github.com/suhailrehman/repo/stargazers
-[issues-shield]: https://img.shields.io/github/issues/suhailrehman/repo.svg?style=for-the-badge
-[issues-url]: https://github.com/suhailrehman/repo/issues
-[license-shield]: https://img.shields.io/github/license/suhailrehman/repo.svg?style=for-the-badge
-[license-url]: https://github.com/suhailrehman/repo/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/suhailrehman
--->
 
 [product-screenshot]: docs/screenshot.png

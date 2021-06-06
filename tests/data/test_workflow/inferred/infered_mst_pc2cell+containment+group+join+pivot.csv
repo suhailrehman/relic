@@ -1,0 +1,7 @@
+0.csv 1.csv {'weight': 0.9999523809523809, 'num': 0, 'type': 'cell'}
+1.csv 2.csv {'weight': 0.8, 'num': 1, 'type': 'cell'}
+2.csv 4.csv {'weight': 1.0, 'num': 3, 'type': 'join'}
+7.csv 6.csv {'weight': 1.0, 'num': 6, 'type': 'pivot'}
+6.csv 5.csv {'weight': 0.9166666666666666, 'num': 5, 'type': 'groupby'}
+5.csv 4.csv {'weight': 0.9666666666666667, 'num': 4, 'type': 'intra_cell'}
+4.csv 3.csv {'weight': 1.0, 'num': 2, 'type': 'join'}
