@@ -80,7 +80,6 @@ def test_add_join_edges(relic_instance):
 
 def test_inter_cell_edges(relic_instance):
     logging.info('Testing Intra_cell Edges')
-    # relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False, sim_threshold=0.1,
                                      tiebreak_function=tiebreak_from_computed_scores,
                                      final_function=tiebreak_hash_edge,
@@ -144,7 +143,9 @@ def test_store_load_distances(relic_instance, tmpdir):
         distance_file = output.join('/ppo_scores.csv')
         pairwise_scores = load_distances_from_file(distance_file)
         for label in ppo_labels:
+            logging.info(f'Checking {label} Score File: {distance_file}')
             assert set(pairwise_scores[label].keys()) == set(relic_instance.score_records[label].keys())
             for k in set(pairwise_scores[label].keys()):
-                logging.info(f'Checking {label} Score File: {distance_file}')
                 assert pairwise_scores[label][k] == pytest.approx(relic_instance.score_records[label][k])
+
+

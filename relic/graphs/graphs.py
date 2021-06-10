@@ -14,6 +14,9 @@ from relic.graphs import clustering
 
 import numpy as np
 
+from relic.utils.serialize import build_df_dict_dir
+import logging
+
 GRAPH_EDGE_ARGS = '-Eminlen=70.0'
 
 
@@ -390,5 +393,59 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
         else:
             if edge_color != '#D3D3D3':  # Hack to remove TP edges
                 nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, color=edge_color)
+
+    return nb_net
+
+
+def draw_web_graph(g_inferred, artifact_dir, inferred_dir):
+    nb_net = Network(height="100%", width="100%")
+
+    df_dict = build_df_dict_dir(artifact_dir)
+    logging.debug(artifact_dir)
+    logging.debug(df_dict)
+
+    if '0.csv' not in df_dict:
+        root_node = np.random.choice([x for x in df_dict.keys()], 1)[0]
+    else:
+        root_node = '0.csv'
+
+    logging.debug(f'Root Node: {root_node}')
+
+    pos = graphviz_layout(g_inferred, root=root_node, prog='dot')
+
+    # Cluster Coloring
+    cluster_dict = clustering.get_graph_clusters(inferred_dir+'/clusters.txt')
+
+    cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
+    node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in g_inferred.nodes()}
+
+    for src, dst, data in g_inferred.edges(data=True):
+        w = data['weight']
+
+        # TODO: Edge Coloring requires g_truth
+
+        edge_number = data['num']
+        hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
+        src_node_hover_html = "Rows:" + str(len(df_dict[src])) + " Columns:" + str(len(set(df_dict[src]))) + \
+                              "<br>" + df_dict[src].head().to_html()
+        dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
+                              "<br>" + df_dict[dst].head().to_html()
+        nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
+                        color=node_color[src])
+        nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
+                        color=node_color[dst])
+
+        # Ground Truth Operation Label:
+        '''
+        if g_truth.to_undirected().has_edge(src, dst):
+            hover_string += '<br> Operation: ' + str(g.to_undirected()[src][dst]['operation'])
+            if 'args' in g.to_undirected()[src][dst]:
+                hover_string += '<br> Args: ' + str(g.to_undirected()[src][dst]['args'])
+        '''
+        # Edge Coloring
+        hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
+        hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
+        nb_net.add_edge(src, dst, value=data['weight'], title=hover_string, physics=False, label=edge_number)
+
 
     return nb_net

@@ -142,3 +142,7 @@ def store_all_distances(pairwise_scores, out_dir):
                                 out_dir+'/ppo_scores.csv')
 
     logging.info('Completed writing all distances to file')
+
+
+def write_inferred_graph(g_inferred, output_file):
+    nx.write_edgelist(g_inferred, output_file, data=True)

@@ -14,3 +14,9 @@ Faker
 pytest
 pytest-cov
 python-Levenshtein
+flask
+#click
+#db-sqlite3
+werkzeug
+Flask-Uploads
+pyvis
