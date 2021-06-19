@@ -19,7 +19,7 @@ from relic.distance.ppo import compute_all_ppo_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
-from relic.utils.serialize import build_df_dict_dir, write_inferred_graph
+from relic.utils.serialize import build_df_dict_dir, write_graph
 from relic.algorithm import compute_tuplewise_similarity
 from relic.utils.artifactdict import ArtifactDict
 
@@ -28,7 +28,7 @@ module_logger = logging.getLogger('relic.core')
 
 class RelicAlgorithm:
 
-    def __init__(self, input_dir, output_dir, name='wf_', **kwargs):
+    def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, **kwargs):
         # Logging Setup
         self.logger = logging.getLogger('relic.core.RelicAlgorithm')
         self.logger.info('Starting instance of RelicAlgorithm on %s', name)
@@ -61,7 +61,8 @@ class RelicAlgorithm:
 
         # Load the Ground Truth
         # Optional GT annotation or remove entirely
-        # self.g_truth = graphs.get_graph(self.base_dir, self.nb_name).to_undirected()
+        if g_truth_file:
+            self.g_truth = nx.read_gpickle(g_truth_file)
 
         # Current Edge being added
         self.edge_no = 0
@@ -241,6 +242,10 @@ def setup_arguments(args):
                         help="Inter Cluster Cell-Level Edge Retention Threshold",
                         type=float, default=0.1)
 
+    parser.add_argument("--g_truth_file",
+                        help="Ground Truth File as a pickled NetworkX graph",
+                        type=str)
+
     options = parser.parse_args(args)
 
     return options
@@ -268,10 +273,11 @@ def run_relic(options):
         artifact_dir = zip_out
     else:
         artifact_dir = options.artifact_dir
+
+
     # TODO parse json for options
 
-
-    relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name)
+    relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file)
     relic_instance.create_initial_graph()
 
     relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
@@ -338,7 +344,9 @@ def run_relic(options):
                                                           'score_type': 'containment'}
                                          )
 
-    write_inferred_graph(relic_instance.g_inferred, options.out+'/inferred_graph.csv')
+    write_graph(relic_instance.g_inferred, options.out + '/inferred_graph.csv')
+    if options.g_truth_file:
+        nx.write_gpickle(relic_instance.g_truth, options.out + '/true_graph.pkl')
 
 
 def main(args=sys.argv[1:]):

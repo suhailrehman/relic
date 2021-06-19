@@ -397,7 +397,7 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     return nb_net
 
 
-def draw_web_graph(g_inferred, artifact_dir, inferred_dir):
+def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
     nb_net = Network(height="100%", width="100%")
 
     df_dict = build_df_dict_dir(artifact_dir)
@@ -422,7 +422,11 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir):
     for src, dst, data in g_inferred.edges(data=True):
         w = data['weight']
 
-        # TODO: Edge Coloring requires g_truth
+        # Edge Coloring
+        if g_truth:
+            edge_color = get_edge_color(src, dst, g_truth, g_inferred)
+        else:
+            edge_color = 'black'
 
         edge_number = data['num']
         hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
@@ -436,16 +440,16 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir):
                         color=node_color[dst])
 
         # Ground Truth Operation Label:
-        '''
-        if g_truth.to_undirected().has_edge(src, dst):
-            hover_string += '<br> Operation: ' + str(g.to_undirected()[src][dst]['operation'])
-            if 'args' in g.to_undirected()[src][dst]:
-                hover_string += '<br> Args: ' + str(g.to_undirected()[src][dst]['args'])
-        '''
+        if g_truth and g_truth.to_undirected().has_edge(src, dst):
+            hover_string += '<br>Ground Truth Operation: ' + str(g_truth.to_undirected()[src][dst]['operation'])
+            if 'args' in g_truth.to_undirected()[src][dst]:
+                hover_string += '<br>Generating Args: ' + str(g_truth.to_undirected()[src][dst]['args'])
+
         # Edge Coloring
         hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
         hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
-        nb_net.add_edge(src, dst, value=data['weight'], title=hover_string, physics=False, label=edge_number)
+        nb_net.add_edge(src, dst, value=data['weight'], title=hover_string, physics=False, label=edge_number,
+                        color=edge_color)
 
 
     return nb_net
