@@ -1,4 +1,5 @@
 # Load a directory and return filename:df pairs
+import json
 import logging
 from collections import defaultdict
 from itertools import chain
@@ -146,3 +147,21 @@ def store_all_distances(pairwise_scores, out_dir):
 
 def write_graph(g_inferred, output_file):
     nx.write_edgelist(g_inferred, output_file, data=True)
+
+
+def get_job_status_phases(options):
+    phases = [
+        'pre_cluster',
+        'join',
+        'groupby',
+        'pivot',
+    ]
+
+    return sum([1 for x in phases if x in options]) + 4
+
+
+def update_phase(job_status, current_phase, status_file):
+    job_status['current_phase'] = current_phase
+    job_status['phaseno'] += 1
+    with open(status_file, 'w') as fp:
+        json.dump(job_status, fp)

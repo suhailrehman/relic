@@ -431,9 +431,9 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
         edge_number = data['num']
         hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
         src_node_hover_html = "Rows:" + str(len(df_dict[src])) + " Columns:" + str(len(set(df_dict[src]))) + \
-                              "<br>" + df_dict[src].head().to_html()
+                              "<br>" + "(Click to Preview DataFrame)"
         dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
-                              "<br>" + df_dict[dst].head().to_html()
+                              "<br>" + "(Click to Preview DataFrame)"
         nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
                         color=node_color[src])
         nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,

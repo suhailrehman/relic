@@ -1,5 +1,6 @@
 import argparse
 import copy
+import json
 import shutil
 import sys
 import zipfile
@@ -19,11 +20,11 @@ from relic.distance.ppo import compute_all_ppo_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
-from relic.utils.serialize import build_df_dict_dir, write_graph
+from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase
 from relic.algorithm import compute_tuplewise_similarity
-from relic.utils.artifactdict import ArtifactDict
 
 module_logger = logging.getLogger('relic.core')
+
 
 
 class RelicAlgorithm:
@@ -32,6 +33,7 @@ class RelicAlgorithm:
         # Logging Setup
         self.logger = logging.getLogger('relic.core.RelicAlgorithm')
         self.logger.info('Starting instance of RelicAlgorithm on %s', name)
+        self.logger.setLevel(logging.INFO)
 
         # Directory Setup
         self.nb_name = name
@@ -259,8 +261,17 @@ def run_relic(options):
     # Setup Job Log
     logger = logging.getLogger()
     # create file handler which logs even info messages
-    fh = logging.FileHandler(str(options.out)+'job_status.log')
+    fh = logging.FileHandler(str(options.out)+'job.log')
     logger.addHandler(fh)
+
+    job_status = {
+        'status': 'running',
+        'job_id': options.nb_name,
+        'phaseno': 0,
+        'totalphases': get_job_status_phases(options)
+    }
+
+    status_file = str(options.out)+'job_status.json'
 
     if 'artifact_zip' in options and options.artifact_zip: #Zip file was provided
         zip_out = options.out+'/artifacts/'
@@ -277,24 +288,29 @@ def run_relic(options):
 
     # TODO parse json for options
 
+
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file)
     relic_instance.create_initial_graph()
 
     relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
 
     if options.pre_cluster:
+        update_phase(job_status, 'Clustering', status_file)
         clusters = relic_instance.set_initial_clusters()
         os.makedirs(options.out+'/inferred', exist_ok=True)
         write_clusters_to_file(clusters, options.out+'/inferred/clusters.txt')
         logging.info(f'Clustered by Schema: {len(clusters.keys())} individual clusters created.')
         logging.info('Looking for PPO edges within each cluster...')
 
+        update_phase(job_status, 'Intra-Cluster Jaccard', status_file)
         relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True,
                                          tiebreak_function=tiebreak_from_computed_scores,
                                          final_function=tiebreak_hash_edge,
                                          tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                           'score_type': 'overlap'}
                                          )
+
+        update_phase(job_status, 'Intra-Cluster Containment', status_file)
         relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=True,
                                          tiebreak_function=tiebreak_from_computed_scores,
                                          final_function=tiebreak_hash_edge,
@@ -304,6 +320,7 @@ def run_relic(options):
 
     if options.join:
         logging.info('Looking for join edges across clusters...')
+        update_phase(job_status, 'Join Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
         relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
@@ -313,12 +330,15 @@ def run_relic(options):
                                          )
 
     logging.info('Looking for PPO edges across clusters...')
+    update_phase(job_status, 'Inter-Cluster Jaccard', status_file)
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False,
                                      tiebreak_function=tiebreak_from_computed_scores,
                                      final_function=tiebreak_hash_edge,
                                      tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                       'score_type': 'overlap'}
                                      )
+
+    update_phase(job_status, 'Inter-Cluster Containment', status_file)
     relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=False,
                                      tiebreak_function=tiebreak_from_computed_scores,
                                      final_function=tiebreak_hash_edge,
@@ -327,6 +347,7 @@ def run_relic(options):
                                      )
     if options.groupby:
         logging.info('Looking for Groupby edges across clusters...')
+        update_phase(job_status, 'Groupby Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
@@ -336,6 +357,7 @@ def run_relic(options):
                                          )
     if options.pivot:
         logging.info('Looking for Pivot edges across clusters...')
+        update_phase(job_status, 'Pivot Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
@@ -347,6 +369,10 @@ def run_relic(options):
     write_graph(relic_instance.g_inferred, options.out + '/inferred_graph.csv')
     if options.g_truth_file:
         nx.write_gpickle(relic_instance.g_truth, options.out + '/true_graph.pkl')
+
+    job_status['status'] = 'complete'
+    with open(status_file, 'w') as fp:
+        json.dump(job_status, fp)
 
 
 def main(args=sys.argv[1:]):

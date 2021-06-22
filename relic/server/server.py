@@ -1,7 +1,9 @@
 import logging
+from threading import Thread
 
 import networkx as nx
-from flask import Flask, render_template, request, redirect, url_for, send_file
+import pandas as pd
+from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response
 from datetime import datetime
 import os
 
@@ -12,27 +14,30 @@ app = Flask(__name__)
 UPLOAD_FOLDER = '/tmp/uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+app.debug=False
+app.logger.setLevel(logging.INFO)
 
-
-def index():
-    return render_template('index.html')
 
 @app.route('/')
-@app.route('/form')
-def form():
-    return render_template('form.html')
+def index():
+    return render_template('index.html')
 
 
 @app.route('/status/<job_id>', methods=['GET'])
 def status(job_id):
-    result_graph_file = f'/tmp/relic/{job_id}/inferred_graph.csv'
-    job_log_file = f'/tmp/relic/{job_id}/job_status.log'
-    logging.debug(f'Graph File: {result_graph_file}, {os.path.exists(result_graph_file)}')
-    logging.debug(f'Job File: {job_log_file}')
-    if os.path.exists(result_graph_file):
-        logging.debug(f'Job completed, sending graph file')
-        return redirect(url_for('render', job_id=job_id))
+    job_status_file = f'/tmp/relic/{job_id}/job_status.json'
+    logging.debug(f'Job Status File: {job_status_file}')
+    if os.path.exists(job_status_file):
+        return send_file(job_status_file, mimetype='text/json')
     else:
+        return jsonify({'job_id': job_id, 'status': 'pending'})
+
+
+@app.route('/log/<job_id>', methods=['GET'])
+def log(job_id):
+    job_log_file = f'/tmp/relic/{job_id}/job.log'
+    logging.debug(f'Job File: {job_log_file}')
+    if os.path.exists(job_log_file):
         return send_file(job_log_file, mimetype='text/plain')
 
 
@@ -58,6 +63,17 @@ def render(job_id):
         return "RELIC is still processing your job"
 
 
+@app.route('/artifact/<job_id>/<artifact_id>', methods=['GET'])
+def artifact(job_id, artifact_id):
+    artifact_file = f'/tmp/relic/{job_id}/artifacts/{artifact_id}'
+    if os.path.exists(artifact_file):
+        pd.set_option('display.max_colwidth', 20)
+        df = pd.read_csv(artifact_file, index_col=0).head(100)
+        return df.to_html(notebook=True, classes="table table-striped table-sm", table_id="artifacttable")
+    else:
+        return make_response(jsonify({'job_id': job_id, 'artifact_id': artifact_id, 'status': 404}), 404)
+
+
 @app.route('/upload', methods=['POST'])
 def upload():
     f = request.files['artifacts']
@@ -78,8 +94,11 @@ def upload():
         gt.save(g_truth_full_path)
         args.append(f'--g_truth_file={g_truth_full_path}')
 
-    main(args=args[1:])
-    return redirect(url_for('status', job_id=job_id))
+    thread = Thread(target=main, kwargs={'args': args[1:]})
+    thread.daemon = True
+    thread.start()
+    return jsonify({'job_id': str(job_id),
+                    'status': 'pending'})
 
 
 app.run(host='0.0.0.0', port=8000)
