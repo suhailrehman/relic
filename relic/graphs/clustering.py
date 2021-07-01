@@ -10,6 +10,10 @@ from relic.distance import ppo
 
 from hashlib import md5
 
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
+
 
 def hash_edge(x):
     w = "+".join(sorted(x[:-1])).encode('utf8')

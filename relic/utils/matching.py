@@ -1,10 +1,12 @@
-import logging
-
 import networkx as nx
 from fuzzywuzzy import fuzz
 
 from relic.distance.set_functions import set_jaccard_similarity
 from itertools import combinations
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 
 def fuzzy_column_match(df1, df2):
@@ -19,7 +21,7 @@ def fuzzy_column_match(df1, df2):
         g = nx.DiGraph()
         for l in left_mismatch:
             for r in right_mismatch:
-                logging.debug(l, r, fuzz.ratio(l, r))
+                logger.debug(l, r, fuzz.ratio(l, r))
                 g.add_edge(l, r, weight=fuzz.WRatio(l, r))
         try:
             matching = nx.max_weight_matching(g)
@@ -27,7 +29,7 @@ def fuzzy_column_match(df1, df2):
 
             df1 = df1.rename(columns=ordered_match)
         except AssertionError as e:
-            logging.warning('Could not perform column fuzzy matching:', e)
+            logger.warning('Could not perform column fuzzy matching:', e)
             pass
     return df1, df2
 

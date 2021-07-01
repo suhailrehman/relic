@@ -1,6 +1,5 @@
 # Load a directory and return filename:df pairs
 import json
-import logging
 from collections import defaultdict
 from itertools import chain
 
@@ -11,6 +10,10 @@ import networkx as nx
 
 import relic.distance.ppo
 from relic.utils.pqedge import PQEdges
+
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 
 def build_df_dict(nb_name, base_dir):
@@ -89,7 +92,7 @@ def load_distances_from_file(filename):
         for ix, row in score_df.iterrows():
             k = [row[x] for x in df_list]
             key = ((k[0],k[1]), k[2]) if len(k) == 3 else frozenset(k)
-            logging.debug(f'Dataframe variables: {k} : {key} : {row[label]}')
+            logger.debug(f'Dataframe variables: {k} : {key} : {row[label]}')
             pairwise_scores[label].additem(key, float(row[label]))
 
     return pairwise_scores
@@ -110,27 +113,27 @@ def store_distances_to_file(pairwise_scores, filename, labels=None):
 
     index = [x for x in pairwise_scores[labels[0]].keys()]
     score_df = pd.DataFrame(columns=col_names, index=[x for x in pairwise_scores[labels[0]].keys()])
-    logging.debug(f'Loaded index: {index}')
+    logger.debug(f'Loaded index: {index}')
     counter = 0
     for label in labels:
-        logging.debug(f'Writing {label} values to DF')
+        logger.debug(f'Writing {label} values to DF')
         for k, v in pairwise_scores[label].items():
-            logging.debug(f'Loading {k}:{v} to dataframe')
+            logger.debug(f'Loading {k}:{v} to dataframe')
             score_df.at[k, label] = v
     if 'join' in labels:
         score_df.index = score_df.index.map(_flatten_join)
     else:
         score_df.index = score_df.index.map(_flatten_frozenset)
 
-    logging.debug(f'Index Length: {score_df.index.nlevels}')
-    logging.debug(f'Index : {score_df.index}')
+    logger.debug(f'Index Length: {score_df.index.nlevels}')
+    logger.debug(f'Index : {score_df.index}')
 
     score_df.index = score_df.index.rename(['df'+str(x) for x in range(1, score_df.index.nlevels+1)])
     score_df.reset_index().to_csv(filename)
 
 
 def store_all_distances(pairwise_scores, out_dir):
-    logging.info(f'Writing distances to directory: {out_dir}')
+    logger.info(f'Writing distances to directory: {out_dir}')
     ppo_labels = []
     for label in pairwise_scores.keys():
         if label in relic.distance.ppo.PPO_LABELS:
@@ -142,7 +145,7 @@ def store_all_distances(pairwise_scores, out_dir):
         store_distances_to_file({label: pairwise_scores[label] for label in ppo_labels},
                                 out_dir+'/ppo_scores.csv')
 
-    logging.info('Completed writing all distances to file')
+    logger.info('Completed writing all distances to file')
 
 
 def write_graph(g_inferred, output_file):

@@ -7,7 +7,7 @@ import logging
 from relic.utils.pqedge import PQEdges
 from relic.distance.ppo import compute_all_ppo_labels
 
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 

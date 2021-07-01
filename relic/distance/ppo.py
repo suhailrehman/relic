@@ -49,7 +49,7 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
         if column_match:
             df1, df2 = fuzzy_column_match(df1, df2)
     except IndexError as e:
-        logging.warning(f"Reindex error. Ignoring: {e}")
+        logger.warning(f"Reindex error. Ignoring: {e}")
         pass
 
     try:
@@ -97,7 +97,7 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
     union = df3.size
     minsize = min(df1.size, df2.size)
 
-    logger.debug(f'Merged: {df3.head()}')
+    #logger.debug(f'Merged: {df3.head()}')
 
     result_dict = {
         'jaccard': float(intersection) / union,
@@ -134,12 +134,12 @@ def compute_col_jaccard_df(d1, d2, df_dict):
         try:
             sim = set_jaccard_similarity(set(df1[col].values), set(df2[col].values))
             common_cols_jaccard.append(sim)
-            logging.debug(f'col: {col} jaccard: {sim}')
+            logger.debug(f'col: {col} jaccard: {sim}')
 
         except Exception as e:
             print(col)
             print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
             raise e
 
-    logging.debug(f'num/denom: {np.sum(common_cols_jaccard)}, {len(set(df1).union(set(df2)))}')
+    logger.debug(f'num/denom: {np.sum(common_cols_jaccard)}, {len(set(df1).union(set(df2)))}')
     return np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))

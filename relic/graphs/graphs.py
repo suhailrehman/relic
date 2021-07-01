@@ -16,6 +16,8 @@ import numpy as np
 
 from relic.utils.serialize import build_df_dict_dir
 import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 GRAPH_EDGE_ARGS = '-Eminlen=70.0'
 
@@ -401,17 +403,25 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
     nb_net = Network(height="100%", width="100%")
 
     df_dict = build_df_dict_dir(artifact_dir)
-    logging.debug(artifact_dir)
-    logging.debug(df_dict)
+    logger.debug(artifact_dir)
+    logger.debug(df_dict)
 
     if '0.csv' not in df_dict:
-        root_node = np.random.choice([x for x in df_dict.keys()], 1)[0]
+        if g_truth:
+            zero_degree_nodes = [n for n, d in g_truth.in_degree() if d == 0]
+            if zero_degree_nodes:
+                root_node = zero_degree_nodes[0]
+            else:
+                root_node = np.random.choice([x for x in df_dict.keys()], 1)[0]
     else:
         root_node = '0.csv'
 
-    logging.debug(f'Root Node: {root_node}')
+    logger.debug(f'Root Node: {root_node}')
 
-    pos = graphviz_layout(g_inferred, root=root_node, prog='dot')
+    positional_graph = g_truth if g_truth else g_inferred
+    pos = graphviz_layout(positional_graph, root=root_node, prog='dot')
+
+    logger.debug(f'Position Matrix: {pos}')
 
     # Cluster Coloring
     cluster_dict = clustering.get_graph_clusters(inferred_dir+'/clusters.txt')
@@ -419,8 +429,12 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
     cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
     node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in g_inferred.nodes()}
 
-    for src, dst, data in g_inferred.edges(data=True):
-        w = data['weight']
+    all_edges = g_inferred.copy().edges(data=True)
+    if g_truth:
+        all_edges = nx.compose(g_inferred, g_truth)
+
+    for src, dst, data in all_edges.edges(data=True):
+        w = data['weight'] if 'weight' in data else 0
 
         # Edge Coloring
         if g_truth:
@@ -428,12 +442,13 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
         else:
             edge_color = 'black'
 
-        edge_number = data['num']
+        edge_number = data['num'] if 'num' in data else 'x'
+
         hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
         src_node_hover_html = "Rows:" + str(len(df_dict[src])) + " Columns:" + str(len(set(df_dict[src]))) + \
-                              "<br>" + "(Click to Preview DataFrame)"
+                              "<br>" + "(Click to Inspect Artifact)"
         dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
-                              "<br>" + "(Click to Preview DataFrame)"
+                              "<br>" + "(Click to Inspect Artifact)"
         nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
                         color=node_color[src])
         nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
@@ -446,9 +461,11 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
                 hover_string += '<br>Generating Args: ' + str(g_truth.to_undirected()[src][dst]['args'])
 
         # Edge Coloring
-        hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
-        hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
-        nb_net.add_edge(src, dst, value=data['weight'], title=hover_string, physics=False, label=edge_number,
+        if g_inferred.has_edge(src, dst):
+            hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
+            hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
+
+        nb_net.add_edge(src, dst, value=w, title=hover_string, physics=False, label=edge_number,
                         color=edge_color)
 
 

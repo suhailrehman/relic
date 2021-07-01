@@ -1,4 +1,8 @@
-import logging
+from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS
+from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
+from relic.graphs.clustering import exact_schema_cluster
+from relic.utils.serialize import build_df_dict_dir
+
 import os
 import itertools
 import sys
@@ -6,10 +10,10 @@ import pandas as pd
 import glob
 import argparse
 
-from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS
-from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
-from relic.graphs.clustering import exact_schema_cluster
-from relic.utils.serialize import build_df_dict_dir
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
+
 
 _function_mappings = {
     'ppo': compute_all_ppo_labels,
@@ -37,9 +41,9 @@ def enumerate_tuple_pairs(input_dir, out_filename, n_tuples=2, filter_function=N
 
             fp.write(f"{','.join(x for x in d)}\n")
             if i % 100000 == 0:
-                logging.info(f'Written {i} records\r', )
+                logger.info(f'Written {i} records\r', )
             i += 1
-    logging.info(f'Complete. Wrote  {i} records')
+    logger.info(f'Complete. Wrote  {i} records')
 
 
 def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
@@ -60,7 +64,7 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
 
 
 def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, labels=PPO_LABELS):
-    logging.info('Processing: ', infile, ' using ', function.__name__)
+    logger.info('Processing: ', infile, ' using ', function.__name__)
     file_part = os.path.basename(infile)
     df_dict = {}
     i = 0
@@ -82,10 +86,10 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
                     score = function(*dfs, None)
                 outfile.write(f"{','.join(x for x in df_names)},{score}\n")
                 if i % 10000 == 0:
-                    logging.info(f'{file_part}: Written {i} records\r', )
+                    logger.info(f'{file_part}: Written {i} records\r', )
                 i += 1
 
-    logging.info(f'{file_part}: Complete. Wrote  {i} records')
+    logger.info(f'{file_part}: Complete. Wrote  {i} records')
 
 
 def combine_and_create_pkl(in_dir, outfile):
@@ -136,11 +140,11 @@ def main(args=None):
     options = setup_arguments(args)
     if options.mode == 'enumerate':
         if options.func == 'join':
-            logging.info('Building Dataframe Dict...')
+            logger.info('Building Dataframe Dict...')
             df_dict = build_df_dict_dir(options.input)
-            logging.info('Clustering by Schema...')
+            logger.info('Clustering by Schema...')
             cluster_dict = exact_schema_cluster(df_dict)
-            logging.info('Enumerating Joins...')
+            logger.info('Enumerating Joins...')
             enumerate_join_triples(cluster_dict, options.output)
         else:
             enumerate_tuple_pairs(options.input, options.output, options.ntuples)

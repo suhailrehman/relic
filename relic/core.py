@@ -11,7 +11,6 @@ import numpy as np
 import os
 import itertools
 from collections import defaultdict
-import logging
 import networkx as nx
 from networkx.utils import UnionFind
 
@@ -23,17 +22,15 @@ from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
 from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase
 from relic.algorithm import compute_tuplewise_similarity
 
-module_logger = logging.getLogger('relic.core')
-
+import logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 
 class RelicAlgorithm:
 
     def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, **kwargs):
-        # Logging Setup
-        self.logger = logging.getLogger('relic.core.RelicAlgorithm')
-        self.logger.info('Starting instance of RelicAlgorithm on %s', name)
-        self.logger.setLevel(logging.INFO)
+        logger.info('Starting instance of RelicAlgorithm on %s', name)
 
         # Directory Setup
         self.nb_name = name
@@ -81,11 +78,11 @@ class RelicAlgorithm:
         pass
 
     def create_initial_graph(self):
-        self.logger.debug('Creating the initial graph of artifact nodes')
+        logger.debug('Creating the initial graph of artifact nodes')
         self.g_inferred = nx.Graph()
         for artifact in self.dataset.keys():
             if artifact not in [n for n in self.g_inferred.nodes()]:
-                self.logger.debug('Adding artifact to graph %s', str(artifact))
+                logger.debug('Adding artifact to graph %s', str(artifact))
                 self.g_inferred.add_node(artifact)
 
         return self.g_inferred
@@ -101,14 +98,14 @@ class RelicAlgorithm:
 
     def initialize_components(self):
         # Initializes the current list of graph components:
-        self.logger.debug('Updating Graph Components')
+        logger.debug('Updating Graph Components')
         components = [n for c in nx.connected_components(self.g_inferred) for n in c]
         self.components = UnionFind(elements=components)
         self.num_components = len(components)
         return self.components
 
     def add_edge_and_merge_components(self, edge, data):
-        self.logger.debug(f'About to add and merge edge {edge}')
+        logger.debug(f'About to add and merge edge {edge}')
 
         if type(edge[0]) == tuple:  # two sources, like join
             for e in edge[0]:
@@ -118,7 +115,7 @@ class RelicAlgorithm:
             self.g_inferred.add_edge(edge[0], edge[1], **data)
             self.components.union(edge[0], edge[1])
 
-        self.logger.debug([x for x in self.components.to_sets()])
+        logger.debug([x for x in self.components.to_sets()])
         self.edge_no += 1
         self.num_components = len([x for x in self.components])
 
@@ -144,9 +141,9 @@ class RelicAlgorithm:
 
         if intra_cluster:
             weights_pq = get_intra_cluster_edges_only(self.pairwise_weights[edge_type], self.cluster_lookup)
-            self.logger.debug('Intra Cluster PQEdges')
-            self.logger.debug(self.pairwise_weights[edge_type])
-            self.logger.debug(weights_pq)
+            logger.debug('Intra Cluster PQEdges')
+            logger.debug(self.pairwise_weights[edge_type])
+            logger.debug(weights_pq)
         else:
             weights_pq = self.pairwise_weights[edge_type]
 
@@ -157,16 +154,16 @@ class RelicAlgorithm:
             max_step = len(self.dataset)
 
         while self.num_components > 1 and steps < max_step and not stop:
-            self.logger.debug(f'PQ Status: {weights_pq}')
-            self.logger.debug(f'UnionFind Status: {[x for x in self.components.to_sets()]}')
+            logger.debug(f'PQ Status: {weights_pq}')
+            logger.debug(f'UnionFind Status: {[x for x in self.components.to_sets()]}')
             max_edges = weights_pq.pop_unionfind_max(self.components)
-            self.logger.debug(f'MaxEdges Found:  {max_edges} edge(s)...')
+            logger.debug(f'MaxEdges Found:  {max_edges} edge(s)...')
             if not max_edges:
-                self.logger.debug('No compatible edges left in PQ/UnionFind')
+                logger.debug('No compatible edges left in PQ/UnionFind')
                 stop = True
                 break
             elif max_edges[0][1] < sim_threshold:
-                self.logger.debug(f'{max_edges} edge(s) below threshold {sim_threshold}, stopping')
+                logger.debug(f'{max_edges} edge(s) below threshold {sim_threshold}, stopping')
                 stop = True
                 break
             elif len(max_edges) > 1:
@@ -176,14 +173,18 @@ class RelicAlgorithm:
                 else:
                     edge = max_edges[0]
                 for e in max_edges:
-                    if e != edge:
-                        self.pairwise_weights[edge_type].additem(e[0], e[1])
+                    if e not in self.pairwise_weights[edge_type] and e != edge:
+                        logger.debug(f'Adding back edge {e}, which is not {edge}')
+                        try:
+                            self.pairwise_weights[edge_type].additem(e[0], e[1])
+                        except KeyError as e:
+                            logger.warning(f'Trying to add back {e}, selected {edge}, to {self.pairwise_weights[edge_type].keys()}')
             else:
                 edge = max_edges[0]
 
             weight = edge[1]
 
-            self.logger.info('Adding edge #%d: %s, type %s', self.edge_no, list(edge), edge_type)
+            logger.info('Adding edge #%d: %s, type %s', self.edge_no, list(edge), edge_type)
             self.add_edge_and_merge_components(list(edge[0]), {'weight': weight, 'type': edge_type, 'num': self.edge_no})
             steps += 1
 
@@ -216,6 +217,14 @@ def setup_arguments(args):
                         help="Pre cluster by exact schema",
                         type=bool, default=True)
 
+    parser.add_argument("--celljaccard",
+                        help="Look for cell-level jaccard edges",
+                        type=bool, default=True)
+
+    parser.add_argument("--cellcontain",
+                        help="Look for cell-level containment edges",
+                        type=bool, default=True)
+
     parser.add_argument("--groupby",
                         help="Use Groupby Edge Detection",
                         type=bool, default=True)
@@ -232,7 +241,7 @@ def setup_arguments(args):
                         help="Use Pivot Edge Detection",
                         type=bool, default=True)
 
-    parser.add_argument("--cellt",
+    parser.add_argument("--intra_cell",
                         help="Cell-Level Edge Retention Threshold",
                         type=float, default=0.1)
 
@@ -240,7 +249,7 @@ def setup_arguments(args):
                         help="Column-Level Edge Retention Threshold",
                         type=float, default=0.1)
 
-    parser.add_argument("--intercellt",
+    parser.add_argument("--inter_cell",
                         help="Inter Cluster Cell-Level Edge Retention Threshold",
                         type=float, default=0.1)
 
@@ -254,14 +263,16 @@ def setup_arguments(args):
 
 
 def run_relic(options):
-    logging.info('Testing RELIC on input:' + str(options.artifact_dir))
-    logging.info('Output directory: ' + str(options.out))
+    global logger
+    logger.info('Testing RELIC on input:' + str(options.artifact_dir))
+    logger.info('Output directory: ' + str(options.out))
     os.makedirs(options.out, exist_ok=True)
 
     # Setup Job Log
     logger = logging.getLogger()
     # create file handler which logs even info messages
     fh = logging.FileHandler(str(options.out)+'job.log')
+    fh.setLevel(logging.DEBUG)
     logger.addHandler(fh)
 
     job_status = {
@@ -275,7 +286,7 @@ def run_relic(options):
 
     if 'artifact_zip' in options and options.artifact_zip: #Zip file was provided
         zip_out = options.out+'/artifacts/'
-        logging.info(f'Extracting ZIP file: {options.artifact_zip} to directory {zip_out}')
+        logger.info(f'Extracting ZIP file: {options.artifact_zip} to directory {zip_out}')
         if os.path.exists(zip_out):
             shutil.rmtree(zip_out)
         os.makedirs(zip_out)
@@ -299,8 +310,8 @@ def run_relic(options):
         clusters = relic_instance.set_initial_clusters()
         os.makedirs(options.out+'/inferred', exist_ok=True)
         write_clusters_to_file(clusters, options.out+'/inferred/clusters.txt')
-        logging.info(f'Clustered by Schema: {len(clusters.keys())} individual clusters created.')
-        logging.info('Looking for PPO edges within each cluster...')
+        logger.info(f'Clustered by Schema: {len(clusters.keys())} individual clusters created.')
+        logger.info('Looking for PPO edges within each cluster...')
 
         update_phase(job_status, 'Intra-Cluster Jaccard', status_file)
         relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True,
@@ -319,7 +330,7 @@ def run_relic(options):
                                          )
 
     if options.join:
-        logging.info('Looking for join edges across clusters...')
+        logger.info('Looking for join edges across clusters...')
         update_phase(job_status, 'Join Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
         relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
@@ -329,7 +340,7 @@ def run_relic(options):
                                                           'score_type': 'overlap'}
                                          )
 
-    logging.info('Looking for PPO edges across clusters...')
+    logger.info('Looking for PPO edges across clusters...')
     update_phase(job_status, 'Inter-Cluster Jaccard', status_file)
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False,
                                      tiebreak_function=tiebreak_from_computed_scores,
@@ -346,7 +357,7 @@ def run_relic(options):
                                                       'score_type': 'overlap'}
                                      )
     if options.groupby:
-        logging.info('Looking for Groupby edges across clusters...')
+        logger.info('Looking for Groupby edges across clusters...')
         update_phase(job_status, 'Groupby Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
@@ -356,7 +367,7 @@ def run_relic(options):
                                                           'score_type': 'containment'}
                                          )
     if options.pivot:
-        logging.info('Looking for Pivot edges across clusters...')
+        logger.info('Looking for Pivot edges across clusters...')
         update_phase(job_status, 'Pivot Detection', status_file)
         relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
@@ -376,9 +387,9 @@ def run_relic(options):
 
 
 def main(args=sys.argv[1:]):
-    logging.info(f'Arguments: {args}')
+    logger.info(f'Arguments: {args}')
     options = setup_arguments(args)
-    logging.info(options)
+    logger.info(options)
     run_relic(options)
 
 

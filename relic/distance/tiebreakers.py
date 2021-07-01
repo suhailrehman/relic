@@ -1,6 +1,9 @@
 from hashlib import md5
 from relic.utils.pqedge import PQEdges
+import logging
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
 
 def hash_edge(x):
     w = "+".join(sorted(list(x[0]))).encode('utf8')
