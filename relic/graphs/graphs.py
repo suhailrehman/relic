@@ -16,10 +16,10 @@ import numpy as np
 
 from relic.utils.serialize import build_df_dict_dir
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+
 logger = logging.getLogger(__name__)
 
-GRAPH_EDGE_ARGS = '-Eminlen=70.0'
+GRAPH_EDGE_ARGS = '-Eminlen=1000.0'
 
 
 # Generates a weighted graph of pairwise similarity scores
@@ -336,7 +336,7 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     else:
         root_node = '0.csv'
 
-    pos = graphviz_layout(g, root=root_node, prog='dot')
+    pos = graphviz_layout(g, root=root_node, prog='dot', args=GRAPH_EDGE_ARGS)
 
     # Cluster Coloring
     cluster_dict = clustering.get_graph_clusters(RESULT_DIR + selected_nb + '/inferred/' + 'clusters_with_filename.csv')
@@ -399,12 +399,12 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
     return nb_net
 
 
-def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
-    nb_net = Network(height="100%", width="100%")
+def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1024, height=768):
 
+    logger.debug(f"Canvas: {str(height)+'px'} X {str(width)+'px'}")
+    nb_net = Network(height=str(height)+'px', width={str(width)+'px'}, layout=True)
     df_dict = build_df_dict_dir(artifact_dir)
-    logger.debug(artifact_dir)
-    logger.debug(df_dict)
+    logger.debug(f'Inferred Graph: {g_inferred.nodes()}')
 
     if '0.csv' not in df_dict:
         if g_truth:
@@ -419,17 +419,19 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
     logger.debug(f'Root Node: {root_node}')
 
     positional_graph = g_truth if g_truth else g_inferred
-    pos = graphviz_layout(positional_graph, root=root_node, prog='dot')
+    #pos = graphviz_layout(positional_graph, root=root_node, prog='dot')
 
-    logger.debug(f'Position Matrix: {pos}')
+    #logger.debug(f'Position Matrix: {pos}')
 
     # Cluster Coloring
-    cluster_dict = clustering.get_graph_clusters(inferred_dir+'/clusters.txt')
+    if os.path.exists(inferred_dir+'/clusters.txt'):
+        cluster_dict = clustering.get_graph_clusters(inferred_dir+'/clusters.txt')
+        cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
+        node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in df_dict.keys()}
+    else:
+        node_color = {e: 'grey' for e in df_dict.keys()}
 
-    cmap = plt.cm.Dark2(np.linspace(0, 1, len(set(cluster_dict.values()))))
-    node_color = {e: to_hex(cmap[cluster_dict[e]]) for e in g_inferred.nodes()}
-
-    all_edges = g_inferred.copy().edges(data=True)
+    all_edges = g_inferred.copy()
     if g_truth:
         all_edges = nx.compose(g_inferred, g_truth)
 
@@ -440,7 +442,7 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
         if g_truth:
             edge_color = get_edge_color(src, dst, g_truth, g_inferred)
         else:
-            edge_color = 'black'
+            edge_color = 'lightgrey'
 
         edge_number = data['num'] if 'num' in data else 'x'
 
@@ -449,9 +451,14 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None):
                               "<br>" + "(Click to Inspect Artifact)"
         dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
                               "<br>" + "(Click to Inspect Artifact)"
-        nb_net.add_node(src, src, x=pos[src][0], y=pos[src][1], physics=False, title=src_node_hover_html,
+        # nb_net.add_node(src, src, x=pos[src][1] - 150, y=pos[src][0] - 100, physics=False, title=src_node_hover_html,
+        #                 color=node_color[src])
+        # nb_net.add_node(dst, dst, x=pos[dst][1] - 150, y=pos[dst][0] - 100, physics=False, title=dst_node_hover_html,
+        #                 color=node_color[dst])
+
+        nb_net.add_node(src, src, physics=False, title=src_node_hover_html,
                         color=node_color[src])
-        nb_net.add_node(dst, dst, x=pos[dst][0], y=pos[dst][1], physics=False, title=dst_node_hover_html,
+        nb_net.add_node(dst, dst, physics=False, title=dst_node_hover_html,
                         color=node_color[dst])
 
         # Ground Truth Operation Label:

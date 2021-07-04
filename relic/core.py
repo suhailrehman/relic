@@ -19,7 +19,7 @@ from relic.distance.ppo import compute_all_ppo_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
-from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase
+from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool
 from relic.algorithm import compute_tuplewise_similarity
 
 import logging
@@ -86,7 +86,6 @@ class RelicAlgorithm:
                 self.g_inferred.add_node(artifact)
 
         return self.g_inferred
-
 
     def set_initial_clusters(self, cluster_type='exact_schema'):
         # Initial Clusters set to individual artifacts:
@@ -215,31 +214,38 @@ def setup_arguments(args):
 
     parser.add_argument("--pre_cluster",
                         help="Pre cluster by exact schema",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--celljaccard",
                         help="Look for cell-level jaccard edges",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--cellcontain",
                         help="Look for cell-level containment edges",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--groupby",
                         help="Use Groupby Edge Detection",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--join",
                         help="Use Join Edge Detection",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--transform",
                         help="Use Transform Edge Detection",
-                        type=bool, default=False)
+                        type=str2bool, default=False,
+                        nargs='?', const=False)
 
     parser.add_argument("--pivot",
                         help="Use Pivot Edge Detection",
-                        type=bool, default=True)
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
 
     parser.add_argument("--intra_cell",
                         help="Cell-Level Edge Retention Threshold",
@@ -266,11 +272,12 @@ def run_relic(options):
     global logger
     logger.info('Testing RELIC on input:' + str(options.artifact_dir))
     logger.info('Output directory: ' + str(options.out))
+    logger.info(f'Options: {options}')
     os.makedirs(options.out, exist_ok=True)
 
     # Setup Job Log
     logger = logging.getLogger()
-    # create file handler which logs even info messages
+    # create file handler which logs even debug messages
     fh = logging.FileHandler(str(options.out)+'job.log')
     fh.setLevel(logging.DEBUG)
     logger.addHandler(fh)
@@ -297,8 +304,6 @@ def run_relic(options):
         artifact_dir = options.artifact_dir
 
 
-    # TODO parse json for options
-
 
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file)
     relic_instance.create_initial_graph()
@@ -313,21 +318,25 @@ def run_relic(options):
         logger.info(f'Clustered by Schema: {len(clusters.keys())} individual clusters created.')
         logger.info('Looking for PPO edges within each cluster...')
 
-        update_phase(job_status, 'Intra-Cluster Jaccard', status_file)
-        relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True,
-                                         tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
-                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
-                                                          'score_type': 'overlap'}
-                                         )
+        if options.celljaccard:
+            update_phase(job_status, 'Intra-Cluster Jaccard', status_file)
+            relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True,
+                                             tiebreak_function=tiebreak_from_computed_scores,
+                                             final_function=tiebreak_hash_edge,
+                                             sim_threshold=options.intra_cell,
+                                             tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
+                                                              'score_type': 'overlap'}
+                                             )
 
-        update_phase(job_status, 'Intra-Cluster Containment', status_file)
-        relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=True,
-                                         tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
-                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
-                                                          'score_type': 'overlap'}
-                                         )
+        if options.cellcontain:
+            update_phase(job_status, 'Intra-Cluster Containment', status_file)
+            relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=True,
+                                             tiebreak_function=tiebreak_from_computed_scores,
+                                             final_function=tiebreak_hash_edge,
+                                             sim_threshold=options.intra_cell,
+                                             tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
+                                                              'score_type': 'overlap'}
+                                             )
 
     if options.join:
         logger.info('Looking for join edges across clusters...')
@@ -341,21 +350,25 @@ def run_relic(options):
                                          )
 
     logger.info('Looking for PPO edges across clusters...')
-    update_phase(job_status, 'Inter-Cluster Jaccard', status_file)
-    relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False,
-                                     tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
-                                     tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
-                                                      'score_type': 'overlap'}
-                                     )
+    if options.celljaccard:
+        update_phase(job_status, 'Inter-Cluster Jaccard', status_file)
+        relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False,
+                                         tiebreak_function=tiebreak_from_computed_scores,
+                                         final_function=tiebreak_hash_edge,
+                                         sim_threshold=options.inter_cell,
+                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
+                                                          'score_type': 'overlap'}
+                                         )
 
-    update_phase(job_status, 'Inter-Cluster Containment', status_file)
-    relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=False,
-                                     tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
-                                     tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
-                                                      'score_type': 'overlap'}
-                                     )
+    if options.cellcontain:
+        update_phase(job_status, 'Inter-Cluster Containment', status_file)
+        relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=False,
+                                         tiebreak_function=tiebreak_from_computed_scores,
+                                         final_function=tiebreak_hash_edge,
+                                         sim_threshold=options.inter_cell,
+                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
+                                                          'score_type': 'overlap'}
+                                         )
     if options.groupby:
         logger.info('Looking for Groupby edges across clusters...')
         update_phase(job_status, 'Groupby Detection', status_file)
@@ -389,7 +402,7 @@ def run_relic(options):
 def main(args=sys.argv[1:]):
     logger.info(f'Arguments: {args}')
     options = setup_arguments(args)
-    logger.info(options)
+    logger.info(f'Options: {options}')
     run_relic(options)
 
 

@@ -153,14 +153,23 @@ def write_graph(g_inferred, output_file):
 
 
 def get_job_status_phases(options):
+
     phases = [
-        'pre_cluster',
-        'join',
-        'groupby',
-        'pivot',
+        options.celljaccard,
+        options.cellcontain,
+        options.join,
+        options.groupby,
+        options.pivot
     ]
 
-    return sum([1 for x in phases if x in options]) + 4
+    num_phases = sum([1 for x in phases if x])
+
+    if options.pre_cluster:
+        num_phases += 1
+        num_phases += sum([1 for x in phases[:2] if x])
+
+    return num_phases
+
 
 
 def update_phase(job_status, current_phase, status_file):
@@ -168,3 +177,15 @@ def update_phase(job_status, current_phase, status_file):
     job_status['phaseno'] += 1
     with open(status_file, 'w') as fp:
         json.dump(job_status, fp)
+
+
+# Argparse Hack: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')

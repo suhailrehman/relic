@@ -1,6 +1,16 @@
 $("form#relicform").submit(function(e){
 
-    e.preventDefault()
+    e.preventDefault();
+
+    // Hack to send unchecked boxes in POST
+    $(".form-check-input").each(function(index) {
+        console.log(index + ": " + $(this).attr('id') + " Checked?: " + $(this).is(':checked'));
+        if ($(this).is(':checked')) {
+            document.getElementById($(this).attr('id') + 'Hidden').disabled = true;
+            console.log(document.getElementById($(this).attr('id') + 'Hidden'))
+        }
+    });
+
     var formData = new FormData($(this)[0]);
     console.log(formData)
 
@@ -11,6 +21,9 @@ $("form#relicform").submit(function(e){
         async: false,
         success: function (data) {
             console.log(data)
+            $("#mynetwork").html("Graph will be displayed once the Job is finished...")
+            $("#artifact").html("")
+            $("#artifact_header").attr('hidden', true)
             updateJobStatus(data['job_id'])
         },
         cache: false,
@@ -23,13 +36,19 @@ $("form#relicform").submit(function(e){
 
 
 function renderGraph(jobId){
+    var width = $("#mynetwork").width();
+    var height = $("#mynetwork").height();
+    $("#mynetwork").html("Loading Canned Demo...")
     $.ajax({
         url: 'render/' + jobId,
         async: false,
         cache: false,
+        data: 'width='+width+'&height='+height,
         success: function (data) {
             //console.log(data)
-            $("div#mynetwork").html(data)
+            $("#mynetwork").html(data)
+            $(".graph-button").attr('hidden', false)
+            $("#export").attr('download', jobId+'.csv').attr('onclick', "location.href='export/"+jobId+"'");
 
             network.on('click', function (properties) {
             var nodeID = properties.nodes[0];
@@ -48,7 +67,8 @@ function renderGraph(jobId){
                         $("div#artifact").html(data)
                         $('#artifacttable').DataTable();
                         $('.dataTables_length').addClass('bs-select');
-                        $( "#artifact_header").removeAttr('hidden');
+                        $("#artifact_header").html('Artifact Inspector: '+artifact_id).removeAttr('hidden');
+                        $($.fn.dataTable.tables(true)).DataTable().columns.adjust();
 
                     }
                 });
@@ -114,8 +134,7 @@ function updateJobStatus(jobId){
 
 
 $(document).ready(function () {
-                    $('#dtBasicExample').DataTable();
-                    $('.dataTables_length').addClass('bs-select');
+
 });
 
 
