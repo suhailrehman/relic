@@ -18,13 +18,36 @@ $("form#relicform").submit(function(e){
         url: 'upload',
         type: 'POST',
         data: formData,
-        async: false,
+
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+
+            // First turn the Infer Lineage Button into a progress bar
+
+
+            // Upload progress
+            xhr.upload.addEventListener("progress", function(evt){
+                if (evt.lengthComputable) {
+                    var percentComplete = (evt.loaded / evt.total) * 100;
+                    //Do something with upload progress
+                    $('#formsubmit').replaceWith('<div id="formsubmit" class="progress"><div className="progress-bar progress-bar-striped progress-bar-animated"  aria-valuenow="'+percentComplete+'" style="width:'+percentComplete+'%">Uploading...</div></div>');
+                    console.log('Upload%: '+percentComplete);
+                }
+           }, false);
+
+           return xhr;
+       },
+
         success: function (data) {
             console.log(data)
             $("#mynetwork").html("Graph will be displayed once the Job is finished...")
             $("#artifact").html("")
             $("#artifact_header").attr('hidden', true)
             updateJobStatus(data['job_id'])
+        },
+
+        complete: function(data){
+            $('#formsubmit').replaceWith('<button class="btn btn-success" type="submit" id="formsubmit">Infer Lineage</button>');
         },
         cache: false,
         contentType: false,
@@ -41,7 +64,6 @@ function renderGraph(jobId){
     $("#mynetwork").html("Loading Canned Demo...")
     $.ajax({
         url: 'render/' + jobId,
-        async: false,
         cache: false,
         data: 'width='+width+'&height='+height,
         success: function (data) {
@@ -87,7 +109,6 @@ function updateJobStatus(jobId){
     $.ajax({
         url: 'status/'+jobId,
         dataType: "json",
-        async: false,
         cache: false,
         success: function(data){
             console.log(data)
@@ -98,14 +119,14 @@ function updateJobStatus(jobId){
                 $("h3#status").html("Running Relic Job Id: "+jobId)
                 $("h4#running").html("Currently Running: "+ data['current_phase'])
                 $('div#pbar').attr('aria-valuenow',pcg).attr('style','width:'+Number(pcg)+'%')
-                $("div#alert_container").removeClass("collapse").addClass("alert-primary");
+                $("div#alert_container").removeClass("collapse alert-success").addClass("alert-primary");
             }
             else if(data['status'] === 'pending')
             {
                 var pcg = 0;
                 $("h3#status").html("Preparing Relic Job Id: "+jobId)
                 $('div#pbar').attr('aria-valuenow',pcg).attr('style','width:'+Number(pcg)+'%')
-                $("div#alert_container").removeClass("collapse").addClass("alert-primary");
+                $("div#alert_container").removeClass("collapse alert-success").addClass("alert-primary");
             }
             else if (data['status'] === 'complete')
             {
@@ -134,7 +155,12 @@ function updateJobStatus(jobId){
 
 
 $(document).ready(function () {
-
+    // var myModal = document.getElementById('myModal')
+    // var myInput = document.getElementById('myInput')
+    //
+    // myModal.addEventListener('shown.bs.modal', function () {
+    //   myInput.focus()
+    // })
 });
 
 

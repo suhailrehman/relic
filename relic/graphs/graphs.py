@@ -402,7 +402,7 @@ def draw_interactive_graph(RESULT_DIR, selected_nb, metric='cell', weight='cell_
 def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1024, height=768):
 
     logger.debug(f"Canvas: {str(height)+'px'} X {str(width)+'px'}")
-    nb_net = Network(height=str(height)+'px', width={str(width)+'px'}, layout=True)
+    nb_net = Network(height=str(height)+'px', width={str(width)+'px'})
     df_dict = build_df_dict_dir(artifact_dir)
     logger.debug(f'Inferred Graph: {g_inferred.nodes()}')
 
@@ -419,7 +419,7 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
     logger.debug(f'Root Node: {root_node}')
 
     positional_graph = g_truth if g_truth else g_inferred
-    #pos = graphviz_layout(positional_graph, root=root_node, prog='dot')
+    pos = graphviz_layout(positional_graph, root=root_node, prog='dot')
 
     #logger.debug(f'Position Matrix: {pos}')
 
@@ -451,14 +451,9 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
                               "<br>" + "(Click to Inspect Artifact)"
         dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
                               "<br>" + "(Click to Inspect Artifact)"
-        # nb_net.add_node(src, src, x=pos[src][1] - 150, y=pos[src][0] - 100, physics=False, title=src_node_hover_html,
-        #                 color=node_color[src])
-        # nb_net.add_node(dst, dst, x=pos[dst][1] - 150, y=pos[dst][0] - 100, physics=False, title=dst_node_hover_html,
-        #                 color=node_color[dst])
-
-        nb_net.add_node(src, src, physics=False, title=src_node_hover_html,
+        nb_net.add_node(src, src, x=pos[src][0] - 150, y=pos[src][1] - 100, physics=False, title=src_node_hover_html,
                         color=node_color[src])
-        nb_net.add_node(dst, dst, physics=False, title=dst_node_hover_html,
+        nb_net.add_node(dst, dst, x=pos[dst][0] - 150, y=pos[dst][1] - 100, physics=False, title=dst_node_hover_html,
                         color=node_color[dst])
 
         # Ground Truth Operation Label:

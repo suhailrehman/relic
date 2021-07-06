@@ -308,6 +308,7 @@ def run_relic(options):
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file)
     relic_instance.create_initial_graph()
 
+    update_phase(job_status, 'Computing Pairwise Distances', status_file)
     relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
 
     if options.pre_cluster:

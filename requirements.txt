@@ -20,3 +20,4 @@ flask
 werkzeug
 Flask-Uploads
 pyvis
+Flask-HTTPAuth

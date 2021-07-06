@@ -11,8 +11,10 @@ import networkx as nx
 import relic.distance.ppo
 from relic.utils.pqedge import PQEdges
 
+import argparse
+
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -171,12 +173,14 @@ def get_job_status_phases(options):
     return num_phases
 
 
-
 def update_phase(job_status, current_phase, status_file):
     job_status['current_phase'] = current_phase
     job_status['phaseno'] += 1
     with open(status_file, 'w') as fp:
+        logger.debug(f'Updating Job Status: {job_status}')
         json.dump(job_status, fp)
+        fp.flush()
+        os.fsync(fp)
 
 
 # Argparse Hack: https://stackoverflow.com/questions/15008758/parsing-boolean-values-with-argparse

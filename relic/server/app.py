@@ -4,6 +4,9 @@ from threading import Thread
 import networkx as nx
 import pandas as pd
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, make_response
+from flask_httpauth import HTTPBasicAuth
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from datetime import datetime
 import os
 import sys
@@ -11,8 +14,12 @@ import sys
 import relic.graphs.graphs
 from relic.core import main
 
-app = Flask(__name__)
+
 UPLOAD_FOLDER = '/tmp/uploads/'
+
+app = Flask(__name__)
+auth = HTTPBasicAuth()
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.debug = True
@@ -26,17 +33,38 @@ handler.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s')
 log.addHandler(handler)
 log.setLevel(logging.DEBUG)
 
+log2 = logging.getLogger('relic.utils.serialize')
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('%(name)s - %(levelname)s - %(message)s'))
+log2.addHandler(handler)
+log2.setLevel(logging.DEBUG)
+
+
+try:
+    USERNAME = os.environ['FLASK_USER']
+    PASSWORD = generate_password_hash(os.environ['FLASK_PASSWORD'])
+except KeyError as e:
+    app.logger.fatal('You must set FLASK_USER and FLASK_PASSWORD environment variables to start this server')
+
+
+@auth.verify_password
+def verify_password(username, password):
+    if username == USERNAME and \
+            check_password_hash(PASSWORD, password):
+        return username
 
 
 @app.route('/')
+@auth.login_required
 def index():
     return render_template('index.html')
 
 
 @app.route('/status/<job_id>', methods=['GET'])
+@auth.login_required
 def status(job_id):
     job_status_file = f'/tmp/relic/{job_id}/job_status.json'
-    app.logger.debug(f'Job Status File: {job_status_file}')
+    #app.logger.debug(f'Job Status File: {job_status_file}')
     if os.path.exists(job_status_file):
         return send_file(job_status_file, mimetype='text/json')
     else:
@@ -44,6 +72,7 @@ def status(job_id):
 
 
 @app.route('/log/<job_id>', methods=['GET'])
+@auth.login_required
 def log(job_id):
     job_log_file = f'/tmp/relic/{job_id}/job.log'
     app.logger.debug(f'Job File: {job_log_file}')
@@ -52,9 +81,10 @@ def log(job_id):
 
 
 @app.route('/render/<job_id>', methods=['GET'])
+@auth.login_required
 def render(job_id):
-    width = float(request.args.get('width'))
-    height = float(request.args.get('height'))
+    width = float(request.args.get('width', default=5000))
+    height = float(request.args.get('height', default=5000))
     result_graph_file = f'/tmp/relic/{job_id}/inferred_graph.csv'
     inferred_dir = f'/tmp/relic/{job_id}/inferred/'
     artifact_dir = f'/tmp/relic/{job_id}/artifacts/'
@@ -77,6 +107,7 @@ def render(job_id):
 
 
 @app.route('/artifact/<job_id>/<artifact_id>', methods=['GET'])
+@auth.login_required
 def artifact(job_id, artifact_id):
     artifact_file = f'/tmp/relic/{job_id}/artifacts/{artifact_id}'
     if os.path.exists(artifact_file):
@@ -89,6 +120,7 @@ def artifact(job_id, artifact_id):
 
 
 @app.route('/export/<job_id>/', methods=['GET'])
+@auth.login_required
 def export(job_id):
     result_graph_file = f'/tmp/relic/{job_id}/inferred_graph.csv'
     if os.path.exists(result_graph_file):
@@ -98,6 +130,7 @@ def export(job_id):
 
 
 @app.route('/upload', methods=['POST'])
+@auth.login_required
 def upload():
     f = request.files['artifacts']
     logger.info(request.form)

@@ -26,5 +26,8 @@ def tiebreak_hash_edge_join(edges):
 def tiebreak_from_computed_scores(edge_list, pairwise_weights=None, score_type=None):
     pqe = PQEdges()
     for ed, score in edge_list:
-        pqe.additem(ed, pairwise_weights[score_type][ed])
+        try:
+            pqe.additem(ed, pairwise_weights[score_type][ed])
+        except KeyError:
+            logger.warning(f'Missing Score for Tie Break: {ed}')
     return pqe.pop_max()
