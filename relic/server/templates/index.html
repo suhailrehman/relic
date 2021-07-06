@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Suhail Rehman">
+    <meta name="generator" content="Hugo 0.80.0">
+    <title>Relic: Lineage Inference System</title>
+
+    <link rel="canonical" href="https://getbootstrap.com/docs/5.0/examples/dashboard/">
+
+
+    <!-- Bootstrap core CSS -->
+    <!-- <link href="../assets/dist/css/bootstrap.min.css" rel="stylesheet"> -->
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    <link href="https://cdn.datatables.net/1.10.24/css/jquery.dataTables.min.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="{{url_for('static', filename='dashboard.css')}}" rel="stylesheet">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="{{url_for('static', filename='apple-touch-icon.png')}}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='favicon-32x32.png')}}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='favicon-16x16.png')}}">
+    <link rel="manifest" href="{{url_for('static', filename='site.webmanifest')}}">
+
+</head>
+<body>
+
+<header class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
+<!--    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">Relic</a>-->
+    <a class="navbar-brand col-md-3 col-lg-3 col-xxl-2 d-md-block" href="#">
+        <span class="logo">
+            <img src="{{url_for('static', filename='relic-logo.png')}}" height="35" alt="RELIC">
+        </span>
+    </a>
+
+    <!-- <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button> -->
+    <!-- <input class="form-control form-control-dark w-100" type="text" placeholder="Search" aria-label="Search"> -->
+    <nav class="nav navbar-expand navbar-dark bg-dark px-3">
+        <li><a class="nav-link" href="{{url_for('index')}}">Reset Demo</a></li>
+        <li><a class="nav-link" href="https://github.com/suhailrehman/relic">Github</a></li>
+    </nav>
+
+</header>
+
+
+<div class="container-fluid">
+    <div class="row">
+        <nav id="sidebarMenu" class="col-md-3 col-lg-3 col-xxl-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <nav class="navbar navbar-light bg-light">
+                    <div class="container-fluid">
+                        <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-4 mt-4 mb-1 text-muted" style="flex-basis: 100%;">Canned Demos</h6>
+                            <ul class="nav">
+
+                                    <a class="nav-link" href="#" onclick="renderGraph('titanic')">
+                                        <span data-feather="file-text"></span>
+                                        titanic
+                                    </a>
+
+
+                                    <a class="nav-link" href="#" onclick="renderGraph('githubviz')">
+                                        <span data-feather="file-text"></span>
+                                        githubviz
+                                    </a>
+
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#" onclick="renderGraph('nyc-cab')">
+                                        <span data-feather="file-text"></span>
+                                        nyc-cab
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#" onclick="renderGraph('retail')">
+                                        <span data-feather="file-text"></span>
+                                        retail
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#" onclick="renderGraph('london-crime')">
+                                        <span data-feather="file-text"></span>
+                                        london-crime
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="#" onclick="renderGraph('synthetic')">
+                                        <span data-feather="file-text"></span>
+                                        synthetic
+                                    </a>
+                                </li>
+
+                            </ul>
+
+
+                        <hr style="height:2px; width:100%">
+
+                        <form class="d-flex flex-column" id="relicform" method="POST" enctype="multipart/form-data">
+
+                            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-5 mt-4 mb-1 text-muted">
+                                <span>Custom Input</span>
+                            </h6>
+                            <span class="navbar-text">Artifacts (ZIP)</span>
+                            <input class="form-control me-2" type="file" placeholder="Search" aria-label="Search"
+                                   name="artifacts" id="artifact_input">
+                            <span class="navbar-text">Ground Truth (Optional)</span>
+                            <input class="form-control me-2" type="file" placeholder="Search" aria-label="Search"
+                                   name="g_truth" id="g_truth_input">
+
+                            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-4 mt-4 mb-1 text-muted">
+                                <span>Graph Settings</span>
+                                <a class="link-secondary" href="#" aria-label="Add a new report">
+                                    <span data-feather="plus-circle"></span>
+                                </a>
+                            </h6>
+
+
+                            <div class="form-check form-switch">
+                                <input id='clusteringHidden' type='hidden' name='pre_cluster' value='False'>
+                                <input class="form-check-input" type="checkbox" id="clustering" name="pre_cluster" value="True" checked>
+                                <label class="form-check-label" for="clustering">Clustering</label>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input id='celljaccardHidden' type='hidden' name='celljaccard' value='False'>
+                                <input class="form-check-input" type="checkbox" id="celljaccard" name="celljaccard" value="True" checked>
+                                <label class="form-check-label" for="celljaccard">Cell-Level Jaccard
+                                    Similarity</label>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input id='cellcontainHidden' type='hidden' name='cellcontain' value='False'>
+                                <input class="form-check-input" type="checkbox" id="cellcontain" name="cellcontain" value="True" checked>
+                                <label class="form-check-label" for="cellcontain">Cell-Level Jaccard
+                                    Containment</label>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input id='joinHidden' type='hidden' name='join' value='False'>
+                                <input class="form-check-input" type="checkbox" id="join" name="join" value="True" checked>
+                                <label class="form-check-label" for="join">Join Detector</label>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input id='groupbyHidden' type='hidden' name='groupby' value='False'>
+                                <input class="form-check-input" type="checkbox" id="groupby" name="groupby" value="True" checked>
+                                <label class="form-check-label" for="groupby">Groupby Detector</label>
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input id='pivotHidden' type='hidden' name='pivot' value='False'>
+                                <input class="form-check-input" type="checkbox" id="pivot" name="pivot" value="True" checked>
+                                <label class="form-check-label" for="pivot">Pivot Detector</label>
+                            </div>
+
+                            <div class="d-flex justify-space-around align-items-center">
+                                <label for="intra_cell" class="form-label">Intra-Cluster Threshold</label><output>0.1</output>
+                                <input type="range" min="0" max="1" step="0.1" name="intra_cell" value="0.1" class="form-range" id="intra_cell" oninput="this.previousElementSibling.value = this.value">
+                            </div>
+                            <div class="d-flex justify-space-around align-items-center">
+                                <label for="inter_cell" class="form-label">Inter-Cluster Threshold</label><output>0.1</output>
+                                <input type="range" min="0" max="1" step="0.1" name="inter_cell" value="0.1" class="form-range" id="inter_cell" oninput="this.previousElementSibling.value = this.value">
+                            </div>
+                            <button class="btn btn-success" type="submit" id="formsubmit">Infer Lineage</button>
+
+                        </form>
+                    </div>
+
+                    <a class="navbar mx-auto mt-5" href="https://uchi-db.github.io/chidatasite/">
+                        <img src="{{url_for('static', filename='chidata-maroon-01.png')}}" alt="chidata">
+                    </a>
+
+
+                </nav>
+
+            </div>
+
+
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-9 col-xxl-10 px-md-4">
+
+
+            <div class="alert alert-primary collapse" id="alert_container">
+                <h3 id="status"></h3>
+                <h4  id="running"></h4>
+                <div class="progress">
+                    <div class="progress-bar w-0" id="pbar"></div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Inferred Lineage Graph</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary graph-button" data-bs-toggle="modal" data-bs-target="#legendModal" hidden>Legend</button>
+                    </div>
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary graph-button" id="export" hidden>Export Graph</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal -->
+            <div class="modal fade" id="legendModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-fullscreen">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Graph Legend</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  </div>
+                  <div class="modal-body">
+                    <img class="img-fluid mx-auto d-block" src="{{url_for('static', filename='legend.png')}}" alt="legend">
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- <canvas class="my-4 w-100" id="mynetwork" width="900" height="380"></canvas> -->
+            <div id="mynetwork" class="d-flex justify-content-center align-items-center">
+                <div>
+                  <h4 class="text-muted">Select a Canned Demo or Provide your own Workflow ZIP file to get started...</h4>
+                </div>
+            </div>
+
+
+            <div class="border-bottom">
+                <h4 id="artifact_header" hidden>Artifact Inspector</h4>
+            </div>
+            <div class="table-container">
+                <div class="row">
+                    <div id="artifact" class="table-responsive"></div>
+                </div>
+            </div>
+
+
+        </main>
+    </div>
+</div>
+
+            <!-- <script src="../assets/dist/js/bootstrap.bundle.min.js"></script> -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js"
+                    integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0"
+                    crossorigin="anonymous"></script>
+
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css"/>
+            <script type="text/javascript"
+                    src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"
+                    integrity="sha384-uO3SXW5IuS1ZpFPKugNNWqTZRRglnUJK6UAZ/gxOX80nxEkN9NcGZTftn6RzhGWE"
+                    crossorigin="anonymous"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4/dist/Chart.min.js"
+                    integrity="sha384-zNy6FEbO50N+Cg5wap8IKA4M/ZnLJgzc6w2NqACZaK0u0FXfOWRRJOnQtpZun8ha"
+                    crossorigin="anonymous"></script>
+            <!-- <script src="dashboard.js"></script> -->
+
+            <script
+                    src="https://code.jquery.com/jquery-3.6.0.min.js"
+                    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+                    crossorigin="anonymous"></script>
+
+            <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
+            <script type="text/javascript" src="{{url_for('static', filename='script.js')}}"></script>
+
+
+            <script type="text/javascript">
+
+            </script>
+</body>
+</html>
