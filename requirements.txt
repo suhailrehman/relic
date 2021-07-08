@@ -21,3 +21,4 @@ werkzeug
 Flask-Uploads
 pyvis
 Flask-HTTPAuth
+beautifulsoup4

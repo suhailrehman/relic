@@ -13,6 +13,8 @@ import sys
 
 import relic.graphs.graphs
 from relic.core import main
+from bs4 import BeautifulSoup
+
 
 
 UPLOAD_FOLDER = '/tmp/uploads/'
@@ -45,6 +47,7 @@ try:
     PASSWORD = generate_password_hash(os.environ['FLASK_PASSWORD'])
 except KeyError as e:
     app.logger.fatal('You must set FLASK_USER and FLASK_PASSWORD environment variables to start this server')
+    sys.exit(0)
 
 
 @auth.verify_password
@@ -113,8 +116,10 @@ def artifact(job_id, artifact_id):
     if os.path.exists(artifact_file):
         pd.set_option('display.max_colwidth', 20)
         df = pd.read_csv(artifact_file, index_col=0).head(100)
-        return df.to_html(notebook=True, classes="table table-striped table-sm", table_id="artifacttable",
-                          justify='unset')
+        html = df.to_html(notebook=True, classes="table table-striped table-sm", table_id="artifacttable", justify="unset")
+        soup = BeautifulSoup(html, features="html.parser")
+        soup.style.decompose()
+        return make_response(str(soup))
     else:
         return make_response(jsonify({'job_id': job_id, 'artifact_id': artifact_id, 'status': 404}), 404)
 

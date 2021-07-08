@@ -32,7 +32,7 @@
 <!--    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="#">Relic</a>-->
     <a class="navbar-brand col-md-3 col-lg-3 col-xxl-2 d-md-block" href="#">
         <span class="logo">
-            <img src="{{url_for('static', filename='relic-logo.png')}}" height="35" alt="RELIC">
+            <img src="{{url_for('static', filename='relic-logo.png')}}" class="img-fluid" alt="RELIC" style="max-height: 35px;">
         </span>
     </a>
 
@@ -49,13 +49,12 @@
 
 
 <div class="container-fluid">
-    <div class="row">
         <nav id="sidebarMenu" class="col-md-3 col-lg-3 col-xxl-2 d-md-block bg-light sidebar collapse">
             <div class="position-sticky pt-3">
                 <nav class="navbar navbar-light bg-light">
                     <div class="container-fluid">
                         <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-4 mt-4 mb-1 text-muted" style="flex-basis: 100%;">Canned Demos</h6>
-                            <ul class="nav">
+                            <ul class="nav justify-content-center">
 
                                     <a class="nav-link" href="#" onclick="renderGraph('titanic')">
                                         <span data-feather="file-text"></span>
@@ -241,7 +240,6 @@
 
 
         </main>
-    </div>
 </div>
 
             <!-- <script src="../assets/dist/js/bootstrap.bundle.min.js"></script> -->
