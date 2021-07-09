@@ -140,6 +140,11 @@ body {
 .logo {
   display:block;
   text-align:center;
+
+}
+
+.logo > #img {
+  max-height: 35px;
 }
 
 .table-container > .row {
@@ -149,4 +154,12 @@ body {
 }
 .table-container > .row > #artifact {
   display: inline-block;
+}
+
+.nav-link {
+  padding: 0.25rem 0.25rem;
+}
+
+.nav-divider{
+  padding-top: 0.3rem;
 }

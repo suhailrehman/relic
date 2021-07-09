@@ -61,7 +61,7 @@ class RelicAlgorithm:
         # Load the Ground Truth
         # Optional GT annotation or remove entirely
         if g_truth_file:
-            self.g_truth = nx.read_gpickle(g_truth_file)
+            self.g_truth = nx.read_edgelist(g_truth_file)
 
         # Current Edge being added
         self.edge_no = 0
@@ -393,7 +393,7 @@ def run_relic(options):
 
     write_graph(relic_instance.g_inferred, options.out + '/inferred_graph.csv')
     if options.g_truth_file:
-        nx.write_gpickle(relic_instance.g_truth, options.out + '/true_graph.pkl')
+        nx.write_edgelist(relic_instance.g_truth, options.out + '/true_graph.txt', data=True)
 
     job_status['status'] = 'complete'
     with open(status_file, 'w') as fp:

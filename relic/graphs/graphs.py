@@ -436,7 +436,7 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
         all_edges = nx.compose(g_inferred, g_truth)
 
     for src, dst, data in all_edges.edges(data=True):
-        w = data['weight'] if 'weight' in data else 0
+        w = data['weight'] if 'weight' in data else 0.5
 
         # Edge Coloring
         if g_truth:
@@ -444,9 +444,9 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
         else:
             edge_color = 'lightgrey'
 
-        edge_number = data['num'] if 'num' in data else 'x'
+        edge_number = data['num'] if 'num' in data else 'X'
 
-        hover_string = "<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
+        hover_string = ""  #"<br>".join([str(k) + " : " + str(v) for k, v in data.items()])
         src_node_hover_html = "Rows:" + str(len(df_dict[src])) + " Columns:" + str(len(set(df_dict[src]))) + \
                               "<br>" + "(Click to Inspect Artifact)"
         dst_node_hover_html = "Rows:" + str(len(df_dict[dst])) + " Columns:" + str(len(set(df_dict[dst]))) + \
@@ -458,12 +458,15 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
 
         # Ground Truth Operation Label:
         if g_truth and g_truth.to_undirected().has_edge(src, dst):
+            hover_string += '<strong>Ground Truth Edge Data</strong>'
             hover_string += '<br>Ground Truth Operation: ' + str(g_truth.to_undirected()[src][dst]['operation'])
             if 'args' in g_truth.to_undirected()[src][dst]:
                 hover_string += '<br>Generating Args: ' + str(g_truth.to_undirected()[src][dst]['args'])
+            hover_string += '<br>'
 
         # Edge Coloring
         if g_inferred.has_edge(src, dst):
+            hover_string += '<strong>Inferred Edge Data</strong>'
             hover_string += '<br> Edge Type: ' + g_inferred[src][dst]['type']
             hover_string += ', score: {:.3f}'.format(g_inferred[src][dst]['weight'])
 

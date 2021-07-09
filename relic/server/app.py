@@ -92,15 +92,18 @@ def render(job_id):
     inferred_dir = f'/tmp/relic/{job_id}/inferred/'
     artifact_dir = f'/tmp/relic/{job_id}/artifacts/'
     rendered_graph = f'/tmp/relic/{job_id}/g_inferred.html'
-    g_truth_file = f'/tmp/relic/{job_id}/true_graph.pkl'
+    g_truth_file = f'/tmp/relic/{job_id}/true_graph.txt'
     app.logger.debug(f'Graph File: {result_graph_file}, {os.path.exists(result_graph_file)}')
     app.logger.debug(f'Ground Truth File: {g_truth_file}, {os.path.exists(g_truth_file)}')
-    #if os.path.exists(rendered_graph):
+    # if os.path.exists(rendered_graph):
     #    return send_file(rendered_graph, mimetype='text/html')
     if os.path.exists(result_graph_file):
         app.logger.debug(f'Job completed, rendering graph')
         g_inferred = nx.read_edgelist(result_graph_file)
-        g_truth = nx.read_gpickle(g_truth_file) if os.path.exists(g_truth_file) else None
+        if os.path.exists(g_truth_file):
+            g_truth = nx.read_edgelist(g_truth_file, create_using=nx.DiGraph)
+        else:
+            g_truth = None
         network = relic.graphs.graphs.draw_web_graph(g_inferred, artifact_dir, inferred_dir,
                                                      g_truth=g_truth, height=height, width=width)
         network.save_graph(rendered_graph)
