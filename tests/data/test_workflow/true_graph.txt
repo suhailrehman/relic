@@ -1,0 +1,7 @@
+0.csv 1.csv {'operation': 'point_edit', 'args': {'col': 'random_number', 'old_value': 9182.0, 'new_value': 540594.0}}
+1.csv 2.csv {'operation': 'sample', 'args': {'frac': 0.8}}
+2.csv 4.csv {'operation': 'merge', 'args': {'key': 'safe_email'}}
+3.csv 4.csv {'operation': 'merge', 'args': {'key': 'safe_email'}}
+4.csv 5.csv {'operation': 'assign', 'args': {'string_or_numeric': 'numeric', 'col': 'pyint', 'random_scalar': [65, 35], 'new_col_name': 'pyint__65x+35'}}
+5.csv 6.csv {'operation': 'groupby', 'args': {'col': ['last_name', 'free_email_domain'], 'func': 'sum'}}
+6.csv 7.csv {'operation': 'pivot', 'args': {'index': 'pybool', 'column': 'free_email_domain', 'numeric': 'random_number'}}
