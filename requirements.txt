@@ -22,3 +22,4 @@ Flask-Uploads
 pyvis
 Flask-HTTPAuth
 beautifulsoup4
+python-dotenv

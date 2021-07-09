@@ -24,7 +24,7 @@ auth = HTTPBasicAuth()
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-app.debug = True
+
 
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
@@ -175,4 +175,3 @@ def upload():
                     'status': 'pending'})
 
 
-app.run(host='0.0.0.0', port=8000)
