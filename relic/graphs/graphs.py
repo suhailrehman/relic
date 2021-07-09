@@ -405,14 +405,15 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
     nb_net = Network(height=str(height)+'px', width={str(width)+'px'})
     df_dict = build_df_dict_dir(artifact_dir)
     logger.debug(f'Inferred Graph: {g_inferred.nodes()}')
+    root_node = None
 
     if '0.csv' not in df_dict:
         if g_truth:
             zero_degree_nodes = [n for n, d in g_truth.in_degree() if d == 0]
             if zero_degree_nodes:
                 root_node = zero_degree_nodes[0]
-            else:
-                root_node = np.random.choice([x for x in df_dict.keys()], 1)[0]
+        if not root_node:
+            root_node = np.random.choice([x for x in df_dict.keys()], 1)[0]
     else:
         root_node = '0.csv'
 

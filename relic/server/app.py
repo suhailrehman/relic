@@ -15,6 +15,7 @@ import relic.graphs.graphs
 from relic.core import main
 from bs4 import BeautifulSoup
 
+from dotenv import load_dotenv
 
 
 UPLOAD_FOLDER = '/tmp/uploads/'
