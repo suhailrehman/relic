@@ -94,9 +94,7 @@ mkdir -p $output_dir
 
 
 # Generate tuples first
-#python compute_tuple_distances.py --mode=enumerate --input=$artifact_dir --output=$output_dir/tuples.csv
-python compute_tuple_distances.py --mode=enumerate --input="$artifact_dir" --output=$output_dir/"${ntuples}_combos" --ntuples=$ntuples --func=$distfunc
-#mkdir -p $output_dir/tuples
+python offline.py --mode=enumerate --input="$artifact_dir" --output=$output_dir/"${ntuples}_combos" --ntuples=$ntuples --func=$distfunc
 mkdir -p $output_dir/"${ntuples}_combos"
 
 # Split tuples into $num_procs files to distribute
@@ -109,13 +107,10 @@ mkdir -p $output_dir/$distfunc
 
 for f in $output_dir/"${ntuples}_combos"*; do
   filename=`basename $f`
-  python compute_tuple_distances.py --mode=compute --slice=$f  --input=$artifact_dir --output=$output_dir/$distfunc/$filename --func=$distfunc &
+  python offline.py --mode=compute --slice=$f  --input=$artifact_dir --output=$output_dir/$distfunc/$filename --func=$distfunc &
 done
 
 wait
 
 # combine computed scores
-python compute_tuple_distances.py --mode=combine  --input=$output_dir/$distfunc/$filename --output=$output_dir/$distfunc.pkl
-
-# Single distance test
-#python compute_tuple_distances.py --mode=compute --slice=$output_dir/tuples/tuples_part_00.csv  --input=$artifact_dir --output=$output_dir/celljaccard/tuples_part_00.csv
+python offline.py --mode=combine  --input=$output_dir/$distfunc/$filename --output=$output_dir/$distfunc.pkl

@@ -1,14 +1,16 @@
-from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS
-from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
-from relic.graphs.clustering import exact_schema_cluster
-from relic.utils.serialize import build_df_dict_dir
-
 import os
 import itertools
 import sys
 import pandas as pd
 import glob
 import argparse
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS
+from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
+from relic.graphs.clustering import exact_schema_cluster
+from relic.utils.serialize import build_df_dict_dir
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
@@ -72,7 +74,6 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
         with open(infile, 'r') as infile:
             for line in infile:
                 df_names = line.strip().split(',')
-
 
                 # Load DF if not already in dict
                 for dfn in df_names:
