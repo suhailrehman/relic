@@ -84,6 +84,7 @@ distfunc=$func # cellcontainment
 
 
 if [ ! -d $artifact_dir ]
+then
     echo "Error: Directory $artifact_dir does not exist, exiting"
     exit 1
 fi
