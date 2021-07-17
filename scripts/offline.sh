@@ -31,7 +31,7 @@ fi
 # read getopt’s output this way to handle the quoting right:
 eval set -- "$PARSED"
 
-d=n f=n func=ppo outDir=- inDir=- ntuples=2 threads=35
+d=n f=n func=ppo outDir=result inDir=- ntuples=2 threads=35
 # now enjoy the options in order and nicely split until we see --
 while true; do
     case "$1" in
@@ -82,10 +82,14 @@ num_procs=$threads
 
 distfunc=$func # cellcontainment
 
+
+if [ ! -d $artifact_dir ]
+    echo "Error: Directory $artifact_dir does not exist, exiting"
+    exit 1
+fi
+
 # Create inferred dir if it does not exist:
 mkdir -p $output_dir
-
-
 
 
 # Generate tuples first
