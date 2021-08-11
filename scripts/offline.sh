@@ -99,7 +99,7 @@ mkdir -p $output_dir/"${ntuples}_combos/"
 
 # Split tuples into $num_procs files to distribute
 #split -da 2 -l $((`wc -l < $output_dir/tuples.csv` / 20)) $output_dir/tuples.csv $output_dir/tuples/tuples_part_ --additional-suffix=".csv"
-split -da 2 -l $((`wc -l < $output_dir/"${ntuples}_combos.csv"` / $num_procs)) $output_dir/"${ntuples}_combos" $output_dir/"${ntuples}_combos"/"${ntuples}_combos"_part_ --additional-suffix=".csv"
+split -da 2 -l $((`wc -l < $output_dir/"${ntuples}_combos.csv"` / $num_procs)) $output_dir/"${ntuples}_combos.csv" $output_dir/"${ntuples}_combos"/"${ntuples}_combos"_part_ --additional-suffix=".csv"
 
 
 #Compute cell-jacard
@@ -107,7 +107,7 @@ mkdir -p $output_dir/$distfunc
 
 for f in $output_dir/"${ntuples}_combos"/*; do
   filename=`basename $f`
-  python ../relic/offline.py --mode=compute --slice=$f  --input=$artifact_dir --output=$output_dir/$distfunc/$filename --func=$distfunc &
+  python ../relic/offline.py --mode=compute --slice=$f  --input=$artifact_dir/ --output=$output_dir/$distfunc/$filename --func=$distfunc &
 done
 
 wait

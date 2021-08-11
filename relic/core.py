@@ -5,10 +5,12 @@ import shutil
 import sys
 import zipfile
 from datetime import datetime
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import numpy as np
-import os
 import itertools
 from collections import defaultdict
 import networkx as nx
@@ -19,7 +21,8 @@ from relic.distance.ppo import compute_all_ppo_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
-from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool
+from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool, \
+    load_distances_from_raw_files
 from relic.algorithm import compute_tuplewise_similarity
 
 import logging
@@ -263,6 +266,11 @@ def setup_arguments(args):
                         help="Ground Truth File as a pickled NetworkX graph",
                         type=str)
 
+    parser.add_argument("--pre_compute",
+                        help="Use pre-computed distances (in the appropriate distance folder)",
+                        type=str2bool, default=False,
+                        nargs='?', const=False)
+
     options = parser.parse_args(args)
 
     return options
@@ -303,13 +311,14 @@ def run_relic(options):
     else:
         artifact_dir = options.artifact_dir
 
-
-
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file)
     relic_instance.create_initial_graph()
 
     update_phase(job_status, 'Computing Pairwise Distances', status_file)
-    relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
+    if options.pre_compute:
+        relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out+'/inferred/ppo/'))
+    else:
+        relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
 
     if options.pre_cluster:
         update_phase(job_status, 'Clustering', status_file)
@@ -342,7 +351,10 @@ def run_relic(options):
     if options.join:
         logger.info('Looking for join edges across clusters...')
         update_phase(job_status, 'Join Detection', status_file)
-        relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
+        if options.pre_compute:
+            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/join/'))
+        else:
+            relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
         relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
                                          final_function=tiebreak_hash_edge,
@@ -373,7 +385,10 @@ def run_relic(options):
     if options.groupby:
         logger.info('Looking for Groupby edges across clusters...')
         update_phase(job_status, 'Groupby Detection', status_file)
-        relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
+        if options.pre_compute:
+            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/groupby/'))
+        else:
+            relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
                                          final_function=tiebreak_hash_edge,
@@ -383,7 +398,10 @@ def run_relic(options):
     if options.pivot:
         logger.info('Looking for Pivot edges across clusters...')
         update_phase(job_status, 'Pivot Detection', status_file)
-        relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
+        if options.pre_compute:
+            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/pivot/'))
+        else:
+            relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
                                          final_function=tiebreak_hash_edge,

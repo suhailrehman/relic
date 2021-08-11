@@ -85,7 +85,7 @@ def combine_and_create_pkl(indir, outfile, ntuples=2):
     pd.concat(all_dfs).sort_values('score', ascending=False).to_csv(outfile)
 
 
-def load_distances_from_file(filename):
+def load_distances_from_pandas_file(filename):
     score_df = pd.read_csv(filename, index_col=0)
     df_list = [x for x in score_df.columns if 'df' in x]
     scores_list = list(set(score_df.columns) - set(df_list))
@@ -96,6 +96,24 @@ def load_distances_from_file(filename):
             key = ((k[0],k[1]), k[2]) if len(k) == 3 else frozenset(k)
             logger.debug(f'Dataframe variables: {k} : {key} : {row[label]}')
             pairwise_scores[label].additem(key, float(row[label]))
+
+    return pairwise_scores
+
+
+def load_distances_from_raw_files(in_dir):
+    import ast
+    pairwise_scores = defaultdict(PQEdges)
+    for file in glob.glob(in_dir + '*.csv'):
+        with open(file, 'r') as fp:
+            for line in fp:
+                tokens = line.strip().split(',')
+                if len(tokens[:-1]) == 3:
+                    combo = ((tokens[0], tokens[1]), tokens[2])
+                else:
+                    combo = frozenset(x for x in tokens[:-1])
+                scores_dict = ast.literal_eval(','.join(tokens[-1]))
+                for score_type, score in scores_dict.items():
+                    pairwise_scores[score_type].additem(combo, score)
 
     return pairwise_scores
 

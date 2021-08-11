@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="d90c5f3f-aa43-4cea-8631-52f94bf18df1" name="roscoe">
+        <fileTransfer rootFolder="/tank/local/suhail/scratch/" accessType="SFTP" host="roscoe.cs.uchicago.edu" port="22" sshConfigId="9c087831-6bd8-4864-859b-e9f78870aa73" sshConfig="suhail@roscoe.cs.uchicago.edu:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

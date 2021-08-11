@@ -1,6 +1,8 @@
 import os
 import itertools
 import sys
+from collections import defaultdict
+
 import pandas as pd
 import glob
 import argparse
@@ -13,8 +15,9 @@ from relic.graphs.clustering import exact_schema_cluster
 from relic.utils.serialize import build_df_dict_dir
 
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 
 _function_mappings = {
@@ -25,10 +28,13 @@ _function_mappings = {
 }
 
 
+
 def enumerate_tuple_pairs(input_dir, out_filename, n_tuples=2, filter_function=None):
     # DO NOT LOAD tuples unless you need a schema filter_functions
     df_dict = None
-    file_list = (os.path.basename(file) for file in glob.glob(input_dir + '*.csv'))
+    logger.debug(f'Checking input dir: {input_dir}')
+    file_list = (os.path.basename(file) for file in glob.glob(input_dir + '/*.csv'))
+    #logger.debug(f'File List : {file_list}')
     if filter_function:
         # Limit join search to eligible clusters only
         df_dict = build_df_dict_dir(input_dir)
@@ -36,6 +42,7 @@ def enumerate_tuple_pairs(input_dir, out_filename, n_tuples=2, filter_function=N
 
     i = 0
     with open(out_filename, 'w') as fp:
+        #logger.debug(len([x for x in itertools.combinations(file_list, n_tuples)]))
         for d in itertools.combinations(file_list, n_tuples):
             if filter_function:
                 if not filter_function(*d, df_dict):
@@ -66,7 +73,7 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
 
 
 def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, labels=PPO_LABELS):
-    logger.info('Processing: ', infile, ' using ', function.__name__)
+    logger.info(f'Processing: {infile} using  {function.__name__}')
     file_part = os.path.basename(infile)
     df_dict = {}
     i = 0
@@ -81,10 +88,7 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
                         df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
 
                 dfs = [df_dict[dfn] for dfn in df_names]
-                if function == join_detector:
-                    score = (*df_names, df_dict)
-                else:
-                    score = function(*dfs, None)
+                score = function(*df_names, df_dict)[-1]
                 outfile.write(f"{','.join(x for x in df_names)},{score}\n")
                 if i % 10000 == 0:
                     logger.info(f'{file_part}: Written {i} records\r', )
@@ -139,6 +143,7 @@ def main(args=None):
         args = sys.argv[1:]
 
     options = setup_arguments(args)
+    logger.debug(f'Options: {options}')
     if options.mode == 'enumerate':
         if options.func == 'join':
             logger.info('Building Dataframe Dict...')

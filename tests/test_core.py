@@ -11,7 +11,7 @@ import pytest
 import logging
 
 from relic.graphs.clustering import get_graph_clusters_set
-from relic.utils.serialize import store_all_distances, load_distances_from_file
+from relic.utils.serialize import store_all_distances, load_distances_from_pandas_file
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
@@ -132,7 +132,7 @@ def test_store_load_distances(relic_instance, tmpdir):
             distance_file = output.join('/'+label+'_scores.csv')
             logging.info(f'Checking {label} Score File: {distance_file}')
             assert os.path.exists(distance_file)
-            pairwise_scores = load_distances_from_file(distance_file)
+            pairwise_scores = load_distances_from_pandas_file(distance_file)
             assert set(pairwise_scores[label].keys()) == set(relic_instance.score_records[label].keys())
             for k in set(pairwise_scores[label].keys()):
                 assert pairwise_scores[label][k] == pytest.approx(relic_instance.score_records[label][k])
@@ -141,7 +141,7 @@ def test_store_load_distances(relic_instance, tmpdir):
 
     if ppo_labels:
         distance_file = output.join('/ppo_scores.csv')
-        pairwise_scores = load_distances_from_file(distance_file)
+        pairwise_scores = load_distances_from_pandas_file(distance_file)
         for label in ppo_labels:
             logging.info(f'Checking {label} Score File: {distance_file}')
             assert set(pairwise_scores[label].keys()) == set(relic_instance.score_records[label].keys())
