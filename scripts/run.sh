@@ -1,0 +1,1 @@
+python ../relic/core.py --artifact_dir=/tank/local/suhail/data/relic/mixed/syn500_modified/artifacts/ --nb_name=syn500_modified --out=/tank/local/suhail/data/relic/mixed/syn500_modified$ --pre_compute=True
