@@ -72,24 +72,29 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
                     i += 1
 
 
-def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, labels=PPO_LABELS):
+def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels):
     logger.info(f'Processing: {infile} using  {function.__name__}')
     file_part = os.path.basename(infile)
     df_dict = {}
     i = 0
+    labels = PPO_LABELS if function == compute_all_ppo_labels else [function.__name__.split('_')[0]]
+    ntuples = 3 if function == join_detector else 2
     with open(out, 'w') as outfile:
+        # write header
+        header=','.join(['df'+str(x) for x in range(1,ntuples+1)] + [x for x in labels])+'\n'
+        outfile.write(header)
         with open(infile, 'r') as infile:
             for line in infile:
                 df_names = line.strip().split(',')
-
                 # Load DF if not already in dict
                 for dfn in df_names:
                     if dfn not in df_dict:
                         df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
 
                 dfs = [df_dict[dfn] for dfn in df_names]
-                score = function(*df_names, df_dict)[-1]
-                outfile.write(f"{','.join(x for x in df_names)},{score}\n")
+                scores = function(*df_names, df_dict)[-1]
+                scores_list_str = ','.join([str(scores[l]) for l in labels])
+                outfile.write(f"{','.join(x for x in df_names)},{scores_list_str}\n")
                 if i % 10000 == 0:
                     logger.info(f'{file_part}: Written {i} records\r', )
                 i += 1
@@ -99,10 +104,10 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
 
 def combine_and_create_pkl(in_dir, outfile):
     all_dfs = []
-    for file in glob.glob(in_dir + '*.csv'):
-        all_dfs.append(pd.read_csv(file, header=None, names=['df1', 'df2', 'score']))
+    for file in glob.glob(in_dir + '/*.csv'):
+        all_dfs.append(pd.read_csv(file))
 
-    pd.concat(all_dfs).sort_values('score', ascending=False).to_csv(outfile)
+    pd.concat(all_dfs).to_csv(outfile)
 
 
 def setup_arguments(args):

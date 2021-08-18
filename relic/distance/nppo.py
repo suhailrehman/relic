@@ -762,10 +762,10 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
                     try:
                         replaydf = src.pivot_table(index=index_name_match, columns=col, values=val, aggfunc=max)
                         similarities.append(ppo.compute_all_ppo(dst, replaydf)['jaccard'])
+                        logger.debug(f'pivot replay result: {dst.head()}, {replaydf.head()}, {similarities}')
                     except Exception as e:
-                        logger.warning(f'Cannot pivot:', df1_name, df2_name, index_name_match, col, val, e)
+                        logger.debug(f'Cannot pivot:', df1_name, df2_name, index_name_match, col, val, e)
                         similarities.append(0.0)
-                logger.debug(f'pivot replay result: {dst.head()}, {replaydf.head()}, {similarities}')
             return frozenset((df1_name, df2_name)), {'pivot': max(similarities)}
 
     return frozenset((df1_name, df2_name)), {'pivot': index_containment * max_col_score}

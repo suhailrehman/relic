@@ -113,4 +113,4 @@ done
 wait
 
 # combine computed scores
-python ../relic/offline.py --mode=combine  --input=$output_dir/$distfunc/$filename --output=$output_dir/$distfunc.pkl
+python ../relic/offline.py --mode=combine  --input=$output_dir/$distfunc/ --output=$output_dir/$distfunc.pkl

@@ -2,8 +2,6 @@ networkx
 matplotlib
 pandas
 tqdm
-#psycopg2
-datasketch
 pygraphviz
 jupyter
 Pillow
@@ -15,8 +13,6 @@ pytest
 pytest-cov
 python-Levenshtein
 flask
-#click
-#db-sqlite3
 werkzeug
 Flask-Uploads
 pyvis

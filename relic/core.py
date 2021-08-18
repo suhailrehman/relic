@@ -22,7 +22,7 @@ from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_compute
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
 from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool, \
-    load_distances_from_raw_files
+    load_distances_from_raw_files, load_distances_from_pandas_file
 from relic.algorithm import compute_tuplewise_similarity
 
 import logging
@@ -44,7 +44,9 @@ class RelicAlgorithm:
         # Load the dataset
         # Load/read on demand infrastructure
         # self.dataset = ArtifactDict(self.artifact_dir)
+        logger.info(f'Loading Artifacts from {self.artifact_dir}')
         self.dataset = build_df_dict_dir(self.artifact_dir)
+        logger.info('Loading Complete')
 
         # Create the initial graph
         self.g_inferred = nx.Graph()
@@ -180,7 +182,8 @@ class RelicAlgorithm:
                         try:
                             self.pairwise_weights[edge_type].additem(e[0], e[1])
                         except KeyError as e:
-                            logger.warning(f'Trying to add back {e}, selected {edge}, to {self.pairwise_weights[edge_type].keys()}')
+                            logger.debug(f'Error: Trying to add back {e}, selected {edge}, to {edge_type} dict')
+
             else:
                 edge = max_edges[0]
 
@@ -283,6 +286,8 @@ def run_relic(options):
     logger.info(f'Options: {options}')
     os.makedirs(options.out, exist_ok=True)
 
+    distance_load_function = load_distances_from_pandas_file
+
     # Setup Job Log
     logger = logging.getLogger()
     # create file handler which logs even debug messages
@@ -316,7 +321,7 @@ def run_relic(options):
 
     update_phase(job_status, 'Computing Pairwise Distances', status_file)
     if options.pre_compute:
-        relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out+'/inferred/ppo/'))
+        relic_instance.pairwise_weights.update(distance_load_function(options.out+'/ppo.csv'))
     else:
         relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
 
@@ -352,7 +357,7 @@ def run_relic(options):
         logger.info('Looking for join edges across clusters...')
         update_phase(job_status, 'Join Detection', status_file)
         if options.pre_compute:
-            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/join/'))
+            relic_instance.pairwise_weights.update(distance_load_function(options.out + '/join.csv'))
         else:
             relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
         relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
@@ -386,7 +391,7 @@ def run_relic(options):
         logger.info('Looking for Groupby edges across clusters...')
         update_phase(job_status, 'Groupby Detection', status_file)
         if options.pre_compute:
-            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/groupby/'))
+            relic_instance.pairwise_weights.update(distance_load_function(options.out + '/groupby.csv'))
         else:
             relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
@@ -399,7 +404,7 @@ def run_relic(options):
         logger.info('Looking for Pivot edges across clusters...')
         update_phase(job_status, 'Pivot Detection', status_file)
         if options.pre_compute:
-            relic_instance.pairwise_weights.update(load_distances_from_raw_files(options.out + '/inferred/pivot/'))
+            relic_instance.pairwise_weights.update(distance_load_function(options.out + '/pivot.csv'))
         else:
             relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
