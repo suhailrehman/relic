@@ -12,7 +12,6 @@ setup(
         "matplotlib",
         "pandas",
         "tqdm",
-        "pygraphviz",
         "jupyter",
         "Pillow",
         "numpy",
@@ -22,14 +21,20 @@ setup(
         "pytest",
         "pytest-cov",
         "python-Levenshtein",
-        "flask",
-        "werkzeug",
-        "Flask-Uploads",
-        "pyvis",
-        "Flask-HTTPAuth",
-        "beautifulsoup4",
-        "python-dotenv"
     ],
+    extras_require={
+        'server': [
+            'pygraphviz',
+            'pyviz',
+            "flask",
+            "werkzeug",
+            "Flask-Uploads",
+            "pyvis",
+            "Flask-HTTPAuth",
+            "beautifulsoup4",
+            "python-dotenv"
+        ]
+    },
     setup_requires=['pytest-runner'],
     tests_require=['pytest>=4.6'],
     test_suite='tests',
