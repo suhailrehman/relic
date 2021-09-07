@@ -1,7 +1,7 @@
 #!/bin/bash
 
-basedir=/tank/local/suhail/data/relic/mixed/newratiogen/
-offline_compute=false
+basedir=/tank/local/suhail/data/relic/mixed/grid/
+offline_compute=true
 num_components=1
 
 {
@@ -14,14 +14,8 @@ do
   mkdir -p $outdir
   if $offline_compute;
   then
-    echo "$i; `date` ; Computing PPO"
-    ./offline.sh -i $indir -o $outdir -f ppo -n 2
-    echo "$i; `date` ; Computing Joins"
-    ./offline.sh -i $indir -o $outdir -f join -n 3
-    echo "$i; `date` ; Computing Groupbys"
-    ./offline.sh -i $indir -o $outdir -f groupby -n 2
-    echo "$i; `date` ; Computing Pivots"
-    ./offline.sh -i $indir -o $outdir -f pivot -n 2
+    echo "$i; `date` ; Computing Baseline"
+    ./offline.sh -i $indir -o $outdir -f baseline -n 2
   fi
 
   num_artifacts=`ls -1q $indir/*.csv | wc -l`
@@ -35,12 +29,9 @@ do
                           --nb_name=combined_all \
                           --out=$outdir \
                           --pre_compute=True \
-                          --inter_contain=0.1 \
-                          --intra_contain=0.1 \
-                          --inter_cell=0.1 \
-                          --intra_cell=0.1 \
                           --max_n_edges=$((num_artifacts-num_components)) \
-                          --result_prefix=nppo_first_2
+                          --result_prefix=baseline_
+                          --baseline=True
 
   echo "$i; `date` ;Completed"
 

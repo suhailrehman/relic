@@ -9,7 +9,7 @@ import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS
+from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS, compute_baseline
 from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
 from relic.graphs.clustering import exact_schema_cluster
 from relic.utils.serialize import build_df_dict_dir
@@ -24,7 +24,8 @@ _function_mappings = {
     'ppo': compute_all_ppo_labels,
     'groupby': groupby_detector,
     'pivot': pivot_detector,
-    'join': join_detector
+    'join': join_detector,
+    'baseline' : compute_baseline
 }
 
 

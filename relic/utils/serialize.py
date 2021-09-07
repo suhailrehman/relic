@@ -7,8 +7,10 @@ import pandas as pd
 import glob
 import os
 import networkx as nx
+from tqdm.auto import tqdm
 
 import relic.distance.ppo
+import numpy as np
 from relic.utils.pqedge import PQEdges
 
 import argparse
@@ -24,7 +26,7 @@ def build_df_dict(nb_name, base_dir):
 
 def build_df_dict_dir(csv_dir):
     dataset = {}
-    for file in glob.glob(csv_dir + '*.csv'):
+    for file in tqdm(glob.glob(csv_dir + '*.csv')):
         csvfile = os.path.basename(file)
         try:
             dataset[csvfile] = pd.read_csv(file, index_col=0)
@@ -80,22 +82,31 @@ def check_csv_graph(artifact_dir, g_truth):
 def combine_and_create_pkl(indir, outfile, ntuples=2):
     all_dfs = []
     for file in glob.glob(indir + '*.csv'):
-        all_dfs.append(load_distances_from_file(file, ntuples=ntuples))
+        all_dfs.append(load_distances_from_pandas_file(file, ntuples=ntuples))
 
     pd.concat(all_dfs).sort_values('score', ascending=False).to_csv(outfile)
 
 
-def load_distances_from_pandas_file(filename):
-    score_df = pd.read_csv(filename, index_col=0)
-    df_list = [x for x in score_df.columns if 'df' in x]
-    scores_list = list(set(score_df.columns) - set(df_list))
+def load_distances_from_pandas_file(filename, csize=10000):
+    logger.info('Loading CSV Chunks...')
+    chunks = pd.read_csv(filename, index_col=0, chunksize=csize)
+    total_chunks = np.ceil(sum(1 for row in open(filename, 'r')) / csize)
+
+    logger.info('Chunk Loaded...')
     pairwise_scores = defaultdict(PQEdges)
-    for label in scores_list:
-        for ix, row in score_df.iterrows():
+
+    for c, chunk in tqdm(enumerate(chunks), total=total_chunks):
+        if c == 0:
+            df_list = [x for x in chunk.columns if 'df' in x]
+            scores_list = list(set(chunk.columns) - set(df_list))
+            #logger.info(df_list, scores_list)
+
+        for ix, row in chunk.iterrows():
             k = [row[x] for x in df_list]
             key = ((k[0],k[1]), k[2]) if len(k) == 3 else frozenset(k)
-            logger.debug(f'Dataframe variables: {k} : {key} : {row[label]}')
-            pairwise_scores[label].additem(key, float(row[label]))
+            #logger.debug(f'Dataframe variables: {k} : {key} : {row[label]}')
+            for label in scores_list:
+                pairwise_scores[label].additem(key, float(row[label]))
 
     return pairwise_scores
 
@@ -169,6 +180,7 @@ def store_all_distances(pairwise_scores, out_dir):
 
 
 def write_graph(g_inferred, output_file):
+    logger.info(f"Writing out inferred graph file: {output_file}")
     nx.write_edgelist(g_inferred, output_file, data=True)
 
 

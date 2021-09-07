@@ -115,7 +115,7 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
 
 
 # Assumes corresponding column names and valid indices in both data frames
-def compute_col_jaccard_df(d1, d2, df_dict):
+def compute_baseline(d1, d2, df_dict):
     df1 = df_dict[d1]
     df2 = df_dict[d2]
     # fill NaN values in df1, df2 to some token val
@@ -125,7 +125,7 @@ def compute_col_jaccard_df(d1, d2, df_dict):
     common_cols = set(df1).intersection(set(df2))
 
     if len(common_cols) == 0:
-        return 0.0
+        return {'baseline' : 0.0}
 
     common_cols_jaccard = []
 
@@ -137,9 +137,9 @@ def compute_col_jaccard_df(d1, d2, df_dict):
             logger.debug(f'col: {col} jaccard: {sim}')
 
         except Exception as e:
-            print(col)
-            print(set_jaccard_similarity(set(df1[col].values), set(df2[col].values)))
+            logger.error(f'Common Columns: {col}')
+            logger.error(f"Set JSIM: {set_jaccard_similarity(set(df1[col].values) , set(df2[col].values))}")
             raise e
 
     logger.debug(f'num/denom: {np.sum(common_cols_jaccard)}, {len(set(df1).union(set(df2)))}')
-    return np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))
+    return {'baseline' : np.sum(common_cols_jaccard) / len(set(df1).union(set(df2)))}
