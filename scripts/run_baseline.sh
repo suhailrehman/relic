@@ -5,7 +5,7 @@ offline_compute=true
 num_components=1
 
 {
-for i in {2..2};
+for i in {1..16};
 do
   echo Processing Workflow $i
   indir=$basedir/$i/combined/artifacts/
@@ -30,7 +30,7 @@ do
                           --out=$outdir \
                           --pre_compute=True \
                           --max_n_edges=$((num_artifacts-num_components)) \
-                          --result_prefix=baseline_
+                          --result_prefix=baseline_ \
                           --baseline=True
 
   echo "$i; `date` ;Completed"

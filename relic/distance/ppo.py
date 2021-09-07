@@ -30,6 +30,10 @@ def compute_all_ppo_labels(d1, d2, df_dict, **kwargs):
     return frozenset([d1,d2]), compute_all_ppo(df_dict[d1], df_dict[d2], **kwargs)
 
 
+def compute_baseline_labels(d1, d2, df_dict, **kwargs):
+    return frozenset([d1,d2]), compute_baseline(df_dict[d1], df_dict[d2], **kwargs)
+
+
 # Assumes corresponding column names are same and PK refers to same column.
 def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
                     column_match=False, string_cols=True):
@@ -115,9 +119,7 @@ def compute_all_ppo(df1, df2, ppo='all', pk_col_name=None, reindex=False,
 
 
 # Assumes corresponding column names and valid indices in both data frames
-def compute_baseline(d1, d2, df_dict):
-    df1 = df_dict[d1]
-    df2 = df_dict[d2]
+def compute_baseline(df1, df2):
     # fill NaN values in df1, df2 to some token val
     df1 = df1.fillna('jac_tmp_NA').reset_index(drop=True)
     df2 = df2.fillna('jac_tmp_NA').reset_index(drop=True)

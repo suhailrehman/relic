@@ -9,7 +9,7 @@ import argparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS, compute_baseline
+from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS, compute_baseline_labels
 from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
 from relic.graphs.clustering import exact_schema_cluster
 from relic.utils.serialize import build_df_dict_dir
@@ -25,7 +25,7 @@ _function_mappings = {
     'groupby': groupby_detector,
     'pivot': pivot_detector,
     'join': join_detector,
-    'baseline' : compute_baseline
+    'baseline' : compute_baseline_labels
 }
 
 
@@ -78,7 +78,13 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
     file_part = os.path.basename(infile)
     df_dict = {}
     i = 0
-    labels = PPO_LABELS if function == compute_all_ppo_labels else [function.__name__.split('_')[0]]
+    if function == compute_all_ppo_labels:
+        labels = PPO_LABELS
+    elif 'detector' in function.__name__:
+        labels = [function.__name__.split('_')[0]]
+    elif 'baseline' in function.__name__:
+        labels = ['baseline']
+
     ntuples = 3 if function == join_detector else 2
     with open(out, 'w') as outfile:
         # write header

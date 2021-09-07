@@ -18,7 +18,7 @@ import networkx as nx
 from networkx.utils import UnionFind
 
 from relic.distance.nppo import join_detector, groupby_detector, pivot_detector
-from relic.distance.ppo import compute_all_ppo_labels, compute_baseline
+from relic.distance.ppo import compute_all_ppo_labels, compute_baseline, compute_baseline_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores, tiebreak_hash_edge_join, \
     tiebreak_join_from_inferred_graph
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
@@ -438,7 +438,7 @@ def run_baseline(relic_instance, options, distance_load_function, job_status, st
             relic_instance.pairwise_weights.update(distance_load_function(options.out + '/baseline.csv'))
             logger.info(f'Loading complete...')
         else:
-            relic_instance.compute_edges_of_type(edge_type='baseline', similarity_function=compute_baseline, n_pairs=2)
+            relic_instance.compute_edges_of_type(edge_type='baseline', similarity_function=compute_baseline_labels, n_pairs=2)
         relic_instance.add_edges_of_type(edge_type='baseline', intra_cluster=False, sim_threshold=0.0,
                                          tiebreak_function=None,
                                          final_function=tiebreak_hash_edge
