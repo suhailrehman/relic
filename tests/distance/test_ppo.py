@@ -26,7 +26,7 @@ def test_compute_baseline():
     df1 = pd.read_csv(data_dir+file1, index_col=0)
     df2 = pd.read_csv(data_dir+file2, index_col=0)
     df_dict = {file1: df1, file2: df2}
-    result_dict = compute_baseline(file1, file2, df_dict)
+    result_dict = compute_baseline_labels(file1, file2, df_dict)[1]
     logging.debug(f'Result Dict: {result_dict}')
     assert 'baseline' in result_dict.keys()
     assert 0.0 <= result_dict['baseline'] <= 1.0

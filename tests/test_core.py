@@ -5,7 +5,7 @@ import networkx as nx
 import relic.distance.ppo
 from relic.core import *
 from relic.distance.nppo import join_detector, groupby_detector, pivot_detector
-from relic.distance.tiebreakers import tiebreak_from_computed_scores, tiebreak_hash_edge
+from relic.distance.tiebreakers import tiebreak_from_computed_scores, tiebreak_hash_edge, tiebreak_hash_edge_pqe
 
 import pytest
 import logging
@@ -50,9 +50,11 @@ def test_set_initial_clusters(relic_instance):
 
 def test_add_ppo_edges(relic_instance):
     logging.info('Testing PPO Cell Jaccard Edges')
+    tiebreak_pqe = PQEdges()
     relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True, tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
+                                     final_function=tiebreak_hash_edge_pqe,
+                                     tiebreak_pqe= tiebreak_pqe,
                                      tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
                                                       'score_type': 'overlap'}
                                      )
@@ -64,10 +66,12 @@ def test_add_ppo_edges(relic_instance):
 
 def test_add_join_edges(relic_instance):
     logging.info('Testing Join Edges')
+    tiebreak_pqe = PQEdges()
     relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
     relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
                                      tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
+                                     final_function=tiebreak_hash_edge_pqe,
+                                     tiebreak_pqe= tiebreak_pqe,
                                      tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
                                                       'score_type': 'overlap'}
                                      )
@@ -80,9 +84,11 @@ def test_add_join_edges(relic_instance):
 
 def test_inter_cell_edges(relic_instance):
     logging.info('Testing Intra_cell Edges')
+    tiebreak_pqe = PQEdges()
     relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False, sim_threshold=0.1,
                                      tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
+                                     final_function=tiebreak_hash_edge_pqe,
+                                     tiebreak_pqe= tiebreak_pqe,
                                      tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
                                                       'score_type': 'overlap'}
                                      )
@@ -95,11 +101,13 @@ def test_inter_cell_edges(relic_instance):
 def test_groupby_edges(relic_instance):
     logging.info('Testing GroupBy Edges')
     relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
+    logging.info(f"GroupbyDict: {relic_instance.pairwise_weights['groupby']}")
+    tiebreak_pqe = PQEdges()
     relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
-                                     tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
-                                     tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
-                                                      'score_type': 'containment'}
+                                     tiebreak_function=tiebreak_groupby_replay,
+                                     final_function=tiebreak_hash_edge_pqe,
+                                     tiebreak_pqe= tiebreak_pqe,
+                                     tiebreak_kwargs={'df_dict': relic_instance.dataset}
                                      )
     expected_graph = nx.read_edgelist(expected_out_dir+'infered_mst_pc2cell+containment+group+join+pivot.csv')
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if data['type'] == 'groupby')
@@ -110,9 +118,11 @@ def test_groupby_edges(relic_instance):
 def test_pivot_edges(relic_instance):
     logging.info('Testing Pivot Edges')
     relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
+    tiebreak_pqe = PQEdges()
     relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
                                      tiebreak_function=tiebreak_from_computed_scores,
-                                     final_function=tiebreak_hash_edge,
+                                     final_function=tiebreak_hash_edge_pqe,
+                                     tiebreak_pqe= tiebreak_pqe,
                                      tiebreak_kwargs={'pairwise_weights' : relic_instance.pairwise_weights,
                                                       'score_type': 'containment'}
                                      )
@@ -120,6 +130,19 @@ def test_pivot_edges(relic_instance):
     expected_edge_set = set(frozenset((u, v)) for u, v, data in expected_graph.edges(data=True) if data['type'] == 'pivot')
     actual_edge_set = set(frozenset((u,v)) for u, v, data in relic_instance.g_inferred.edges(data=True) if data['type'] == 'pivot')
     assert actual_edge_set == expected_edge_set
+
+
+def test_baseline_edges(tmpdir_factory):
+    logging.info('Testing Baseline Graph creation')
+    d = tmpdir_factory.mktemp('inferred_actual')
+    logging.info('Testing RELIC on input:' + str(data_dir))
+    logging.info('Temporary Output directory: '+str(d))
+    ri = RelicAlgorithm(data_dir, d, name='test_workflow')
+    ri.create_initial_graph()
+    ri.compute_edges_of_type(edge_type='baseline', similarity_function=compute_baseline_labels, n_pairs=2)
+    ri.add_edges_of_type(edge_type='baseline', intra_cluster=False, sim_threshold=0.0,
+                         final_function=tiebreak_hash_edge_pqe)
+    assert not nx.is_empty(ri.g_inferred)
 
 
 def test_store_load_distances(relic_instance, tmpdir):

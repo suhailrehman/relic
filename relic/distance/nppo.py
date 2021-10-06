@@ -15,7 +15,7 @@ import networkx as nx
 from collections import defaultdict
 
 from relic.distance import ppo, set_functions
-from relic.distance.tiebreakers import hash_edge_join, hash_edge
+#from relic.distance.tiebreakers import hash_edge_join, hash_edge
 
 from relic.graphs import clustering
 import csv
@@ -155,7 +155,7 @@ def join_detector(df1, df2, df3, df_dict, debug=False, replay=True):
 
     logger.debug(f'max_col_ratio, maxcontain, replay_score: {max_col_number}, {containments[max_containment]}, {replay_score}')
 
-    return (max_combo[0], max_combo[1]), {'join': replay_score}
+    return ((df1, df2), df3), {'join': replay_score}
 
 
 def get_max_coherent_columns_1(df1, df2):
@@ -350,7 +350,7 @@ def groupby_detector(d1, d2, df_dict, debug=False, strict_schema=False, lattice_
 
     column_diff = set_functions.set_jaccard_similarity(set(df1.columns), set(df2.columns))
     contraction_ratio = len(src.index) / len(dst.index)
-    final_val = ((1.0 * len(group_cols) * dst_group_keyness_ratio) - missing_vals)  # * column_diff
+    final_val = ((1.0 * len(group_cols) * dst_group_keyness_ratio) - missing_vals) #- (1.0 - column_diff)
 
     logger.debug(f'GB({d1},{d2}): final_val = (1.0 * len(group_cols) * group_keyness_ratio) - missing_vals')
     logger.debug(f'GB({d1},{d2}): {final_val} = (1.0 * {len(group_cols)} * {dst_group_keyness_ratio} - {missing_vals}')
@@ -394,72 +394,72 @@ def transform_detector(df1_name, df2_name, df_dict, g_inferred):
 ### Common NPPO component search routine:
 
 
-def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, replay_dict=None,
-                              nppo_function=groupby_detector,
-                              label='groupby',
-                              threshold=1.0, g_truth=None):
-    components = [c for c in nx.connected_components(g_inferred)]
-    print('components: ', len(components))
-
-    all_cmp_pairs_similarties = []
-
-    for srccmp, dstcmp in tqdm(itertools.combinations(components, 2), total=math.comb(len(components), 2)):
-        # Group Edges Checked here
-        similarites, nppo_dict = get_pairs_nppo_edges(df_dict, srccmp, dstcmp, g_inferred, nppo_function, nppo_dict)
-        all_cmp_pairs_similarties.extend(similarites)
-
-    if not all_cmp_pairs_similarties:
-        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
-
-    # TODO: Common scoring function. right now 1.0 for all edges found.
-    all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
-
-    # print('NNPOs detected')
-    # print(all_cmp_pairs_similarties)
-
-    score_dict = clustering.generate_score_dict(all_cmp_pairs_similarties)
-    maxscore = max(score_dict)
-
-    if maxscore < threshold:
-        print('No more edges above threshold')
-        return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
-
-    if len(score_dict[maxscore]) > 1:
-        '''
-        # Removing ground truth capabilities here.
-        if nppo_function == df_groupby_check_new:
-            print("Breaking tie by groupby replay", score_dict[maxscore])
-            src, dst, score = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], g_truth=g_truth)
-
-        elif nppo_function == pivot_detector: # Consider pivot tiebreaker to be GT group edge if present.
-            print("Adding GT edge if present for pivot")
-            found = False
-            for u, v, s in score_dict[maxscore]:
-                if g_truth.to_undirected().has_edge(u,v):
-                    src, dst, score = u,v,s
-                    found=True
-            if not found:
-                return None, edge_num, nppo_dict, None
-
-        else:
-        '''
-
-        if nppo_function == groupby_detector:
-            # print("Breaking tie by column-level", score_dict[maxscore])
-            # src, dst, score = tiebreak_by_col_level(df_dict, score_dict[maxscore])
-            print("Breaking tie by groupby-replay", score_dict[maxscore])
-            src, dst, score, replay_dict = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], replay_dict)
-        else:
-            print("Breaking tie by contraction ratio", score_dict[maxscore])
-            src, dst, score = tie_break_by_contraction_ratio(df_dict, score_dict[maxscore])
-
-    else:
-        src, dst, score = score_dict[maxscore][0]
-
-    print('Adding nppo/group edge', src, dst, score)
-    g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=label)
-    edge_num += 1
-    return g_inferred, edge_num, nppo_dict, (src, dst), all_cmp_pairs_similarties, replay_dict
+# def find_components_nppo_edge(g_inferred, df_dict, edge_num, nppo_dict, replay_dict=None,
+#                               nppo_function=groupby_detector,
+#                               label='groupby',
+#                               threshold=1.0, g_truth=None):
+#     components = [c for c in nx.connected_components(g_inferred)]
+#     print('components: ', len(components))
+#
+#     all_cmp_pairs_similarties = []
+#
+#     for srccmp, dstcmp in tqdm(itertools.combinations(components, 2), total=math.comb(len(components), 2)):
+#         # Group Edges Checked here
+#         similarites, nppo_dict = get_pairs_nppo_edges(df_dict, srccmp, dstcmp, g_inferred, nppo_function, nppo_dict)
+#         all_cmp_pairs_similarties.extend(similarites)
+#
+#     if not all_cmp_pairs_similarties:
+#         return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
+#
+#     # TODO: Common scoring function. right now 1.0 for all edges found.
+#     all_cmp_pairs_similarties.sort(key=lambda x: x[2], reverse=True)
+#
+#     # print('NNPOs detected')
+#     # print(all_cmp_pairs_similarties)
+#
+#     score_dict = clustering.generate_score_dict(all_cmp_pairs_similarties)
+#     maxscore = max(score_dict)
+#
+#     if maxscore < threshold:
+#         print('No more edges above threshold')
+#         return None, edge_num, nppo_dict, None, all_cmp_pairs_similarties, replay_dict
+#
+#     if len(score_dict[maxscore]) > 1:
+#         '''
+#         # Removing ground truth capabilities here.
+#         if nppo_function == df_groupby_check_new:
+#             print("Breaking tie by groupby replay", score_dict[maxscore])
+#             src, dst, score = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], g_truth=g_truth)
+#
+#         elif nppo_function == pivot_detector: # Consider pivot tiebreaker to be GT group edge if present.
+#             print("Adding GT edge if present for pivot")
+#             found = False
+#             for u, v, s in score_dict[maxscore]:
+#                 if g_truth.to_undirected().has_edge(u,v):
+#                     src, dst, score = u,v,s
+#                     found=True
+#             if not found:
+#                 return None, edge_num, nppo_dict, None
+#
+#         else:
+#         '''
+#
+#         if nppo_function == groupby_detector:
+#             # print("Breaking tie by column-level", score_dict[maxscore])
+#             # src, dst, score = tiebreak_by_col_level(df_dict, score_dict[maxscore])
+#             print("Breaking tie by groupby-replay", score_dict[maxscore])
+#             src, dst, score, replay_dict = tiebreak_by_groupby_replay(df_dict, score_dict[maxscore], replay_dict)
+#         else:
+#             print("Breaking tie by contraction ratio", score_dict[maxscore])
+#             src, dst, score = tie_break_by_contraction_ratio(df_dict, score_dict[maxscore])
+#
+#     else:
+#         src, dst, score = score_dict[maxscore][0]
+#
+#     print('Adding nppo/group edge', src, dst, score)
+#     g_inferred.add_edge(src, dst, weight=score, num=edge_num, type=label)
+#     edge_num += 1
+#     return g_inferred, edge_num, nppo_dict, (src, dst), all_cmp_pairs_similarties, replay_dict
 
 
 def augment_triples(triples, g_inferred):
@@ -497,93 +497,93 @@ def augment_tuples(tuples, g_inferred):
     return new_edges
 
 
-def select_max_join_score(score_dict, g_inferred, threshold):
-    src, dst, score = None, None, None
+# def select_max_join_score(score_dict, g_inferred, threshold):
+#     src, dst, score = None, None, None
+#
+#     for score in sorted(score_dict.keys(), reverse=True):
+#         if score >= threshold:
+#             if len(score_dict[score]) > 1:
+#                 print("Warning multiple join-edges with same score", score_dict[score])
+#             s_edge_list = sorted(score_dict[score], key=hash_edge_join)
+#             for src_c, dst_c, score_c in s_edge_list:
+#                 current_joins = sum(1 for e in g_inferred.edges(dst_c, data=True) if e[2]['type'] == 'join')
+#                 if current_joins < 2:
+#                     return src_c, dst_c, score_c
+#                 else:
+#                     print('Skipping ', src_c, dst_c, score_c, 'as destination is already part of join')
+#         else:
+#             break
+#
+#     return src, dst, score
 
-    for score in sorted(score_dict.keys(), reverse=True):
-        if score >= threshold:
-            if len(score_dict[score]) > 1:
-                print("Warning multiple join-edges with same score", score_dict[score])
-            s_edge_list = sorted(score_dict[score], key=hash_edge_join)
-            for src_c, dst_c, score_c in s_edge_list:
-                current_joins = sum(1 for e in g_inferred.edges(dst_c, data=True) if e[2]['type'] == 'join')
-                if current_joins < 2:
-                    return src_c, dst_c, score_c
-                else:
-                    print('Skipping ', src_c, dst_c, score_c, 'as destination is already part of join')
-        else:
-            break
-
-    return src, dst, score
 
 
-
-def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.999):
-    components = [c for c in nx.connected_components(g_inferred)]
-    if len(components) > 2:
-        combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
-        triples = set(item for sublist in combos for item in sublist)
-        print(len(triples), "number of join combinations to be explored")
-        # print(triples)
-        triples = augment_triples(triples, g_inferred)
-        print(len(triples), "number of join combinations to be explored after augmentation")
-    else:
-        # Only two components:
-        combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 2)]
-        tuples = set(item for sublist in combos for item in sublist)
-        print(len(tuples), "number of join combinations to be explored")
-        # print(triples)
-        triples = augment_tuples(tuples, g_inferred)
-        print(len(triples), "number of join combinations to be explored after augmentation")
-
-        # print(triples)
-
-    join_scores = []
-
-    for d1, d2, d3 in tqdm(triples):
-        # print(tuple(fset))
-        # d1,d2,d3 = tuple(fset)
-        if frozenset((d1, d2, d3)) in triple_dict:
-            similarities = triple_dict[frozenset((d1, d2, d3))]
-        else:
-            similarities = join_detector(d1, d2, d3, df_dict)
-            triple_dict[frozenset((d1, d2, d3))] = similarities
-
-        join_scores.append(similarities)
-
-    if not join_scores:
-        return None, edge_num, triple_dict, None, None
-
-    # print('NNPOs detected')
-    # print(join_scores)
-
-    score_dict = clustering.generate_score_dict(join_scores)
-    maxscore = max(score_dict)
-
-    if maxscore <= threshold:
-        return None, edge_num, triple_dict, None, None
-
-    src, dst, score = select_max_join_score(score_dict, g_inferred, threshold)
-
-    if None in (src, dst, score):
-        return None, edge_num, triple_dict, None, None
-
-    if g_inferred.has_edge(src[0], dst):
-        print('Join Edge already present: ', src[0], dst)
-
-    print('Adding nppo/group edge', src[0], dst, score)
-    g_inferred.add_edge(src[0], dst, weight=score, num=edge_num, type='join')
-    edge_num += 1
-
-    if g_inferred.has_edge(src[1], dst):
-        print('Join Edge already present: ', src[1], dst)
-
-    print('Adding nppo/group edge', src[1], dst, score)
-    g_inferred.add_edge(src[1], dst, weight=score, num=edge_num, type='join')
-
-    edge_num += 1
-
-    return g_inferred, edge_num, triple_dict, (src[0], dst), (src[1], dst)
+# def find_components_join_edge(g_inferred, df_dict, edge_num, triple_dict, threshold=0.999):
+#     components = [c for c in nx.connected_components(g_inferred)]
+#     if len(components) > 2:
+#         combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 3)]
+#         triples = set(item for sublist in combos for item in sublist)
+#         print(len(triples), "number of join combinations to be explored")
+#         # print(triples)
+#         triples = augment_triples(triples, g_inferred)
+#         print(len(triples), "number of join combinations to be explored after augmentation")
+#     else:
+#         # Only two components:
+#         combos = [[frozenset(i) for i in itertools.product(*c)] for c in itertools.combinations(components, 2)]
+#         tuples = set(item for sublist in combos for item in sublist)
+#         print(len(tuples), "number of join combinations to be explored")
+#         # print(triples)
+#         triples = augment_tuples(tuples, g_inferred)
+#         print(len(triples), "number of join combinations to be explored after augmentation")
+#
+#         # print(triples)
+#
+#     join_scores = []
+#
+#     for d1, d2, d3 in tqdm(triples):
+#         # print(tuple(fset))
+#         # d1,d2,d3 = tuple(fset)
+#         if frozenset((d1, d2, d3)) in triple_dict:
+#             similarities = triple_dict[frozenset((d1, d2, d3))]
+#         else:
+#             similarities = join_detector(d1, d2, d3, df_dict)
+#             triple_dict[frozenset((d1, d2, d3))] = similarities
+#
+#         join_scores.append(similarities)
+#
+#     if not join_scores:
+#         return None, edge_num, triple_dict, None, None
+#
+#     # print('NNPOs detected')
+#     # print(join_scores)
+#
+#     score_dict = clustering.generate_score_dict(join_scores)
+#     maxscore = max(score_dict)
+#
+#     if maxscore <= threshold:
+#         return None, edge_num, triple_dict, None, None
+#
+#     src, dst, score = select_max_join_score(score_dict, g_inferred, threshold)
+#
+#     if None in (src, dst, score):
+#         return None, edge_num, triple_dict, None, None
+#
+#     if g_inferred.has_edge(src[0], dst):
+#         print('Join Edge already present: ', src[0], dst)
+#
+#     print('Adding nppo/group edge', src[0], dst, score)
+#     g_inferred.add_edge(src[0], dst, weight=score, num=edge_num, type='join')
+#     edge_num += 1
+#
+#     if g_inferred.has_edge(src[1], dst):
+#         print('Join Edge already present: ', src[1], dst)
+#
+#     print('Adding nppo/group edge', src[1], dst, score)
+#     g_inferred.add_edge(src[1], dst, weight=score, num=edge_num, type='join')
+#
+#     edge_num += 1
+#
+#     return g_inferred, edge_num, triple_dict, (src[0], dst), (src[1], dst)
 
 
 def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_function, nppo_dict, threshold=0.6):
@@ -621,28 +621,28 @@ def compute_contraction_ratio(df_dict, df1_name, df2_name):
     return len(srcdf.index) / len(dstdf.index)
 
 
-def tie_break_by_contraction_ratio(df_dict, pairlist):
-    max_contraction = None
-    max_score = 0
-
-    scores_list = []
-
-    for src, dst, score in pairlist:
-        contraction = compute_contraction_ratio(df_dict, src, dst)
-        scores_list.append((src, dst, score, contraction))
-
-        if contraction >= max_score:
-            max_contraction = (src, dst, score)
-            max_score = contraction
-
-    score_dict = clustering.generate_tiebreak_score_dict(scores_list)
-
-    if len(score_dict[max_score]) > 1:
-        print("Multiple Contraction candidates:", score_dict[max_score])
-        s_edge_list = sorted(score_dict[max_score], key=hash_edge)
-        return s_edge_list[0]
-
-    return max_contraction
+# def tie_break_by_contraction_ratio(df_dict, pairlist):
+#     max_contraction = None
+#     max_score = 0
+#
+#     scores_list = []
+#
+#     for src, dst, score in pairlist:
+#         contraction = compute_contraction_ratio(df_dict, src, dst)
+#         scores_list.append((src, dst, score, contraction))
+#
+#         if contraction >= max_score:
+#             max_contraction = (src, dst, score)
+#             max_score = contraction
+#
+#     score_dict = clustering.generate_tiebreak_score_dict(scores_list)
+#
+#     if len(score_dict[max_score]) > 1:
+#         print("Multiple Contraction candidates:", score_dict[max_score])
+#         s_edge_list = sorted(score_dict[max_score], key=hash_edge)
+#         return s_edge_list[0]
+#
+#     return max_contraction
 
 
 def find_column_set_match(df, valueset, string_convert=False):
@@ -771,61 +771,61 @@ def pivot_detector(df1_name, df2_name, df_dict, g_inferred=None, match_values=Tr
     return frozenset((df1_name, df2_name)), {'pivot': index_containment * max_col_score}
 
 
-def tiebreak_by_timestamp_synthetic(df_dict, pairlist):
-    min_ts_diff = None
-    min_diff = np.inf
+# def tiebreak_by_timestamp_synthetic(df_dict, pairlist):
+#     min_ts_diff = None
+#     min_diff = np.inf
+#
+#     scores_list = []
+#
+#     for src, dst, score in pairlist:
+#         src_time = int(src.split('.csv')[0])
+#         dst_time = int(dst.split('.csv')[0])
+#
+#         time_diff = abs(dst_time - src_time)
+#
+#         scores_list.append((src, dst, time_diff))
+#
+#         if time_diff <= min_diff:
+#             min_ts_diff = (src, dst, score)
+#             min_diff = time_diff
+#
+#     score_dict = clustering.generate_score_dict(scores_list)
+#
+#     if len(score_dict[min_diff]) > 1:
+#         print("Multiple Timestamp candidates:", score_dict[min_diff])
+#         s_edge_list = sorted(score_dict[min_diff], key=hash_edge)
+#         return s_edge_list[0]
+#
+#     return min_ts_diff
 
-    scores_list = []
 
-    for src, dst, score in pairlist:
-        src_time = int(src.split('.csv')[0])
-        dst_time = int(dst.split('.csv')[0])
-
-        time_diff = abs(dst_time - src_time)
-
-        scores_list.append((src, dst, time_diff))
-
-        if time_diff <= min_diff:
-            min_ts_diff = (src, dst, score)
-            min_diff = time_diff
-
-    score_dict = clustering.generate_score_dict(scores_list)
-
-    if len(score_dict[min_diff]) > 1:
-        print("Multiple Timestamp candidates:", score_dict[min_diff])
-        s_edge_list = sorted(score_dict[min_diff], key=hash_edge)
-        return s_edge_list[0]
-
-    return min_ts_diff
-
-
-def tiebreak_by_groupby_replay(df_dict, pairlist, replay_dict):
-    max_replay_candidate = None
-    max_cell_score = 0.0
-
-    scores_list = []
-
-    for src, dst, score in pairlist:
-        if frozenset((src, dst)) in replay_dict:
-            replay_score = replay_dict[frozenset((src, dst))]
-        else:
-            replay_score = replay_groupby(df_dict[src], df_dict[dst])
-            replay_dict[frozenset((src, dst))] = replay_score
-
-        scores_list.append((src, dst, replay_score))
-
-        if replay_score >= max_cell_score:
-            max_replay_candidate = (src, dst, replay_score)
-            max_cell_score = replay_score
-
-    score_dict = clustering.generate_score_dict(scores_list)
-
-    if len(score_dict[max_cell_score]) > 1:
-        print("Multiple Replay candidates:", score_dict[max_cell_score])
-        s_edge_list = sorted(score_dict[max_cell_score], key=hash_edge)
-        return *s_edge_list[0], replay_dict
-
-    return *max_replay_candidate, replay_dict
+# def tiebreak_by_groupby_replay(df_dict, pairlist, replay_dict):
+#     max_replay_candidate = None
+#     max_cell_score = 0.0
+#
+#     scores_list = []
+#
+#     for src, dst, score in pairlist:
+#         if frozenset((src, dst)) in replay_dict:
+#             replay_score = replay_dict[frozenset((src, dst))]
+#         else:
+#             replay_score = replay_groupby(df_dict[src], df_dict[dst])
+#             replay_dict[frozenset((src, dst))] = replay_score
+#
+#         scores_list.append((src, dst, replay_score))
+#
+#         if replay_score >= max_cell_score:
+#             max_replay_candidate = (src, dst, replay_score)
+#             max_cell_score = replay_score
+#
+#     score_dict = clustering.generate_score_dict(scores_list)
+#
+#     if len(score_dict[max_cell_score]) > 1:
+#         print("Multiple Replay candidates:", score_dict[max_cell_score])
+#         s_edge_list = sorted(score_dict[max_cell_score], key=hash_edge)
+#         return *s_edge_list[0], replay_dict
+#
+#     return *max_replay_candidate, replay_dict
 
 
 def replay_groupby(df1, df2, grouplist=None,
@@ -899,30 +899,30 @@ def replay_merge(src1, src2, dst, key, threshold=0.95):
     return max([inner_score, left_score, right_score])
 
 
-def tiebreak_by_col_level(df_dict, pairlist):
-    max_col_candidate = None
-    max_col_score = 0.0
-
-    scores_list = []
-
-    for src, dst, score in pairlist:
-        col_score = ppo.compute_col_jaccard_DF(df_dict[src], df_dict[dst])
-
-        scores_list.append((src, dst, col_score))
-
-        if col_score >= max_col_score:
-            max_col_candidate = (src, dst, col_score)
-            max_col_score = col_score
-
-    score_dict = clustering.generate_score_dict(scores_list)
-
-    if len(score_dict[max_col_score]) > 1:
-        print("Multiple Column-Level candidates:", score_dict[max_col_score])
-        s_edge_list = sorted(score_dict[max_col_score], key=hash_edge)
-        print('Sorted & Hash Values:', s_edge_list, list(map(hash_edge, s_edge_list)))
-        return s_edge_list[0]
-
-    return max_col_candidate
+# def tiebreak_by_col_level(df_dict, pairlist):
+#     max_col_candidate = None
+#     max_col_score = 0.0
+#
+#     scores_list = []
+#
+#     for src, dst, score in pairlist:
+#         col_score = ppo.compute_col_jaccard_DF(df_dict[src], df_dict[dst])
+#
+#         scores_list.append((src, dst, col_score))
+#
+#         if col_score >= max_col_score:
+#             max_col_candidate = (src, dst, col_score)
+#             max_col_score = col_score
+#
+#     score_dict = clustering.generate_score_dict(scores_list)
+#
+#     if len(score_dict[max_col_score]) > 1:
+#         print("Multiple Column-Level candidates:", score_dict[max_col_score])
+#         s_edge_list = sorted(score_dict[max_col_score], key=hash_edge)
+#         print('Sorted & Hash Values:', s_edge_list, list(map(hash_edge, s_edge_list)))
+#         return s_edge_list[0]
+#
+#     return max_col_candidate
 
 
 def merge_size(left_frame, right_frame, group_by, how='inner'):

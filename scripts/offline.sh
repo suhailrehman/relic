@@ -98,7 +98,6 @@ python ../relic/offline.py --mode=enumerate --input="$artifact_dir" --output=$ou
 mkdir -p $output_dir/"${ntuples}_combos/"
 
 # Split tuples into $num_procs files to distribute
-#split -da 2 -l $((`wc -l < $output_dir/tuples.csv` / 20)) $output_dir/tuples.csv $output_dir/tuples/tuples_part_ --additional-suffix=".csv"
 split -da 2 -l $((`wc -l < $output_dir/"${ntuples}_combos.csv"` / $num_procs)) $output_dir/"${ntuples}_combos.csv" $output_dir/"${ntuples}_combos"/"${ntuples}_combos"_part_ --additional-suffix=".csv"
 
 

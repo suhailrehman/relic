@@ -20,7 +20,8 @@ from networkx.utils import UnionFind
 from relic.distance.nppo import join_detector, groupby_detector, pivot_detector
 from relic.distance.ppo import compute_all_ppo_labels, compute_baseline, compute_baseline_labels
 from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_computed_scores, tiebreak_hash_edge_join, \
-    tiebreak_join_from_inferred_graph
+    tiebreak_join_from_inferred_graph, tiebreak_join_computed_scores, tiebreak_join_src_containment, \
+    tiebreak_groupby_replay, tiebreak_hash_edge_join_pqe, tiebreak_hash_edge_pqe
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
 from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool, \
@@ -142,7 +143,7 @@ class RelicAlgorithm:
 
     def add_edges_of_type(self, edge_type='jaccard', intra_cluster=False, tiebreak_function=None,
                           final_function=tiebreak_hash_edge,
-                          sim_threshold=0.1, max_step=False, tiebreak_kwargs=None):
+                          sim_threshold=0.1, max_step=False, tiebreak_pqe=None, tiebreak_kwargs=None):
 
         if len(self.g_inferred.edges) >= self.max_n_edges:
             logger.warning(f"Reached maximum edges, unable to add {edge_type} to graph")
@@ -176,6 +177,9 @@ class RelicAlgorithm:
             #logger.debug(f'UnionFind Status: {[x for x in self.components.to_sets()]}')
             max_edges = weights_pq.pop_unionfind_max(self.components)
             #logger.debug(f'MaxEdges Found:  {max_edges} edge(s)...')
+
+            add_remaining_tie_break_edges = False
+
             if not max_edges:
                 logger.debug('No compatible edges left in PQ/UnionFind')
                 stop = True
@@ -188,30 +192,60 @@ class RelicAlgorithm:
                 logger.info(f"Tiebreaking {len(max_edges)} edges...")
                 weight = max_edges[0][1]
                 if tiebreak_function:
-                    tie_break_edges = tiebreak_function(max_edges, **tiebreak_kwargs)
+                    tiebreak_pqe = tiebreak_function(max_edges, pqe=tiebreak_pqe, **tiebreak_kwargs)
+                    tie_break_edges = tiebreak_pqe.pop_max()
                 else:
                     tie_break_edges = max_edges
                 if len(tie_break_edges) > 1:
+                    final_pqe = PQEdges()
                     logger.info(f"Applying final tiebreaker for  {len(tie_break_edges)} edges...")
-                    edge = final_function(tie_break_edges)
+                    final_pqe = final_function(tie_break_edges, pqe=final_pqe)
+                    final_edges = final_pqe.pop_max()
+                    edge = final_edges[0][0]
+                    add_remaining_tie_break_edges = True
+
                 else:
-                    edge = max_edges[0]
-                for e in max_edges:
-                    if e not in self.pairwise_weights[edge_type] and e != edge:
-                        logger.debug(f'Adding back edge {e}, which is not {edge}')
-                        try:
-                            if self.components[e[0]] != self.components[e[1]]:
-                                self.pairwise_weights[edge_type].additem(e[0], e[1])
-                        except KeyError as e:
-                            logger.debug(f'Error: Trying to add back {e}, selected {edge}, to {edge_type} dict')
+                    edge = tie_break_edges[0]
 
             else:
                 edge = max_edges[0]
                 weight = edge[1]
 
             logger.info(f"Adding edge #{self.edge_no}: {edge[0]}, type {edge_type}, weight: {weight}")
+            if tiebreak_kwargs and 'pqe' in tiebreak_kwargs.keys():
+                logger.debug(f"PQE status: {tiebreak_kwargs['pqe']}")
             self.add_edge_and_merge_components(list(edge[0]), {'weight': weight, 'type': edge_type, 'num': self.edge_no})
             steps += 1
+
+            # Clean up and add back remaining edges to respective PQEs:
+            if len(max_edges) > 1:
+                logger.info(f'Adding back {len(max_edges)} edges to pqdict')
+                for e in max_edges:
+                    if e not in self.pairwise_weights[edge_type] and e != edge:
+                        try:
+                            if edge_type == 'join':
+                                u, v = e[0][0]
+                                dst = e[0][1]
+                                logger.debug(f"Evaluating Join Edge info: {u},,,{v}-->{dst}")
+
+                                if self.components[u] == self.components[dst] or self.components[v] == self.components[dst]:
+                                    logger.debug(f'Skipping adding back redundant edge: {e}')
+                                else:
+                                    self.pairwise_weights[edge_type].additem(e[0], e[1])
+                            else:
+                                if self.components[e[0]] != self.components[e[1]]:
+                                    self.pairwise_weights[edge_type].additem(e[0], e[1])
+                        except KeyError as e:
+                            logger.warning(f'Error: Trying to add back {e}, selected {edge}, to {edge_type} dict')
+
+                if add_remaining_tie_break_edges and tiebreak_function:
+                    for e in tie_break_edges:
+                        if self.components[e[0]] != self.components[e[1]]:
+                            if e != edge:
+                                if e not in tiebreak_pqe:
+                                    tiebreak_pqe.additem(e[0], e[1])
+
+
 
 
 def setup_arguments(args):
@@ -320,6 +354,7 @@ def setup_arguments(args):
 
     return options
 
+
 def run_precluster(relic_instance, options, job_status, status_file):
     if options.pre_cluster:
         update_phase(job_status, 'Clustering', status_file)
@@ -330,25 +365,32 @@ def run_precluster(relic_instance, options, job_status, status_file):
         logger.info('Looking for PPO edges within each cluster...')
 
         if options.celljaccard:
+            tiebreak_pqe = PQEdges()
+            final_pqe = PQEdges()
             update_phase(job_status, 'Intra-Cluster Jaccard', status_file)
             relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=True,
                                              tiebreak_function=tiebreak_from_computed_scores,
-                                             final_function=tiebreak_hash_edge,
+                                             final_function=tiebreak_hash_edge_pqe,
                                              sim_threshold=options.intra_cell,
+                                             tiebreak_pqe=tiebreak_pqe,
                                              tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                               'score_type': 'overlap'}
                                              )
 
         if options.cellcontain:
+            tiebreak_pqe = PQEdges()
+            final_pqe = PQEdges()
             update_phase(job_status, 'Intra-Cluster Containment', status_file)
             relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=True,
                                              tiebreak_function=tiebreak_from_computed_scores,
-                                             final_function=tiebreak_hash_edge,
+                                             final_function=tiebreak_hash_edge_pqe,
                                              sim_threshold=options.intra_contain,
+                                             tiebreak_pqe=tiebreak_pqe,
                                              tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                               'score_type': 'overlap'}
                                              )
     return relic_instance
+
 
 def run_join(relic_instance, options, distance_load_function, job_status, status_file):
     if options.join:
@@ -360,21 +402,30 @@ def run_join(relic_instance, options, distance_load_function, job_status, status
             logger.info(f'Loading complete...')
         else:
             relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
+
+        tiebreak_pqe = PQEdges()
+        final_pqe = PQEdges()
         relic_instance.add_edges_of_type(edge_type='join', intra_cluster=False, sim_threshold=1.0,
-                                         tiebreak_function=tiebreak_join_from_inferred_graph,
-                                         final_function=tiebreak_hash_edge_join,
-                                         tiebreak_kwargs={'g_inferred': relic_instance.g_inferred}
+                                         tiebreak_function=tiebreak_join_computed_scores,
+                                         final_function=tiebreak_hash_edge_join_pqe,
+                                         tiebreak_pqe=tiebreak_pqe,
+                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
+                                                          'score_type': 'containment'}
                                          )
     return relic_instance
+
 
 def run_inter_cell(relic_instance, options, job_status, status_file):
     logger.info('Looking for PPO edges across clusters...')
     if options.celljaccard:
+        tiebreak_pqe = PQEdges()
+        final_pqe = PQEdges()
         update_phase(job_status, 'Inter-Cluster Jaccard', status_file)
         relic_instance.add_edges_of_type(edge_type='jaccard', intra_cluster=False,
                                          tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
+                                         final_function=tiebreak_hash_edge_pqe,
                                          sim_threshold=options.inter_cell,
+                                         tiebreak_pqe=tiebreak_pqe,
                                          tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                           'score_type': 'overlap'}
                                          )
@@ -382,15 +433,19 @@ def run_inter_cell(relic_instance, options, job_status, status_file):
 
 def run_inter_contain(relic_instance, options, job_status, status_file):
     if options.cellcontain:
+        tiebreak_pqe = PQEdges()
+        final_pqe = PQEdges()
         update_phase(job_status, 'Inter-Cluster Containment', status_file)
         relic_instance.add_edges_of_type(edge_type='containment', intra_cluster=False,
                                          tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
+                                         final_function=tiebreak_hash_edge_pqe,
                                          sim_threshold=options.inter_contain,
+                                         tiebreak_pqe=tiebreak_pqe,
                                          tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                           'score_type': 'overlap'}
                                          )
     return relic_instance
+
 
 def run_groupby(relic_instance, options, distance_load_function, job_status, status_file):
     if options.groupby:
@@ -402,13 +457,18 @@ def run_groupby(relic_instance, options, distance_load_function, job_status, sta
             logger.info(f'Loading complete...')
         else:
             relic_instance.compute_edges_of_type(edge_type='groupby', similarity_function=groupby_detector, n_pairs=2)
+
+        tiebreak_pqe = PQEdges()
+        final_pqe = PQEdges()
         relic_instance.add_edges_of_type(edge_type='groupby', intra_cluster=False, sim_threshold=1.0,
-                                         tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
-                                         tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
-                                                          'score_type': 'containment'}
+                                         tiebreak_function=tiebreak_groupby_replay,
+                                         final_function=tiebreak_hash_edge_pqe,
+                                         tiebreak_pqe=tiebreak_pqe,
+                                         tiebreak_kwargs={'df_dict': relic_instance.dataset}
                                          )
+        logger.info(f'GB Tiebreak Dict: {len(tiebreak_pqe.keys())}')
     return relic_instance
+
 
 def run_pivot(relic_instance, options, distance_load_function, job_status, status_file):
     if options.pivot:
@@ -420,9 +480,12 @@ def run_pivot(relic_instance, options, distance_load_function, job_status, statu
             logger.info(f'Loading complete...')
         else:
             relic_instance.compute_edges_of_type(edge_type='pivot', similarity_function=pivot_detector, n_pairs=2)
+        tiebreak_pqe = PQEdges()
+        final_pqe = PQEdges()
         relic_instance.add_edges_of_type(edge_type='pivot', intra_cluster=False, sim_threshold=1.0,
                                          tiebreak_function=tiebreak_from_computed_scores,
-                                         final_function=tiebreak_hash_edge,
+                                         final_function=tiebreak_hash_edge_pqe,
+                                         tiebreak_pqe=tiebreak_pqe,
                                          tiebreak_kwargs={'pairwise_weights': relic_instance.pairwise_weights,
                                                           'score_type': 'containment'}
                                          )
@@ -439,9 +502,11 @@ def run_baseline(relic_instance, options, distance_load_function, job_status, st
             logger.info(f'Loading complete...')
         else:
             relic_instance.compute_edges_of_type(edge_type='baseline', similarity_function=compute_baseline_labels, n_pairs=2)
+
+        final_pqe = PQEdges()
         relic_instance.add_edges_of_type(edge_type='baseline', intra_cluster=False, sim_threshold=0.0,
                                          tiebreak_function=None,
-                                         final_function=tiebreak_hash_edge
+                                         final_function=tiebreak_hash_edge_pqe,
                                          )
     return relic_instance
 
@@ -487,7 +552,7 @@ def run_relic(options):
     update_phase(job_status, 'Computing Pairwise Distances', status_file)
 
     if options.baseline:
-        run_baseline(relic_instance, options, job_status, status_file)
+        run_baseline(relic_instance, options, distance_load_function, job_status, status_file)
     else:
         if options.pre_compute:
             logger.info(f'Loading Pairwise PPO distances from file...')

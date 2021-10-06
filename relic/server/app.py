@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 import sys
 
-import relic.graphs.graphs
+from relic.graphs.graphs import draw_web_graph
 from relic.core import main
 from bs4 import BeautifulSoup
 
@@ -89,11 +89,24 @@ def log(job_id):
 def render(job_id):
     width = float(request.args.get('width', default=5000))
     height = float(request.args.get('height', default=5000))
-    result_graph_file = f'/tmp/relic/{job_id}/inferred_graph.csv'
+    job_type = request.args.get('job_type', default=None)
+    g_truth = None
+    app.logger.info(f"Request for job {job_id}, type {job_type}")
+    if job_type:
+        result_graph_file = f'/tmp/relic/{job_id}/inferred/{job_type}_inferred_graph.csv'
+        g_truth_file = f'/tmp/relic/{job_id}/{job_id}_gt_fixed.pkl'
+        if os.path.exists(g_truth_file):
+            g_truth = nx.read_gpickle(g_truth_file)
+    else:
+        result_graph_file = f'/tmp/relic/{job_id}/inferred_graph.csv'
+        g_truth_file = f'/tmp/relic/{job_id}/true_graph.txt'
+        if os.path.exists(g_truth_file):
+            g_truth = nx.read_edgelist(g_truth_file, create_using=nx.DiGraph)
+
     inferred_dir = f'/tmp/relic/{job_id}/inferred/'
     artifact_dir = f'/tmp/relic/{job_id}/artifacts/'
     rendered_graph = f'/tmp/relic/{job_id}/g_inferred.html'
-    g_truth_file = f'/tmp/relic/{job_id}/true_graph.txt'
+
     app.logger.debug(f'Graph File: {result_graph_file}, {os.path.exists(result_graph_file)}')
     app.logger.debug(f'Ground Truth File: {g_truth_file}, {os.path.exists(g_truth_file)}')
     # if os.path.exists(rendered_graph):
@@ -101,12 +114,7 @@ def render(job_id):
     if os.path.exists(result_graph_file):
         app.logger.debug(f'Job completed, rendering graph')
         g_inferred = nx.read_edgelist(result_graph_file)
-        if os.path.exists(g_truth_file):
-            g_truth = nx.read_edgelist(g_truth_file, create_using=nx.DiGraph)
-        else:
-            g_truth = None
-        network = relic.graphs.graphs.draw_web_graph(g_inferred, artifact_dir, inferred_dir,
-                                                     g_truth=g_truth, height=height, width=width)
+        network = draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=g_truth, height=height, width=width)
         network.save_graph(rendered_graph)
         return send_file(rendered_graph, mimetype='text/html')
     else:

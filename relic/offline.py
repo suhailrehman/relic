@@ -99,7 +99,9 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
                         df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
 
                 dfs = [df_dict[dfn] for dfn in df_names]
-                scores = function(*df_names, df_dict)[-1]
+                edge_tuple, scores = function(*df_names, df_dict)
+                if function == join_detector:  # Explicit edge ordering for join detector
+                    df_names = edge_tuple[0][0], edge_tuple[0][1], edge_tuple[1]
                 scores_list_str = ','.join([str(scores[l]) for l in labels])
                 outfile.write(f"{','.join(x for x in df_names)},{scores_list_str}\n")
                 if i % 10000 == 0:

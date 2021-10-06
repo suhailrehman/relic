@@ -177,6 +177,40 @@
                             <button class="btn btn-success" type="submit" id="formsubmit">Infer Lineage</button>
 
                         </form>
+
+                        <hr style="height:2px; width:100%">
+
+
+                            <h6 class="sidebar-heading d-flex justify-content-center align-items-center px-5 mt-4 mb-1 text-muted">
+                                <span>Display Completed Job</span>
+                            </h6>
+
+                            <div class="d-flex justify-space-around align-items-center">
+                                <input class="form-control-sm" type="text" id="jobid" name="jobid" placeholder="Job Id">
+<!--                                <div class="dropdown-menu-right">-->
+<!--                                    <button class="btn btn-secondary dropdown-toggle" type="button" id="jobtype" data-bs-toggle="dropdown" aria-expanded="false">-->
+<!--                                        Result Type-->
+<!--                                    </button>-->
+<!--                                    <ul class="dropdown-menu" aria-labelledby="jobtype">-->
+<!--                                        <li><a class="dropdown-item" href="#">cell</a></li>-->
+<!--                                        <li><a class="dropdown-item" href="#">cell+detectors</a></li>-->
+<!--                                        <li><a class="dropdown-item" href="#">relic</a></li>-->
+<!--                                        <li><a class="dropdown-item" href="#">baseline</a></li>-->
+<!--                                    </ul>-->
+<!--                                </div>-->
+                                <select class="form-select" aria-label="jobtype" id="jobtype">
+                                    <option selected value="null">Result Type</option>
+                                    <option value="cell">cell</option>
+                                    <option value="cell+detectors">cell+detectors</option>
+                                    <option value="relic">relic</option>
+                                    <option value="baseline">baseline</option>
+                                </select>
+                            </div>
+
+
+                            <button class="btn btn-success" id="jobsubmit">View Job</button>
+
+
                     </div>
 
                     <a class="navbar mx-auto mt-5" href="https://uchi-db.github.io/chidatasite/">

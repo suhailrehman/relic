@@ -61,11 +61,15 @@ $("form#relicform").submit(function(e){
 function renderGraph(jobId){
     var width = $("#mynetwork").width();
     var height = $("#mynetwork").height();
-    $("#mynetwork").html("Loading Canned Demo...")
+    var jobType = encodeURIComponent($("#jobtype").val());
+    var renderData = 'width='+width+'&height='+height;
+    if(jobType != 'null')
+        renderData += '&job_type='+jobType;
+    $("#mynetwork").html("Loading...")
     $.ajax({
-        url: 'render/' + jobId,
+        url: 'render/' + encodeURIComponent(jobId),
         cache: false,
-        data: 'width='+width+'&height='+height,
+        data: renderData,
         success: function (data) {
             //console.log(data)
             $("#mynetwork").html(data)
@@ -101,6 +105,17 @@ function renderGraph(jobId){
         }
     });
 }
+
+$("button#jobsubmit").click(function(e){
+    e.preventDefault();
+
+    console.log('Clicked Job Request')
+    console.log($("#jobid").val())
+    console.log($("#jobtype").val())
+    renderGraph($("#jobid").val())
+
+
+});
 
 function updateJobStatus(jobId){
 

@@ -460,9 +460,10 @@ def draw_web_graph(g_inferred, artifact_dir, inferred_dir, g_truth=None, width=1
         # Ground Truth Operation Label:
         if g_truth and g_truth.to_undirected().has_edge(src, dst):
             hover_string += '<strong>Ground Truth Edge Data</strong>'
-            hover_string += '<br>Ground Truth Operation: ' + str(g_truth.to_undirected()[src][dst]['operation'])
-            if 'args' in g_truth.to_undirected()[src][dst]:
-                hover_string += '<br>Generating Args: ' + str(g_truth.to_undirected()[src][dst]['args'])
+            hover_string += '<br>'+str(g_truth.to_undirected()[src][dst])
+            #hover_string += '<br>Ground Truth Operation: ' + str(g_truth.to_undirected()[src][dst]['operation'])
+            #if 'args' in g_truth.to_undirected()[src][dst]:
+            #    hover_string += '<br>Generating Args: ' + str(g_truth.to_undirected()[src][dst]['args'])
             hover_string += '<br>'
 
         # Edge Coloring

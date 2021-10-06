@@ -10,6 +10,6 @@ for i in {1..16}
 do
   echo Copying Workflow $i
 
-  tar --append -vf $outdir$setname.tar $basedir$i/combined/combined_gt_fixed.pkl --strip-components=7
-  tar --append -vf $outdir$setname.tar $basedir$i/combined/inferred/*inferred_graph.csv --strip-components=7
+  tar --append -vf $outdir$setname.tar $basedir$i/combined/combined_gt_fixed.pkl --strip-components=6
+  tar --append -vf $outdir$setname.tar $basedir$i/combined/inferred/*inferred_graph.csv --strip-components=6
 done
