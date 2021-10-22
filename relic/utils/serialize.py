@@ -170,11 +170,11 @@ def store_all_distances(pairwise_scores, out_dir):
         if label in relic.distance.ppo.PPO_LABELS:
             ppo_labels.append(label)
         else:
-            store_distances_to_file({label: pairwise_scores[label]}, out_dir + '/'+label+'_scores.csv')
+            store_distances_to_file({label: pairwise_scores[label]}, out_dir + '/'+label+'.csv')
 
     if ppo_labels:
         store_distances_to_file({label: pairwise_scores[label] for label in ppo_labels},
-                                out_dir+'/ppo_scores.csv')
+                                out_dir+'/ppo.csv')
 
     logger.info('Completed writing all distances to file')
 
@@ -223,3 +223,10 @@ def str2bool(v):
         return False
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
+def update_timing_df(timing_dicts, nb_name, stage, elapsed_time):
+    timing_dicts.append({'nb_name': nb_name,
+                                  'stage': stage,
+                                  'time': elapsed_time})
+    return timing_dicts

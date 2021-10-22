@@ -5,7 +5,10 @@ def set_jaccard_distance(set1, set2):
 def set_jaccard_similarity(set1, set2):
     intersect = set1.intersection(set2)
     union = set1.union(set2)
-    return len(intersect) / len(union)
+    if len(union) > 0:
+        return len(intersect) / len(union)
+    else:
+        return 0.0
 
 
 def set_max_containment(set1, set2):
@@ -18,4 +21,7 @@ def set_max_containment(set1, set2):
 # Returns the containment of set1 in set2
 def set_containment(set1, set2):
     intersect = len(set1.intersection(set2))
-    return intersect / len(set1)
+    if len(set1) > 0:
+        return intersect / len(set1)
+    else:
+        return 0.0

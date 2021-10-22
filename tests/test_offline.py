@@ -2,10 +2,6 @@ from itertools import combinations
 
 from relic.offline import *
 
-# @pytest.mark.parametrize("earned,spent,expected", [
-#     (30, 10, 20),
-#     (20, 2, 18),
-# ])
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
@@ -24,4 +20,12 @@ def test_enumeration(tmpdir):
 
 
 def test_join_enumeration(tmpdir):
+    assert True
+
+
+def test_compute_distance_pair():
+    assert True
+
+
+def test_combine_and_create_pkl():
     assert True

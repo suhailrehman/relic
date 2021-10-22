@@ -3,7 +3,6 @@
   <component name="SshConfigs">
     <configs>
       <sshConfig host="flamingo.cs.uchicago.edu" id="8d066911-a404-497e-ab0a-12aaa9664b36" keyPath="\\wsl$\Ubuntu-20.04\home\suhail\.ssh\id_rsa" port="22" nameFormat="DESCRIPTIVE" username="suhail" />
-      <sshConfig connectionConfig="{&quot;serverAliveInterval&quot;:300}" host="roscoe.cs.uchicago.edu" id="9c087831-6bd8-4864-859b-e9f78870aa73" keyPath="\\wsl$\Ubuntu-20.04\home\suhail\.ssh\id_rsa" port="22" nameFormat="DESCRIPTIVE" username="suhail" />
     </configs>
   </component>
 </project>

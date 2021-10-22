@@ -7,6 +7,7 @@ import zipfile
 from datetime import datetime
 import os
 from functools import partial
+from time import perf_counter
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -25,8 +26,11 @@ from relic.distance.tiebreakers import tiebreak_hash_edge, tiebreak_from_compute
 from relic.graphs.clustering import exact_schema_cluster, reverse_schema_dict, write_clusters_to_file
 from relic.utils.pqedge import PQEdges, get_intra_cluster_edges_only
 from relic.utils.serialize import build_df_dict_dir, write_graph, get_job_status_phases, update_phase, str2bool, \
-    load_distances_from_raw_files, load_distances_from_pandas_file
+    load_distances_from_raw_files, load_distances_from_pandas_file, update_timing_df, store_distances_to_file, \
+    store_all_distances
 from relic.algorithm import compute_tuplewise_similarity
+from relic.approx.sampling import generate_sample_index, build_sample_df_dict_dir
+
 
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
@@ -35,7 +39,8 @@ logger = logging.getLogger(__name__)
 
 class RelicAlgorithm:
 
-    def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, max_edges=None, **kwargs):
+    def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, max_edges=None,
+                 sample_frac=1.0, sample_index_flag=False, **kwargs):
         logger.info('Starting instance of RelicAlgorithm on %s', name)
 
         # Directory Setup
@@ -48,7 +53,13 @@ class RelicAlgorithm:
         # Load/read on demand infrastructure
         # self.dataset = ArtifactDict(self.artifact_dir)
         logger.info(f'Loading Artifacts from {self.artifact_dir}')
-        self.dataset = build_df_dict_dir(self.artifact_dir)
+        if sample_frac < 1.0:
+            sample_index = None
+            if sample_index_flag:
+                sample_index = generate_sample_index(self.artifact_dir, self.inferred_dir, frac=sample_frac)
+            self.dataset = build_sample_df_dict_dir(self.artifact_dir, frac=sample_frac, sample_index=sample_index)
+        else:
+            self.dataset = build_df_dict_dir(self.artifact_dir)
         logger.info('Loading Complete')
 
         # Create the initial graph
@@ -349,6 +360,20 @@ def setup_arguments(args):
                         type=str2bool, default=False,
                         nargs='?', const=False)
 
+    parser.add_argument("--sample_frac",
+                        help="Sampling Fraction to load dataset",
+                        type=float, default=1.0)
+
+    parser.add_argument("--sample_index",
+                        help="Use consistent sampling when sample_frac less than 1.0",
+                        type=str2bool, default=False,
+                        nargs='?', const=False)
+
+    parser.add_argument("--store_scores",
+                        help="Write computed scores to disk in output dir",
+                        type=str2bool, default=True,
+                        nargs='?', const=True)
+
 
     options = parser.parse_args(args)
 
@@ -398,7 +423,14 @@ def run_join(relic_instance, options, distance_load_function, job_status, status
         update_phase(job_status, 'Join Detection', status_file)
         if options.pre_compute:
             logger.info(f'Loading Triplewise Join distances from file...')
-            relic_instance.pairwise_weights.update(distance_load_function(options.out + '/join.csv'))
+            distance_file = options.out + '/join.csv'
+            # TODO: Fix Hack for missing join.csv in case there are no schema-eligible join candidates
+            # Else consolidate all the run_functions into a bigger function that can handle different detector types
+            if os.path.exists(distance_file):
+                relic_instance.pairwise_weights.update(distance_load_function(distance_file))
+            else:
+                logger.warning(f'Missing distance file: {distance_file}')
+                return relic_instance
             logger.info(f'Loading complete...')
         else:
             relic_instance.compute_edges_of_type(edge_type='join', similarity_function=join_detector, n_pairs=3)
@@ -545,8 +577,15 @@ def run_relic(options):
     else:
         artifact_dir = options.artifact_dir
 
+    timing_dicts = []
+
+    start = perf_counter()
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file,
-                                    max_edges=options.max_n_edges)
+                                    max_edges=options.max_n_edges, sample_frac=options.sample_frac,
+                                    sample_index_flag=options.sample_index)
+    end = perf_counter()
+    update_timing_df(timing_dicts, options.nb_name, 'loading', end-start)
+
     relic_instance.create_initial_graph()
 
     update_phase(job_status, 'Computing Pairwise Distances', status_file)
@@ -559,7 +598,10 @@ def run_relic(options):
             relic_instance.pairwise_weights.update(distance_load_function(options.out+'/ppo.csv'))
             logger.info(f'Loading Complete...')
         else:
+            start = perf_counter()
             relic_instance.compute_edges_of_type(edge_type='all', similarity_function=compute_all_ppo_labels, n_pairs=2)
+            end = perf_counter()
+            update_timing_df(timing_dicts, options.nb_name, 'ppo', end-start)
 
         functions = {
             'pre_cluster' : partial(run_precluster, relic_instance, options, job_status, status_file),
@@ -567,14 +609,17 @@ def run_relic(options):
             'inter_cell': partial(run_inter_cell, relic_instance, options, job_status, status_file),
             'inter_contain': partial(run_inter_contain, relic_instance, options, job_status, status_file) ,
             'groupby': partial(run_groupby, relic_instance, options, distance_load_function, job_status, status_file),
-            'pivot' : partial(run_pivot, relic_instance, options, distance_load_function, job_status, status_file)
+            'pivot': partial(run_pivot, relic_instance, options, distance_load_function, job_status, status_file)
         }
 
         order = ['pre_cluster', 'join', 'inter_cell', 'inter_contain', 'groupby', 'pivot']
         #order = ['join', 'groupby', 'pivot', 'pre_cluster', 'inter_cell', 'inter_contain']
 
         for func in order:
+            start = perf_counter()
             relic_instance = functions[func]()
+            end = perf_counter()
+            update_timing_df(timing_dicts, options.nb_name, func, end-start)
 
     write_graph(relic_instance.g_inferred, f"{options.out}/{options.result_prefix}inferred_graph.csv")
     if options.g_truth_file:
@@ -583,6 +628,12 @@ def run_relic(options):
     job_status['status'] = 'complete'
     with open(status_file, 'w') as fp:
         json.dump(job_status, fp)
+
+    pd.DataFrame(timing_dicts).to_csv(f"{options.out}/run_time.csv")
+
+    if options.store_scores:
+        store_all_distances(relic_instance.score_records, options.out)
+
 
 
 def main(args=sys.argv[1:]):

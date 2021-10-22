@@ -218,8 +218,12 @@ def col_group_containment(df1, df2, colgroup, colgroup2=None, denom='df2'):
         return 0.0
 
     if denom == 'df2':
+        if len(df2valset) == 0:
+            return 0.0
         return len(df1valset.intersection(df2valset)) / len(df2valset)
     else:
+        if len(df1valset) == 0:
+            return 0.0
         return len(df1valset.intersection(df2valset)) / len(df1valset)
 
 

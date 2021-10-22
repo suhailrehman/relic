@@ -152,7 +152,7 @@ def test_store_load_distances(relic_instance, tmpdir):
     ppo_labels = []
     for label in relic_instance.score_records.keys():
         if label not in relic.distance.ppo.PPO_LABELS:
-            distance_file = output.join('/'+label+'_scores.csv')
+            distance_file = output.join('/'+label+'.csv')
             logging.info(f'Checking {label} Score File: {distance_file}')
             assert os.path.exists(distance_file)
             pairwise_scores = load_distances_from_pandas_file(distance_file)
@@ -163,7 +163,7 @@ def test_store_load_distances(relic_instance, tmpdir):
             ppo_labels.append(label)
 
     if ppo_labels:
-        distance_file = output.join('/ppo_scores.csv')
+        distance_file = output.join('/ppo.csv')
         pairwise_scores = load_distances_from_pandas_file(distance_file)
         for label in ppo_labels:
             logging.info(f'Checking {label} Score File: {distance_file}')

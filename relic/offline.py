@@ -12,7 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS, compute_baseline_labels
 from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
 from relic.graphs.clustering import exact_schema_cluster
-from relic.utils.serialize import build_df_dict_dir
+from relic.utils.serialize import build_df_dict_dir, str2bool
+from relic.approx.sampling import load_df_sample, generate_sample_index
 
 import logging
 logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s:%(message)s')
@@ -73,7 +74,7 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
                     i += 1
 
 
-def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels):
+def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, frac=None, sample_index=None):
     logger.info(f'Processing: {infile} using  {function.__name__}')
     file_part = os.path.basename(infile)
     df_dict = {}
@@ -96,7 +97,10 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
                 # Load DF if not already in dict
                 for dfn in df_names:
                     if dfn not in df_dict:
-                        df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
+                        if frac:
+                            df_dict[dfn] = load_df_sample(input_dir + dfn, frac=frac, sample_index=sample_index)
+                        else:
+                            df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
 
                 dfs = [df_dict[dfn] for dfn in df_names]
                 edge_tuple, scores = function(*df_names, df_dict)
@@ -147,6 +151,14 @@ def setup_arguments(args):
                         help="Number of tuples to enumerate",
                         type=int, default=2)
 
+    parser.add_argument("--sample_frac",
+                        help="Sampling fraction to read from each artifact",
+                        type=float)
+
+    parser.add_argument("--sample_index",
+                        help="Consistent Sample Index File",
+                        type=str, default=None)
+
     options = parser.parse_args(args)
 
     return options
@@ -158,7 +170,9 @@ def main(args=None):
 
     options = setup_arguments(args)
     logger.debug(f'Options: {options}')
-    if options.mode == 'enumerate':
+    if options.mode == 'sample':
+        generate_sample_index(options.input, options.output, frac=options.sample_frac)
+    elif options.mode == 'enumerate':
         if options.func == 'join':
             logger.info('Building Dataframe Dict...')
             df_dict = build_df_dict_dir(options.input)
@@ -169,7 +183,17 @@ def main(args=None):
         else:
             enumerate_tuple_pairs(options.input, options.output, options.ntuples)
     elif options.mode == 'compute':
-        compute_distance_pair(options.slice, options.output, options.input, function=_function_mappings[options.func])
+        if options.sample_index:
+            sample_index = []
+            with open(options.sample_index) as fp:
+                for line in fp.readlines():
+                    sample_index.append(int(line.strip()))
+        else:
+            sample_index = None
+        compute_distance_pair(options.slice, options.output, options.input,
+                              function=_function_mappings[options.func],
+                              sample_index=sample_index,
+                              frac=options.sample_frac)
     elif options.mode == 'combine':
         combine_and_create_pkl(options.input, options.output)
 
