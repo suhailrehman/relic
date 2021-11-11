@@ -3,9 +3,12 @@ import itertools
 import sys
 from collections import defaultdict
 
+import networkx as nx
 import pandas as pd
 import glob
 import argparse
+
+from relic.utils.analysis import is_join_op
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -28,7 +31,6 @@ _function_mappings = {
     'join': join_detector,
     'baseline' : compute_baseline_labels
 }
-
 
 
 def enumerate_tuple_pairs(input_dir, out_filename, n_tuples=2, filter_function=None):
@@ -72,6 +74,29 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
                     if i % 100000 == 0:
                         print(f'Written {i} records\r', )
                     i += 1
+
+
+def enumerate_gt_op_tuples(gt_graph_file='gt_fixed.pkl', op_type='join', filename='gt_join_combos.txt'):
+    # Enumerate using ground truth
+    gt_graph = nx.read_gpickle(gt_graph_file)
+    nb_op_tuples = set()
+    for u,v, uv_data in gt_graph.edges(data=True):
+        if op_type == 'all':
+            nb_op_tuples.add(frozenset([u, v]))
+        elif op_type == 'join' and is_join_op(uv_data):
+            # Create join triple from this edge\
+            for s, t, st_data in gt_graph.in_edges(v, data=True):
+                if is_join_op(st_data) and s != u:
+                    nb_op_tuples.add(frozenset([u, s, v]))
+        elif uv_data['operation'] == op_type:
+            nb_op_tuples.add(frozenset([u, v]))
+
+    i = 0
+    with open(filename, 'w') as fp:
+        for tup in nb_op_tuples:
+            fp.write(f"{','.join(list(tup))}\n")
+            print(f'Written {i} records\r', )
+            i += 1
 
 
 def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, frac=None, sample_index=None):
@@ -127,7 +152,7 @@ def setup_arguments(args):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--mode",
-                        help="Operation Mode: enumerate|compute|combine",
+                        help="Operation Mode: enumerate|gt_enumerate|compute|combine",
                         type=str, default='enumerate')
 
     parser.add_argument("--input",
@@ -159,6 +184,10 @@ def setup_arguments(args):
                         help="Consistent Sample Index File",
                         type=str, default=None)
 
+    parser.add_argument("--gt_graph_File",
+                        help="Ground Truth Graph File",
+                        type=str, default=None)
+
     options = parser.parse_args(args)
 
     return options
@@ -172,7 +201,7 @@ def main(args=None):
     logger.debug(f'Options: {options}')
     if options.mode == 'sample':
         generate_sample_index(options.input, options.output, frac=options.sample_frac)
-    elif options.mode == 'enumerate':
+    if options.mode == 'enumerate':
         if options.func == 'join':
             logger.info('Building Dataframe Dict...')
             df_dict = build_df_dict_dir(options.input)
@@ -182,6 +211,9 @@ def main(args=None):
             enumerate_join_triples(cluster_dict, options.output)
         else:
             enumerate_tuple_pairs(options.input, options.output, options.ntuples)
+    elif options.mode == 'gt_enumerate':
+        enumerate_gt_op_tuples(gt_graph_file=options.gt_graph_file,
+                               op_type=options.func, filename=options.output)
     elif options.mode == 'compute':
         if options.sample_index:
             sample_index = []
