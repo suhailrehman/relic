@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="roscoe.cs.uchicago.edu" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="suhail@roscoe.cs.uchicago.edu:22" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
       <paths name="roscoe.cs.uchicago.edu">
         <serverdata>
           <mappings>
             <mapping deploy="/scratch/relic" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="suhail@roscoe.cs.uchicago.edu:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tank/local/suhail/scratch/relic" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>

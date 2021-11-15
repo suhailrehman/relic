@@ -14,6 +14,7 @@ import networkx as nx
 
 from collections import defaultdict
 
+from relic.approx.containment import sample_col_containment
 from relic.distance import ppo, set_functions
 #from relic.distance.tiebreakers import hash_edge_join, hash_edge
 
@@ -32,10 +33,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
-
-
-
-
 
 # Join Detection
 from relic.utils.matching import get_common_cols, generate_common_lattice
@@ -590,39 +587,39 @@ def augment_tuples(tuples, g_inferred):
 #     return g_inferred, edge_num, triple_dict, (src[0], dst), (src[1], dst)
 
 
-def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_function, nppo_dict, threshold=0.6):
-    pairwise_similarity = []
-    pairs = list(itertools.product(cluster_set1, cluster_set2))
-    for d1, d2 in pairs:
-        if d1 == d2:
-            continue
-        if frozenset((d1, d2)) in nppo_dict:
-            score = nppo_dict[frozenset((d1, d2))]
-        else:
-            score = nppo_function(d1, d2, dataset, g_inferred)
-            nppo_dict[frozenset((d1, d2))] = score
-        if score >= threshold:
-            pairwise_similarity.append((d1, d2, score))
-        else:
-            pass
-            # print("WARNING: DROPPING",d1,d2, score, threshold)
+# def get_pairs_nppo_edges(dataset, cluster_set1, cluster_set2, g_inferred, nppo_function, nppo_dict, threshold=0.6):
+#     pairwise_similarity = []
+#     pairs = list(itertools.product(cluster_set1, cluster_set2))
+#     for d1, d2 in pairs:
+#         if d1 == d2:
+#             continue
+#         if frozenset((d1, d2)) in nppo_dict:
+#             score = nppo_dict[frozenset((d1, d2))]
+#         else:
+#             score = nppo_function(d1, d2, dataset, g_inferred)
+#             nppo_dict[frozenset((d1, d2))] = score
+#         if score >= threshold:
+#             pairwise_similarity.append((d1, d2, score))
+#         else:
+#             pass
+#             # print("WARNING: DROPPING",d1,d2, score, threshold)
+#
+#     pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
+#     return pairwise_similarity, nppo_dict
 
-    pairwise_similarity.sort(key=lambda x: x[2], reverse=True)
-    return pairwise_similarity, nppo_dict
-
-
-def compute_contraction_ratio(df_dict, df1_name, df2_name):
-    df1 = df_dict[df1_name]
-    df2 = df_dict[df2_name]
-
-    if len(df1.index) > len(df2.index):
-        srcdf = df1
-        dstdf = df2
-    else:
-        srcdf = df2
-        dstdf = df1
-
-    return len(srcdf.index) / len(dstdf.index)
+#
+# def compute_contraction_ratio(df_dict, df1_name, df2_name):
+#     df1 = df_dict[df1_name]
+#     df2 = df_dict[df2_name]
+#
+#     if len(df1.index) > len(df2.index):
+#         srcdf = df1
+#         dstdf = df2
+#     else:
+#         srcdf = df2
+#         dstdf = df1
+#
+#     return len(srcdf.index) / len(dstdf.index)
 
 
 # def tie_break_by_contraction_ratio(df_dict, pairlist):
@@ -1006,3 +1003,113 @@ def check_join_schema(colset1, colset2, colset3):
         return False
 
     return True
+
+
+# Approximate Detectors using Sampling
+def sample_groupby_detector(d1, d2, df_dict, sample_df_dict, sample_ratio, debug=False, strict_schema=False,
+                            lattice_check=False, null_aggs=False):
+    # TODO: Column matching
+    df1 = df_dict[d1]
+    df2 = df_dict[d2]
+    common_cols = set(list(df1)).intersection(set(list(df2)))
+
+    # Strict Schema Check
+    sym_diff_cols = set(list(df1)).symmetric_difference(set(list(df2)))
+    if sym_diff_cols and strict_schema:
+        logger.debug(f'GB({d1},{d2}): Failed Strict schema check')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    if not common_cols:
+        logger.debug(f'GB({d1},{d2}): DFs have no common columns')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    # Contraction Check:
+    if len(df1.index) == len(df2.index):
+        logger.debug(f'GB({d1},{d2}): There is no len contraction')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    if len(df1.index) > len(df2.index):
+        src, src_label = df1, d1
+        dst, dst_label = df2, d2
+    else:
+        src, src_label = df2, d2
+        dst, dst_label = df1, d1
+
+    # Containment check and dividing columns into group and aggregate
+    group_cols, agg_cols, mean_containment = sample_get_group_agg_cols(src, dst, sample_df_dict[src_label],
+                                                                       sampling_ratio=sample_ratio, sim_threshold=1.0,
+                                                                       lattice_check=lattice_check, debug=debug)
+
+    logger.debug(f'GB({d1},{d2}): Detected Group Cols: {group_cols}')
+    logger.debug(f'GB({d1},{d2}): Detected Agg Cols: {agg_cols}')
+    logger.debug(f'GB({d1},{d2}): Mean Containment: {mean_containment}')
+
+    if not group_cols:
+        logger.debug(f'GB({d1},{d2}): No group columns detected')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    if not agg_cols and not null_aggs:  # Don't allow aggregates to be null
+        logger.debug(f'GB({d1},{d2}): No agg cols in common between the dataframes)')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    # TODO: Lattice exploration
+    src_group_keyness_ratio = columnset_keyness_ratio(src, group_cols)
+    dst_group_keyness_ratio = columnset_keyness_ratio(dst, group_cols)
+
+    if src_group_keyness_ratio == 1.0:
+        logger.debug(f'GB({d1},{d2}): Source group columns are also keys, groupby unlikely: {src_group_keyness_ratio}')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    if dst_group_keyness_ratio < 1.0:
+        logger.debug(f'GB({d1},{d2}): Group keyness below threshold: {dst_group_keyness_ratio}')
+        return frozenset((d1, d2)), {'groupby': 0.0}
+
+    column_diff = set_functions.set_jaccard_similarity(set(df1.columns), set(df2.columns))
+    contraction_ratio = len(src.index) / len(dst.index)
+    final_val = ((mean_containment * len(group_cols) * dst_group_keyness_ratio)) #- (1.0 - column_diff)
+
+    logger.debug(f'GB({d1},{d2}): final_val = (mean_containment * len(group_cols) * group_keyness_ratio) - missing_vals')
+    logger.debug(f'GB({d1},{d2}): {final_val} = ({mean_containment} * {len(group_cols)} * {dst_group_keyness_ratio}')
+
+    return frozenset((d1, d2)), {'groupby': final_val}  # * contraction_ratio
+
+
+def sample_get_group_agg_cols(df1, df2, df1_sample, df2_sample, sampling_ratio,
+                              contaiment_threshold=0.9, sim_threshold=0.9, lattice_check=False, debug=False):
+    group_cols = []
+    group_col_containment = []
+    agg_cols = []
+
+    # TODO: Use a column matching map instead
+    common_cols = set(list(df1)).intersection(set(list(df2)))
+
+    for col in common_cols:
+        containment = sample_col_containment(df1, df2, col)
+        #jsim = ppo.set_jaccard_similarity(set(df1[col].values), set(df2[col].values))
+        logger.debug(f'Col, containment, jsim: {col}, {containment}') #, {jsim}')
+        if containment >= contaiment_threshold: # and jsim >= sim_threshold:
+            group_cols.append(col)
+            group_col_containment.append(containment)
+
+        else:
+            agg_cols.append(col)
+
+    logger.debug(f'Determining Group Cols:: {group_cols}, {group_col_containment}')
+
+    if lattice_check and group_cols:
+        group_cols = explore_group_lattice(df1, df2, group_cols, jaccard_threshold=sim_threshold)
+
+    # Find the group value containment for the contained columns:
+    # Can't use missing values anymore, use estimated containment metric
+    #rcvalset = set(frozenset(u) for u in df1[group_cols].values.tolist())
+    #dstvalset = set(frozenset(u) for u in df2[group_cols].values.tolist())
+
+    #logger.debug(f'Source Val set: {srcvalset}')
+    #logger.debug(f'Dest Val set: {dstvalset}')
+    #logger.debug(f'Symmdiff: {srcvalset.symmetric_difference(dstvalset)}')
+
+    #missing_vals = (len(srcvalset.symmetric_difference(dstvalset)) / len(srcvalset))
+
+    return group_cols, agg_cols, np.mean(group_col_containment)  # missing_vals
+
+

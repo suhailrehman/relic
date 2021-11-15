@@ -5,7 +5,7 @@
       <webServer id="ddb0c263-6a06-4112-bac3-23e5a3ff9240" name="roscoe.cs.uchicago.edu">
         <fileTransfer rootFolder="/tank/local/suhail" accessType="SFTP" host="roscoe.cs.uchicago.edu" port="22" sshConfigId="9c087831-6bd8-4864-859b-e9f78870aa73" sshConfig="suhail@roscoe.cs.uchicago.edu:22 key" keyPair="true">
           <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
         </fileTransfer>
       </webServer>

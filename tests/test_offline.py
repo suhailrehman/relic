@@ -4,7 +4,8 @@ from relic.offline import *
 
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
+wf_dir = os.path.join(THIS_DIR, 'data/test_workflow/')
+data_dir = os.path.join(wf_dir, '/artifacts/')
 
 
 def test_enumeration(tmpdir):
@@ -29,3 +30,12 @@ def test_compute_distance_pair():
 
 def test_combine_and_create_pkl():
     assert True
+
+
+def test_enumerate_gt_op_tuples(tmpdir):
+    output = tmpdir.mkdir("offline").join("join_scores.csv")
+    gt_graph_file = wf_dir+'dataset_gt_fixed.pkl'
+    enumerate_gt_op_tuples(gt_graph_file=gt_graph_file,
+                           op_type='join',
+                           filename=output)
+    assert os.path.exists(output)
