@@ -14,7 +14,7 @@ import networkx as nx
 
 from collections import defaultdict
 
-from relic.approx.containment import sample_col_containment
+from relic.approx.containment import sample_col_containment, sample_containment_estimator
 from relic.distance import ppo, set_functions
 #from relic.distance.tiebreakers import hash_edge_join, hash_edge
 
@@ -31,8 +31,9 @@ import math
 import pandas as pd
 import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s:%(lineno)d %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 # Join Detection
 from relic.utils.matching import get_common_cols, generate_common_lattice
@@ -1007,7 +1008,7 @@ def check_join_schema(colset1, colset2, colset3):
 
 # Approximate Detectors using Sampling
 def sample_groupby_detector(d1, d2, df_dict, sample_df_dict, sample_ratio, debug=False, strict_schema=False,
-                            lattice_check=False, null_aggs=False):
+                            lattice_check=True, null_aggs=False):
     # TODO: Column matching
     df1 = df_dict[d1]
     df2 = df_dict[d2]
@@ -1016,16 +1017,16 @@ def sample_groupby_detector(d1, d2, df_dict, sample_df_dict, sample_ratio, debug
     # Strict Schema Check
     sym_diff_cols = set(list(df1)).symmetric_difference(set(list(df2)))
     if sym_diff_cols and strict_schema:
-        logger.debug(f'GB({d1},{d2}): Failed Strict schema check')
+        logger.debug(f'SGB({d1},{d2}): Failed Strict schema check')
         return frozenset((d1, d2)), {'groupby': 0.0}
 
     if not common_cols:
-        logger.debug(f'GB({d1},{d2}): DFs have no common columns')
+        logger.debug(f'SGB({d1},{d2}): DFs have no common columns')
         return frozenset((d1, d2)), {'groupby': 0.0}
 
     # Contraction Check:
     if len(df1.index) == len(df2.index):
-        logger.debug(f'GB({d1},{d2}): There is no len contraction')
+        logger.debug(f'SGB({d1},{d2}): There is no len contraction')
         return frozenset((d1, d2)), {'groupby': 0.0}
 
     if len(df1.index) > len(df2.index):
@@ -1052,30 +1053,19 @@ def sample_groupby_detector(d1, d2, df_dict, sample_df_dict, sample_ratio, debug
         logger.debug(f'GB({d1},{d2}): No agg cols in common between the dataframes)')
         return frozenset((d1, d2)), {'groupby': 0.0}
 
-    # TODO: Lattice exploration
-    src_group_keyness_ratio = columnset_keyness_ratio(src, group_cols)
-    dst_group_keyness_ratio = columnset_keyness_ratio(dst, group_cols)
-
-    if src_group_keyness_ratio == 1.0:
-        logger.debug(f'GB({d1},{d2}): Source group columns are also keys, groupby unlikely: {src_group_keyness_ratio}')
-        return frozenset((d1, d2)), {'groupby': 0.0}
-
-    if dst_group_keyness_ratio < 1.0:
-        logger.debug(f'GB({d1},{d2}): Group keyness below threshold: {dst_group_keyness_ratio}')
-        return frozenset((d1, d2)), {'groupby': 0.0}
 
     column_diff = set_functions.set_jaccard_similarity(set(df1.columns), set(df2.columns))
     contraction_ratio = len(src.index) / len(dst.index)
-    final_val = ((mean_containment * len(group_cols) * dst_group_keyness_ratio)) #- (1.0 - column_diff)
+    final_val = ((mean_containment * len(group_cols) )) #- (1.0 - column_diff)
 
     logger.debug(f'GB({d1},{d2}): final_val = (mean_containment * len(group_cols) * group_keyness_ratio) - missing_vals')
-    logger.debug(f'GB({d1},{d2}): {final_val} = ({mean_containment} * {len(group_cols)} * {dst_group_keyness_ratio}')
+    logger.debug(f'GB({d1},{d2}): {final_val} = ({mean_containment} * {len(group_cols)} ')
 
     return frozenset((d1, d2)), {'groupby': final_val}  # * contraction_ratio
 
 
-def sample_get_group_agg_cols(df1, df2, df1_sample, df2_sample, sampling_ratio,
-                              contaiment_threshold=0.9, sim_threshold=0.9, lattice_check=False, debug=False):
+def sample_get_group_agg_cols(df1, df2, df1_sample, sampling_ratio,
+                              contaiment_threshold=0.999, sim_threshold=0.9, lattice_check=True, debug=False):
     group_cols = []
     group_col_containment = []
     agg_cols = []
@@ -1084,8 +1074,7 @@ def sample_get_group_agg_cols(df1, df2, df1_sample, df2_sample, sampling_ratio,
     common_cols = set(list(df1)).intersection(set(list(df2)))
 
     for col in common_cols:
-        containment = sample_col_containment(df1, df2, col)
-        #jsim = ppo.set_jaccard_similarity(set(df1[col].values), set(df2[col].values))
+        containment = sample_col_containment(df1, df2, df1_sample, col, sampling_ratio)
         logger.debug(f'Col, containment, jsim: {col}, {containment}') #, {jsim}')
         if containment >= contaiment_threshold: # and jsim >= sim_threshold:
             group_cols.append(col)
@@ -1097,19 +1086,65 @@ def sample_get_group_agg_cols(df1, df2, df1_sample, df2_sample, sampling_ratio,
     logger.debug(f'Determining Group Cols:: {group_cols}, {group_col_containment}')
 
     if lattice_check and group_cols:
-        group_cols = explore_group_lattice(df1, df2, group_cols, jaccard_threshold=sim_threshold)
+        group_cols = explore_group_lattice_2(df1, df2, group_cols)
+        agg_cols = list(set(common_cols) - set(group_cols))
 
     # Find the group value containment for the contained columns:
     # Can't use missing values anymore, use estimated containment metric
-    #rcvalset = set(frozenset(u) for u in df1[group_cols].values.tolist())
-    #dstvalset = set(frozenset(u) for u in df2[group_cols].values.tolist())
 
-    #logger.debug(f'Source Val set: {srcvalset}')
-    #logger.debug(f'Dest Val set: {dstvalset}')
-    #logger.debug(f'Symmdiff: {srcvalset.symmetric_difference(dstvalset)}')
+    # Estimate the mean group column containment of the destination in the source for all values
+    sample_src_values = set(tuple(u) for u in df1_sample[list(group_cols)].values.tolist())
+    dst_query_values = set(tuple(u) for u in df2[list(group_cols)].values.tolist())
 
-    #missing_vals = (len(srcvalset.symmetric_difference(dstvalset)) / len(srcvalset))
+    grp_containment_estimate = sample_containment_estimator(dst_query_values, sample_src_values,
+                                                            sampling_ratio=sampling_ratio)
 
-    return group_cols, agg_cols, np.mean(group_col_containment)  # missing_vals
+    return group_cols, agg_cols, grp_containment_estimate  # missing_vals
 
 
+def explore_group_lattice_2(df1, df2, group_cols, maxdepth=3):
+    def col_group_src_keyness(d1, d2, colgroup):
+        df1valset = set(tuple(u) for u in d1[list(colgroup)].values.tolist())
+
+        logger.debug(f'Testing Src Colgroup: {colgroup}')
+        if len(df1valset) == len(d1.index):
+            # Source valset is a key, making it unlikely to be a group column
+            logger.debug('Source df is a key')
+            return False
+
+        return True
+
+    def col_group_dst_keyness(d1, d2, colgroup):
+        df2valset = set(tuple(u) for u in d2[list(colgroup)].values.tolist())
+        logger.debug(f'Testing Dst Colgroup: {colgroup}')
+        if len(df2valset) < len(d2.index):
+            # Source valset is a key, making it unlikely to be a group column
+            logger.debug(f'Dest df is not key : valset:{len(df2valset)} < len:{len(d2.index)}')
+            return False
+
+        return True
+
+    def restofsubsets(goodsubset, remainingels, condition, maxdepth):
+        answers = []
+        for j in range(len(remainingels)):
+            nextsubset = goodsubset + remainingels[j:j + 1]
+            if len(nextsubset) <= maxdepth and condition(nextsubset):
+                answers.append(nextsubset)
+                answers += restofsubsets(nextsubset, remainingels[j + 1:], condition, maxdepth)
+        return answers
+
+    # First explore lattice to prune away the source DFs that are not keys
+    logger.debug('Exploring SGB Lattice')
+    lattice = restofsubsets([], group_cols, lambda l: col_group_src_keyness(df1, df2, l), maxdepth)
+    logger.debug(f'Initial Lattice: {lattice}')
+
+    # Now verify that dest df colgroups are actually keys:
+    finalized_lattice = []
+    for colgroup in lattice:
+        if col_group_dst_keyness(df1, df2, colgroup):
+            finalized_lattice.append(colgroup)
+
+    logger.debug(f'Finalized Lattice: {finalized_lattice}')
+    logger.debug('SGB Lattice Checked')
+
+    return max(finalized_lattice, key=lambda x: len(x))

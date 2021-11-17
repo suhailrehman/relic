@@ -3,14 +3,16 @@ import pytest
 import logging
 import glob
 from itertools import product
+import pandas as pd
 
 from relic.core import RelicAlgorithm
+from relic.distance.nppo import sample_groupby_detector
 from relic.utils.serialize import build_df_dict_dir
-from relic.approx.sampling import load_df_sample, get_file_rowcount, generate_sample_index
+from relic.approx.sampling import load_df_sample, get_file_rowcount, generate_sample_index, build_sample_df_dict_dir
 from relic.core import setup_arguments, run_relic
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-data_dir = os.path.join(THIS_DIR, 'data/test_workflow/artifacts/')
+data_dir = os.path.join(THIS_DIR, '../data/test_workflow/artifacts/')
 files = [os.path.basename(f) for f in glob.glob(data_dir+'*.csv')]
 sample_sizes = [0.05, 0.1, 0.25, 0.5, 0.75]
 
@@ -57,3 +59,5 @@ def test_relic_online_sample_full(tmpdir_factory, frac, sample_index):
 
     options = setup_arguments(cmd_arguments.split(" "))
     run_relic(options)
+
+

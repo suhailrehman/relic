@@ -8,20 +8,20 @@ import pandas as pd
 import glob
 import argparse
 
-from relic.utils.analysis import is_join_op
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from relic.utils.analysis import is_join_op
 from relic.distance.ppo import compute_all_ppo_labels, PPO_LABELS, compute_baseline_labels
-from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema
+from relic.distance.nppo import groupby_detector, pivot_detector, join_detector, check_join_schema, \
+    sample_groupby_detector
 from relic.graphs.clustering import exact_schema_cluster
 from relic.utils.serialize import build_df_dict_dir, str2bool
 from relic.approx.sampling import load_df_sample, generate_sample_index
 
 import logging
-logging.basicConfig(format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(format='%(asctime)s %(name)s:%(lineno)d %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 _function_mappings = {
@@ -29,7 +29,8 @@ _function_mappings = {
     'groupby': groupby_detector,
     'pivot': pivot_detector,
     'join': join_detector,
-    'baseline' : compute_baseline_labels
+    'baseline' : compute_baseline_labels,
+    'sample_groupby': sample_groupby_detector
 }
 
 
@@ -72,7 +73,7 @@ def enumerate_join_triples(cluster_dict=None, filename='join_combos.txt'):
                     # if same_comp_count <= 1:
                     fp.write(f"{d1},{d2},{d3}\n")
                     if i % 100000 == 0:
-                        print(f'Written {i} records\r', )
+                        logger.info(f'Written {i} records\r')
                     i += 1
 
 
@@ -95,8 +96,9 @@ def enumerate_gt_op_tuples(gt_graph_file='gt_fixed.pkl', op_type='join', filenam
     with open(filename, 'w') as fp:
         for tup in nb_op_tuples:
             fp.write(f"{','.join(list(tup))}\n")
-            print(f'Written {i} records\r', )
             i += 1
+
+    logger.info(f'Complete. Wrote  {i} records')
 
 
 def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, frac=None, sample_index=None):
@@ -120,19 +122,34 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
             for line in infile:
                 df_names = line.strip().split(',')
                 # Load DF if not already in dict
-                for dfn in df_names:
-                    if dfn not in df_dict:
-                        if frac:
-                            df_dict[dfn] = load_df_sample(input_dir + dfn, frac=frac, sample_index=sample_index)
-                        else:
-                            df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
+                if function == sample_groupby_detector:
+                    sampled_df_dict = {}
+                    df1_name, df2_name = df_names
+                    if df1_name not in sampled_df_dict:
+                        sampled_df_dict[df1_name] = load_df_sample(input_dir + df1_name, frac=frac,
+                                                                   sample_index=sample_index)
+                        sampled_df_dict[df2_name] = load_df_sample(input_dir + df2_name, frac=frac,
+                                                                   sample_index=sample_index)
+                    if df1_name not in df_dict:
+                        df_dict[df1_name] = pd.read_csv(input_dir + df1_name, index_col=0)
+                    if df2_name not in df_dict:
+                        df_dict[df2_name] = pd.read_csv(input_dir + df2_name, index_col=0)
+                    edge_tuple, scores = function(df1_name, df2_name, df_dict, sampled_df_dict, frac)
+                else:
+                    for dfn in df_names:
+                        if dfn not in df_dict:
+                            if frac:
+                                df_dict[dfn] = load_df_sample(input_dir + dfn, frac=frac, sample_index=sample_index)
+                            else:
+                                df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
+                    dfs = [df_dict[dfn] for dfn in df_names]
+                    edge_tuple, scores = function(*df_names, df_dict)
 
-                dfs = [df_dict[dfn] for dfn in df_names]
-                edge_tuple, scores = function(*df_names, df_dict)
                 if function == join_detector:  # Explicit edge ordering for join detector
                     df_names = edge_tuple[0][0], edge_tuple[0][1], edge_tuple[1]
-                scores_list_str = ','.join([str(scores[l]) for l in labels])
+                scores_list_str = ','.join([str(scores[l]) for l in scores.keys()])
                 outfile.write(f"{','.join(x for x in df_names)},{scores_list_str}\n")
+                logger.debug(f'{scores}')
                 if i % 10000 == 0:
                     logger.info(f'{file_part}: Written {i} records\r', )
                 i += 1
@@ -184,7 +201,7 @@ def setup_arguments(args):
                         help="Consistent Sample Index File",
                         type=str, default=None)
 
-    parser.add_argument("--gt_graph_File",
+    parser.add_argument("--gt_graph_file",
                         help="Ground Truth Graph File",
                         type=str, default=None)
 

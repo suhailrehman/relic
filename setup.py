@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='relic',
-    packages=find_packages(include=['relic', 'relic.distance', 'relic.graphs', 'relic.server', 'relic.utils']),
+    packages=find_packages(include=['relic', 'relic.approx', 'relic.distance', 'relic.graphs', 'relic.server', 'relic.utils']),
     version='0.2',
     description='Retrospective Lineage Inference System',
     author='suhail@uchicago.edu',

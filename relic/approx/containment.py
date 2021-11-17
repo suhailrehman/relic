@@ -1,6 +1,6 @@
 
 
-def sample_containment_estimator(query_set, source_sample_set, source_set_len, sampling_ratio=0.5):
+def sample_containment_estimator(query_set, source_sample_set, sampling_ratio=0.5):
     """
     Returns the adjusted containment estimation of the queryset in the sample source set
     for a given sampling ratio.
@@ -15,7 +15,7 @@ def sample_containment_estimator(query_set, source_sample_set, source_set_len, s
         via the sampling ratio
     """
     common_values = len(query_set.intersection(source_sample_set))
-    containment_estimate = (source_set_len / sampling_ratio) * common_values
+    containment_estimate = min(((1.0 / sampling_ratio) * (common_values)) / len(query_set), 1.0)
     return containment_estimate
 
 
@@ -26,7 +26,6 @@ def sample_col_containment(df1, df2, df1_sample, colname, sampling_ratio, col2na
     df1valset = set(df1_sample[colname])
     df2valset = set(df2[col2name])
 
-    source_set_len = len(set(df1[colname]))
 
-    return sample_containment_estimator(df2valset, df1valset, source_set_len, sampling_ratio=sampling_ratio)
+    return sample_containment_estimator(df2valset, df1valset, sampling_ratio=sampling_ratio)
 
