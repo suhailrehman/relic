@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #basedir=/tank/local/suhail/data/relic/single/
-basedir=/tank/local/suhail/data/relic/matfreq2/
-offline_compute=true
+basedir=/tank/local/suhail/data/relic/matfreq3/
+offline_compute=false
 num_components=1
 combined=''
 
@@ -41,7 +41,7 @@ do
     python ../relic/core.py --artifact_dir=$indir \
                             --nb_name=$i \
                             --out=$outdir \
-                            --pre_compute=True \
+                            --pre_compute=False \
                             --inter_contain=0.99 \
                             --intra_contain=0.99 \
                             --inter_cell=0.1 \

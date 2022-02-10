@@ -26,7 +26,7 @@ def build_df_dict(nb_name, base_dir):
 
 def build_df_dict_dir(csv_dir):
     dataset = {}
-    for file in tqdm(glob.glob(csv_dir + '*.csv')):
+    for file in tqdm(glob.glob(csv_dir + '*.csv'), desc='Loading DFs', leave=False):
         csvfile = os.path.basename(file)
         try:
             dataset[csvfile] = pd.read_csv(file, index_col=0)
