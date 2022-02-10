@@ -250,11 +250,17 @@ class RelicAlgorithm:
                             logger.warning(f'Error: Trying to add back {e}, selected {edge}, to {edge_type} dict')
 
                 if add_remaining_tie_break_edges and tiebreak_function:
-                    for e in tie_break_edges:
-                        if self.components[e[0]] != self.components[e[1]]:
-                            if e != edge:
-                                if e not in tiebreak_pqe:
-                                    tiebreak_pqe.additem(e[0], e[1])
+                    try:
+                        for e in tie_break_edges:
+                            if self.components[e[0]] != self.components[e[1]]:
+                                if e != edge:
+                                    if e not in tiebreak_pqe:
+                                        tiebreak_pqe.additem(e[0], e[1])
+                    except ValueError as err:
+                        logger.error(err)
+                        logger.error(f"Tiebreak Edges: {tie_break_edges}")
+                        logger.error(f"Edge: {e}")
+                        raise(e)
 
 
 
