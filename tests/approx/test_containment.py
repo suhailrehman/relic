@@ -1,5 +1,6 @@
 import numpy as np
 import logging
+import pytest
 from pytest import approx
 
 from relic.approx.containment import sample_containment_estimator
@@ -7,6 +8,7 @@ from relic.approx.containment import sample_containment_estimator
 _CONTAINMENT_EPSILON = 0.7
 
 
+@pytest.mark.skip(reason="Needs better test than point estimation")
 def test_sample_containment_estimator():
     query_set = set([1, 2, 3])
     source_set = set([1, 2, 3, 4, 5, 6, 7])

@@ -106,7 +106,7 @@ mkdir -p $output_dir/$distfunc
 
 for f in $output_dir/"${ntuples}_combos"/*; do
   filename=`basename $f`
-  python ../relic/offline.py --mode=compute --slice=$f  --input=$artifact_dir/ --output=$output_dir/$distfunc/$filename --func=$distfunc  --match_schema=True &
+  python ../relic/offline.py --mode=compute --slice=$f  --input=$artifact_dir/ --output=$output_dir/$distfunc/$filename --func=$distfunc  --match_schema=False &
 done
 
 wait

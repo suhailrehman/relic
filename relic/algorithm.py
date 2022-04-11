@@ -6,14 +6,15 @@ import logging
 
 from relic.utils.pqedge import PQEdges
 from relic.distance.ppo import compute_all_ppo_labels
+from relic.utils.matching import schema_match_df_combo, schema_match_df_triple
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 
 def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo_labels, threshold=-1.0,
                                  silent=False, pairs=None, n_pairs=2,
-                                 tuplewise_similarity=None, label=None, **kwargs):
+                                 tuplewise_similarity=None, label=None, match_schema=False, **kwargs):
     """Compute pairwise similarity metrics of dataset dict using similarity_metric
     returns reverse sorted pqdict of frozenset(pair1, pair2) -> similarity_score mappings
 
@@ -40,8 +41,16 @@ def compute_tuplewise_similarity(dataset, similarity_metric=compute_all_ppo_labe
     for tup in tqdm(pairs, desc='graph pairs', leave=False, disable=silent, total=total_len):
         logger.debug('Evaluating tuple: ' + str(tup))
         # tuple_dfs = [dataset[x] for x in tup]
+        if match_schema:
+            if len(tup) == 3:
+                ds, sm = schema_match_df_triple(tup, dataset)
+            else:
+                ds, sm = schema_match_df_combo(tup, dataset)
+            logger.debug(f"Schema Matches: {sm}")
+        else:
+            ds = dataset
 
-        edge, scores_dict = similarity_metric(*tup, dataset, **kwargs)
+        edge, scores_dict = similarity_metric(*tup, ds, **kwargs)
 
         for ppo_type, score in scores_dict.items():
             logger.debug(f'Adding {ppo_type} score: {scores_dict[ppo_type]} to edge {edge}')
