@@ -8,6 +8,8 @@ import pandas as pd
 import glob
 import argparse
 
+from relic.utils.matching import schema_match_df_triple, schema_match_df_combo
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from relic.utils.analysis import is_join_op
@@ -101,7 +103,8 @@ def enumerate_gt_op_tuples(gt_graph_file='gt_fixed.pkl', op_type='join', filenam
     logger.info(f'Complete. Wrote  {i} records')
 
 
-def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, frac=None, sample_index=None):
+def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_labels, frac=None, sample_index=None,
+                          match_schema=False):
     logger.info(f'Processing: {infile} using  {function.__name__}')
     file_part = os.path.basename(infile)
     df_dict = {}
@@ -143,7 +146,15 @@ def compute_distance_pair(infile, out, input_dir, function=compute_all_ppo_label
                             else:
                                 df_dict[dfn] = pd.read_csv(input_dir + dfn, index_col=0)
                     dfs = [df_dict[dfn] for dfn in df_names]
-                    edge_tuple, scores = function(*df_names, df_dict)
+                    if match_schema:
+                        if function == join_detector:
+                            ds, _ = schema_match_df_triple(df_names, df_dict)
+                        else:
+                            ds, _ = schema_match_df_combo(df_names, df_dict)
+                    else:
+                        ds = df_dict
+
+                    edge_tuple, scores = function(*df_names, ds)
 
                 if function == join_detector:  # Explicit edge ordering for join detector
                     df_names = edge_tuple[0][0], edge_tuple[0][1], edge_tuple[1]
@@ -205,6 +216,11 @@ def setup_arguments(args):
                         help="Ground Truth Graph File",
                         type=str, default=None)
 
+    parser.add_argument("--match_schema",
+                        help="Run schema matching algorithm before computing pairwise similarities",
+                        type=str2bool, default=False,
+                        nargs='?', const=False)
+
     options = parser.parse_args(args)
 
     return options
@@ -242,7 +258,8 @@ def main(args=None):
         compute_distance_pair(options.slice, options.output, options.input,
                               function=_function_mappings[options.func],
                               sample_index=sample_index,
-                              frac=options.sample_frac)
+                              frac=options.sample_frac,
+                              match_schema=options.match_schema)
     elif options.mode == 'combine':
         combine_and_create_pkl(options.input, options.output)
 

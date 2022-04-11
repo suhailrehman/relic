@@ -32,15 +32,20 @@ from relic.algorithm import compute_tuplewise_similarity
 from relic.approx.sampling import generate_sample_index, build_sample_df_dict_dir
 
 
+from relic.utils.matching import perturb_schema_dataset
+
+
 import logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
 
 class RelicAlgorithm:
 
     def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, max_edges=None,
-                 sample_frac=1.0, sample_index_flag=False, **kwargs):
+                 sample_frac=1.0, sample_index_flag=False, match_schema=False,
+                 alpha=0.0, beta=0.0, gamma=0.0,
+                 **kwargs):
         logger.info('Starting instance of RelicAlgorithm on %s', name)
 
         # Directory Setup
@@ -62,6 +67,22 @@ class RelicAlgorithm:
             self.dataset = build_df_dict_dir(self.artifact_dir)
         logger.info('Loading Complete')
 
+        # Load the Ground Truth
+        # Optional GT annotation or remove entirely
+        if g_truth_file:
+            if g_truth_file.endswith('.txt'):
+                self.g_truth = nx.read_edgelist(g_truth_file)
+            if g_truth_file.endswith('.pkl'):
+                self.g_truth = nx.read_gpickle(g_truth_file)
+
+
+        self.match_schema = match_schema
+
+        if alpha > 0.0:
+            self.dataset, self.rename_map= perturb_schema_dataset(self.dataset, self.g_truth, alpha=alpha, beta=beta, gamma=gamma)
+            self.match_schema = match_schema
+
+
         # Create the initial graph
         self.g_inferred = nx.Graph()
         self.create_initial_graph()
@@ -76,11 +97,6 @@ class RelicAlgorithm:
         # Priority queue or self-sorting datastructure in association with unionfind
         self.pairwise_weights = defaultdict(PQEdges)
         self.initialize_components()
-
-        # Load the Ground Truth
-        # Optional GT annotation or remove entirely
-        if g_truth_file:
-            self.g_truth = nx.read_edgelist(g_truth_file)
 
         # Current Edge being added
         self.edge_no = 0
@@ -146,7 +162,7 @@ class RelicAlgorithm:
     def compute_edges_of_type(self, edge_type='all', similarity_function=compute_all_ppo_labels,
                               n_pairs=2):
         edge_scores = compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
-                                                                  label=edge_type, n_pairs=n_pairs)
+                                                   label=edge_type, n_pairs=n_pairs, match_schema=self.match_schema)
         self.pairwise_weights.update(edge_scores)
         if self.serialize == True:
             for edge_type, score_dict in edge_scores.items():
@@ -261,8 +277,6 @@ class RelicAlgorithm:
                         logger.error(f"Tiebreak Edges: {tie_break_edges}")
                         logger.error(f"Edge: {e}")
                         raise(e)
-
-
 
 
 def setup_arguments(args):
@@ -380,6 +394,22 @@ def setup_arguments(args):
                         type=str2bool, default=True,
                         nargs='?', const=True)
 
+    parser.add_argument("--match_schema",
+                        help="Run schema matching algorithm before computing pairwise similarities",
+                        type=str2bool, default=False,
+                        nargs='?', const=False)
+
+    parser.add_argument("--perturb_alpha",
+                        help="Perturb Schema (Alpha) parameter",
+                        type=float, default=0.0)
+
+    parser.add_argument("--perturb_beta",
+                        help="Perturb Schema (Beta) parameter",
+                        type=float, default=0.0)
+
+    parser.add_argument("--perturb_gamma",
+                         help="Perturb Schema (Gamma) parameter",
+                         type=float, default=0.0)
 
     options = parser.parse_args(args)
 
@@ -469,6 +499,7 @@ def run_inter_cell(relic_instance, options, job_status, status_file):
                                          )
     return relic_instance
 
+
 def run_inter_contain(relic_instance, options, job_status, status_file):
     if options.cellcontain:
         tiebreak_pqe = PQEdges()
@@ -548,6 +579,7 @@ def run_baseline(relic_instance, options, distance_load_function, job_status, st
                                          )
     return relic_instance
 
+
 def run_relic(options):
     logger.info('Testing RELIC on input:' + str(options.artifact_dir))
     logger.info('Output directory: ' + str(options.out))
@@ -588,7 +620,8 @@ def run_relic(options):
     start = perf_counter()
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file,
                                     max_edges=options.max_n_edges, sample_frac=options.sample_frac,
-                                    sample_index_flag=options.sample_index)
+                                    sample_index_flag=options.sample_index, match_schema=options.match_schema,
+                                    alpha=options.perturb_alpha, beta=options.perturb_beta, gamme=options.perturb_gamma)
     end = perf_counter()
     update_timing_df(timing_dicts, options.nb_name, 'loading', end-start)
 
@@ -613,7 +646,7 @@ def run_relic(options):
             'pre_cluster' : partial(run_precluster, relic_instance, options, job_status, status_file),
             'join' : partial(run_join, relic_instance, options, distance_load_function, job_status, status_file),
             'inter_cell': partial(run_inter_cell, relic_instance, options, job_status, status_file),
-            'inter_contain': partial(run_inter_contain, relic_instance, options, job_status, status_file) ,
+            'inter_contain': partial(run_inter_contain, relic_instance, options, job_status, status_file),
             'groupby': partial(run_groupby, relic_instance, options, distance_load_function, job_status, status_file),
             'pivot': partial(run_pivot, relic_instance, options, distance_load_function, job_status, status_file)
         }
@@ -635,11 +668,10 @@ def run_relic(options):
     with open(status_file, 'w') as fp:
         json.dump(job_status, fp)
 
-    pd.DataFrame(timing_dicts).to_csv(f"{options.out}/run_time.csv")
+    pd.DataFrame(timing_dicts).to_csv(f"{options.out}/{options.result_prefix}_run_time.csv")
 
     if options.store_scores:
         store_all_distances(relic_instance.score_records, options.out)
-
 
 
 def main(args=sys.argv[1:]):

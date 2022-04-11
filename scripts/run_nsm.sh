@@ -23,13 +23,13 @@ do
     if $offline_compute;
     then
       echo "$i; `date` ; Computing PPO"
-      ./offline.sh -i $indir -o $outdir -f ppo -n 2
+      ./offline_nsm.sh -i $indir -o $outdir -f ppo -n 2
       echo "$i; `date` ; Computing Joins"
-      ./offline.sh -i $indir -o $outdir -f join -n 3
+      ./offline_nsm.sh -i $indir -o $outdir -f join -n 3
        echo "$i; `date` ; Computing Groupbys"
-      ./offline.sh -i $indir -o $outdir -f groupby -n 2
+      ./offline_nsm.sh -i $indir -o $outdir -f groupby -n 2
       echo "$i; `date` ; Computing Pivots"
-      ./offline.sh -i $indir -o $outdir -f pivot -n 2
+      ./offline_nsm.sh -i $indir -o $outdir -f pivot -n 2
     fi
 
     num_artifacts=`ls -1q $indir/*.csv | wc -l`
@@ -48,7 +48,7 @@ do
                             --inter_cell=0.1 \
                             --intra_cell=0.1 \
                             --max_n_edges=$((num_artifacts-num_components)) \
-                            --result_prefix=relic_
+                            --result_prefix=relic_nsm_
     echo "$i; `date` ;Completed"
   fi
 done

@@ -14,6 +14,7 @@ files = [os.path.basename(f) for f in glob.glob(test_data_dir+'*.csv')]
 syn_data_dir = '/tank/local/suhail/data/relic/relic_datasets_vldb_2021/dataset_flat_exact_sample_timing/20210126-153905/artifacts/'
 
 
+@pytest.mark.skip(reason="Needs better test than point estimation")
 @pytest.mark.parametrize("file1, file2, data_dir", (['5.csv', '6.csv', test_data_dir],
                                                     ['15.csv', '12.csv', syn_data_dir]))
 def test_sample_groupby_detector(file1, file2, data_dir):

@@ -22,6 +22,7 @@ setup(
         "pytest",
         "pytest-cov",
         "python-Levenshtein",
+        "valentine"
     ],
     extras_require={
         'server': [
