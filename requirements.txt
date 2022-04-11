@@ -20,3 +20,4 @@ Flask-HTTPAuth
 beautifulsoup4
 python-dotenv
 seaborn
+valentine
