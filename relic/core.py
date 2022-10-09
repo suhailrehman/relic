@@ -12,6 +12,10 @@ from time import perf_counter
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
+
+import warnings
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
 import numpy as np
 import itertools
 from collections import defaultdict
@@ -40,11 +44,12 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(name)s %(levelnam
 logger = logging.getLogger(__name__)
 
 
+
 class RelicAlgorithm:
 
     def __init__(self, input_dir, output_dir, name='wf_', g_truth_file=None, max_edges=None,
                  sample_frac=1.0, sample_index_flag=False, match_schema=False,
-                 alpha=0.0, beta=0.0, gamma=0.0,
+                 alpha=0.0, beta=0.0, gamma=0.0, lsh_graph_file=None,
                  **kwargs):
         logger.info('Starting instance of RelicAlgorithm on %s', name)
 
@@ -109,6 +114,11 @@ class RelicAlgorithm:
         self.serialize = True
         self.score_records = dict()
 
+        self.lsh_edges = None
+        if lsh_graph_file:
+            self.lsh_edges = self.load_lsh_edge_pairs(lsh_graph_file)
+            self.lsh_triples = self.load_lsh_edge_triples(lsh_graph_file)
+
         # No. Max edges if present:
         if max_edges:
             self.max_n_edges = max_edges
@@ -127,6 +137,26 @@ class RelicAlgorithm:
                 self.g_inferred.add_node(artifact)
 
         return self.g_inferred
+
+    def load_lsh_edge_pairs(self, lsh_graph_file):
+        logger.debug('Loading LSH Graph')
+        lsh_graph = nx.read_gpickle(lsh_graph_file)
+        lsh_graph.remove_edges_from(list(nx.selfloop_edges(lsh_graph)))
+
+        return list(lsh_graph.edges())
+
+    def load_lsh_edge_triples(self, lsh_graph_file):
+        logger.debug('Loading LSH Graph for Triples')
+        lsh_graph = nx.read_gpickle(lsh_graph_file)
+        lsh_graph.remove_edges_from(list(nx.selfloop_edges(lsh_graph)))
+        triples = set()
+
+        for node in lsh_graph.nodes():
+            node_neighbors = lsh_graph.neighbors(node)
+            for n_combo in itertools.combinations(node_neighbors, 2):
+                triples.add(frozenset((node, n_combo[0], n_combo[1])))
+
+        return list(triples)
 
     def set_initial_clusters(self, cluster_type='exact_schema'):
         # Initial Clusters set to individual artifacts:
@@ -160,9 +190,16 @@ class RelicAlgorithm:
         self.num_components = len([x for x in self.components])
 
     def compute_edges_of_type(self, edge_type='all', similarity_function=compute_all_ppo_labels,
-                              n_pairs=2):
+                              n_pairs=2, pairs=None):
+        if self.lsh_edges:
+            if n_pairs == 2:
+                pairs = self.lsh_edges
+            elif n_pairs == 3:
+                pairs = self.lsh_triples
+
         edge_scores = compute_tuplewise_similarity(self.dataset, similarity_metric=similarity_function,
-                                                   label=edge_type, n_pairs=n_pairs, match_schema=self.match_schema)
+                                                   label=edge_type, n_pairs=n_pairs, match_schema=self.match_schema,
+                                                   pairs=pairs)
         self.pairwise_weights.update(edge_scores)
         if self.serialize == True:
             for edge_type, score_dict in edge_scores.items():
@@ -411,6 +448,10 @@ def setup_arguments(args):
                          help="Perturb Schema (Gamma) parameter",
                          type=float, default=0.0)
 
+    parser.add_argument("--lsh_graph_file",
+                       help="LSH Graph File after clustering",
+                       type=str, default=None)
+
     options = parser.parse_args(args)
 
     return options
@@ -603,7 +644,7 @@ def run_relic(options):
 
     status_file = str(options.out)+'job_status.json'
 
-    if 'artifact_zip' in options and options.artifact_zip: #Zip file was provided
+    if 'artifact_zip' in options and options.artifact_zip:  # Zip file was provided
         zip_out = options.out+'/artifacts/'
         logger.info(f'Extracting ZIP file: {options.artifact_zip} to directory {zip_out}')
         if os.path.exists(zip_out):
@@ -621,7 +662,8 @@ def run_relic(options):
     relic_instance = RelicAlgorithm(artifact_dir, options.out, name=options.nb_name, g_truth_file=options.g_truth_file,
                                     max_edges=options.max_n_edges, sample_frac=options.sample_frac,
                                     sample_index_flag=options.sample_index, match_schema=options.match_schema,
-                                    alpha=options.perturb_alpha, beta=options.perturb_beta, gamme=options.perturb_gamma)
+                                    alpha=options.perturb_alpha, beta=options.perturb_beta, gamme=options.perturb_gamma,
+                                    lsh_graph_file=options.lsh_graph_file)
     end = perf_counter()
     update_timing_df(timing_dicts, options.nb_name, 'loading', end-start)
 
@@ -643,8 +685,8 @@ def run_relic(options):
             update_timing_df(timing_dicts, options.nb_name, 'ppo', end-start)
 
         functions = {
-            'pre_cluster' : partial(run_precluster, relic_instance, options, job_status, status_file),
-            'join' : partial(run_join, relic_instance, options, distance_load_function, job_status, status_file),
+            'pre_cluster': partial(run_precluster, relic_instance, options, job_status, status_file),
+            'join': partial(run_join, relic_instance, options, distance_load_function, job_status, status_file),
             'inter_cell': partial(run_inter_cell, relic_instance, options, job_status, status_file),
             'inter_contain': partial(run_inter_contain, relic_instance, options, job_status, status_file),
             'groupby': partial(run_groupby, relic_instance, options, distance_load_function, job_status, status_file),
@@ -652,6 +694,8 @@ def run_relic(options):
         }
 
         order = ['pre_cluster', 'join', 'inter_cell', 'inter_contain', 'groupby', 'pivot']
+        if options.lsh_graph_file:
+            order = ['inter_cell', 'inter_contain', 'groupby', 'pivot']
         #order = ['join', 'groupby', 'pivot', 'pre_cluster', 'inter_cell', 'inter_contain']
 
         for func in order:

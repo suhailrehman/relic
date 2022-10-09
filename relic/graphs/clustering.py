@@ -27,6 +27,15 @@ def exact_schema_cluster(df_dict):
     return clusters
 
 
+def label_schema_cluster(label_df):
+    clusters = defaultdict(list)
+    for node, data in label_df.iterrows():
+        current_label = data['gt']
+        if 'csv' not in current_label:
+            clusters[current_label].append(node)
+    return clusters
+
+
 def reverse_schema_dict(schema_dict):
     reverse_dict = {}
     for schema, artifact_list in schema_dict.items():

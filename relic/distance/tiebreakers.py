@@ -8,6 +8,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(name)s %(levelname)s:%(message)s')
 logger = logging.getLogger(__name__)
 
+
 def hash_edge(x):
     w = "+".join(sorted(list(x[0]))).encode('utf8')
     return md5(w).hexdigest()
@@ -60,10 +61,12 @@ def tiebreak_join_from_inferred_graph(edge_list, pqe=None, g_inferred=None):
     return pqe
 
 
-def tiebreak_join_computed_scores(edge_list, pqe=None, pairwise_weights=None, score_type=None):
+def tiebreak_join_computed_scores(edge_list, pqe=None, pairwise_weights=None, score_type=None,
+                                  df_dict=None, score_function=None):
     for ed, score in edge_list:
         src1, src2, dst = ed[0][0], ed[0][1], ed[1]
-        new_score = pairwise_weights[score_type][frozenset([dst, src1])] * pairwise_weights[score_type][frozenset([dst, src2])]
+        new_score = pairwise_weights[score_type][frozenset([dst, src1])] * \
+                    pairwise_weights[score_type][frozenset([dst, src2])]
         if ed not in pqe:
             pqe.additem(ed, new_score)
     return pqe
